@@ -79,18 +79,23 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
         sort: _sort,
       );
       
-      setState(() {
-        _items.addAll(list);
-        final total = (meta['total'] ?? 0) as int;
-        _hasMore = _items.length < total;
-      });
-      
-      // Görselleri yükle (background'da)
-      _loadThumbnails(list);
+      if (mounted) {
+        setState(() {
+          _items.addAll(list);
+          final total = (meta['total'] ?? 0) as int;
+          _hasMore = _items.length < total;
+        });
+        
+        // Görselleri yükle (background'da)
+        _loadThumbnails(list);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Yükleme hatası: $e')),
+          SnackBar(
+            content: Text('Yükleme hatası: $e'),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     } finally {
@@ -113,7 +118,11 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
         }
       } catch (e) {
         // Hata sessizce ignore et
-        _thumbnailCache[variant.articleId] = null;
+        if (mounted) {
+          setState(() {
+            _thumbnailCache[variant.articleId] = null;
+          });
+        }
       }
     }
   }
@@ -131,6 +140,7 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Anatolian Coins'),
+        elevation: 0,
         actions: [
           IconButton(
             onPressed: () => context.push('/account'),
@@ -141,9 +151,9 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
       ),
       body: Column(
         children: [
-          // Filtre bölümü
+          // Filtre bölümü - padding azaltıldı
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10), // 12'den 10'a
             color: Colors.grey[100],
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -153,12 +163,24 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                   value: _selectedRegion,
                   decoration: InputDecoration(
                     labelText: 'Bölge',
-                    prefixIcon: const Icon(Icons.map),
+                    labelStyle: const TextStyle(
+                      fontSize: 13, // Font boyutu küçültüldü
+                      fontWeight: FontWeight.w400,
+                    ),
+                    prefixIcon: const Icon(Icons.map, size: 20),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                     filled: true,
                     fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10, // padding azaltıldı
+                    ),
+                  ),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w300, // ince font
                   ),
                   items: [
                     const DropdownMenuItem(
@@ -179,7 +201,7 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                   },
                 ),
                 
-                const SizedBox(height: 12),
+                const SizedBox(height: 10), // 12'den 10'a
                 
                 // Darphane seçimi veya arama
                 Row(
@@ -188,14 +210,26 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                       child: _useSearch
                           ? TextField(
                               controller: _searchCtrl,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w300, // ince font
+                              ),
                               decoration: InputDecoration(
                                 labelText: 'Darphane Ara',
-                                prefixIcon: const Icon(Icons.search),
+                                labelStyle: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                prefixIcon: const Icon(Icons.search, size: 20),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 filled: true,
                                 fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10, // padding azaltıldı
+                                ),
                               ),
                               onSubmitted: (_) => _load(reset: true),
                             )
@@ -203,12 +237,24 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                               value: _selectedMint,
                               decoration: InputDecoration(
                                 labelText: 'Darphane (Opsiyonel)',
-                                prefixIcon: const Icon(Icons.location_city),
+                                labelStyle: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                prefixIcon: const Icon(Icons.location_city, size: 20),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 filled: true,
                                 fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10, // padding azaltıldı
+                                ),
+                              ),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w300, // ince font
                               ),
                               items: [
                                 const DropdownMenuItem(
@@ -226,8 +272,12 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                               },
                             ),
                     ),
+                    const SizedBox(width: 8),
                     IconButton(
-                      icon: Icon(_useSearch ? Icons.list : Icons.search),
+                      icon: Icon(
+                        _useSearch ? Icons.list : Icons.search,
+                        size: 22,
+                      ),
                       tooltip: _useSearch ? 'Listeye geç' : 'Aramaya geç',
                       onPressed: () {
                         setState(() {
@@ -243,7 +293,7 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                   ],
                 ),
                 
-                const SizedBox(height: 12),
+                const SizedBox(height: 10), // 12'den 10'a
                 
                 // Sıralama ve filtreler
                 Row(
@@ -253,6 +303,10 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                         value: _sort,
                         decoration: InputDecoration(
                           labelText: 'Sırala',
+                          labelStyle: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -260,8 +314,12 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                           fillColor: Colors.white,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
-                            vertical: 8,
+                            vertical: 8, // padding azaltıldı
                           ),
+                        ),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w300, // ince font
                         ),
                         items: const [
                           DropdownMenuItem(
@@ -285,8 +343,18 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                     ),
                     const SizedBox(width: 8),
                     FilterChip(
-                      label: const Text('Görselli'),
+                      label: const Text(
+                        'Görselli',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
                       selected: _onlyImages,
+                      avatar: Icon(
+                        _onlyImages ? Icons.image : Icons.image_outlined,
+                        size: 18,
+                      ),
                       onSelected: (v) {
                         setState(() => _onlyImages = v);
                         _load(reset: true);
@@ -303,85 +371,130 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
             child: _items.isEmpty && _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _items.isEmpty
-                    ? const Center(child: Text('Sonuç bulunamadı'))
-                    : ListView.separated(
-                        controller: _scroll,
-                        itemCount: _items.length + (_hasMore ? 1 : 0),
-                        separatorBuilder: (_, __) => const Divider(height: 1),
-                        itemBuilder: (context, index) {
-                          if (index >= _items.length) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          
-                          final v = _items[index];
-                          final thumbnailUrl = _thumbnailCache[v.articleId];
-                          
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_off,
+                              size: 56,
+                              color: Colors.grey[400],
                             ),
-                            leading: SizedBox(
-                              width: 60,
-                              height: 60,
-                              child: thumbnailUrl == null
-                                  ? Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[200],
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Icon(
-                                        Icons.image,
-                                        color: Colors.grey,
-                                      ),
-                                    )
-                                  : ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: CachedNetworkImage(
-                                        imageUrl: thumbnailUrl,
-                                        fit: BoxFit.cover,
-                                        placeholder: (context, url) => Container(
+                            const SizedBox(height: 12),
+                            Text(
+                              'Sonuç bulunamadı',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Farklı filtreler deneyin',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w300, // ince font
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () => _load(reset: true),
+                        child: ListView.separated(
+                          controller: _scroll,
+                          itemCount: _items.length + (_hasMore ? 1 : 0),
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            if (index >= _items.length) {
+                              return const Padding(
+                                padding: EdgeInsets.all(12), // 16'dan 12'ye
+                                child: Center(child: CircularProgressIndicator()),
+                              );
+                            }
+                            
+                            final v = _items[index];
+                            final thumbnailUrl = _thumbnailCache[v.articleId];
+                            
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, // 16'dan 12'ye
+                                vertical: 6, // 8'den 6'ya
+                              ),
+                              leading: SizedBox(
+                                width: 56, // 60'dan 56'ya
+                                height: 56,
+                                child: thumbnailUrl == null
+                                    ? Container(
+                                        decoration: BoxDecoration(
                                           color: Colors.grey[200],
-                                          child: const Center(
-                                            child: SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.image,
+                                          color: Colors.grey,
+                                          size: 24,
+                                        ),
+                                      )
+                                    : ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: CachedNetworkImage(
+                                          imageUrl: thumbnailUrl,
+                                          fit: BoxFit.cover,
+                                          placeholder: (context, url) => Container(
+                                            color: Colors.grey[200],
+                                            child: const Center(
+                                              child: SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                        errorWidget: (context, url, error) =>
-                                            Container(
-                                          color: Colors.grey[200],
-                                          child: const Icon(
-                                            Icons.broken_image,
-                                            color: Colors.grey,
+                                          errorWidget: (context, url, error) =>
+                                              Container(
+                                            color: Colors.grey[200],
+                                            child: const Icon(
+                                              Icons.broken_image,
+                                              color: Colors.grey,
+                                              size: 24,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                            ),
-                            title: Text(
-                              v.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: Text(
-                              '${RegionData.getRegionName(v.regionCode)} • ${v.material ?? '-'}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 13,
                               ),
-                            ),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () => context.go('/variant/${v.articleId}'),
-                          );
-                        },
+                              title: Text(
+                                v.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500, // w600'dan w500'e
+                                ),
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  '${RegionData.getRegionName(v.regionCode)} • ${v.material ?? '-'}',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12, // 13'ten 12'ye
+                                    fontWeight: FontWeight.w300, // ince font
+                                  ),
+                                ),
+                              ),
+                              trailing: const Icon(
+                                Icons.chevron_right,
+                                size: 20,
+                              ),
+                              onTap: () => context.go('/variant/${v.articleId}'),
+                            );
+                          },
+                        ),
                       ),
           ),
         ],

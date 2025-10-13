@@ -75,11 +75,14 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
       }
     }
     
-    // Online'dan çek
+    // Online'dan çek - Pro üyelik kontrolü ile watermark
     final api = ref.read(variantsApiProvider);
+    final subscription = ref.read(subscriptionProvider);
+    
     try {
       final v = await api.getVariant(widget.articleId, includeImages: true);
-      final imgs = await api.images(widget.articleId, wm: true, abs: false);
+      // Pro üyelik durumuna göre watermark ayarı
+      final imgs = await api.images(widget.articleId, wm: !subscription.isPro, abs: false);
       setState(() {
         _variant = v;
         _images = imgs;
@@ -112,8 +115,8 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
           'Pro üyelik ile:\n'
           '• Sınırsız favori ekleme\n'
           '• Çevrimdışı erişim\n'
+          '• Filigransız yüksek çözünürlük görseller\n'
           '• Sikke tanıma (AI)\n'
-          '• Yüksek çözünürlüklü görseller\n'
           '• Uzman desteği\n'
           '• Reklamsız deneyim',
         ),
@@ -319,7 +322,7 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
               onRefresh: _load,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12), // 16'dan 12'ye düşürüldü
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -327,29 +330,29 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
                       Text(
                         v.title,
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600, // bold → w600
                             ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12), // 16'dan 12'ye düşürüldü
                       
                       // Sikke Bilgileri (içinde açıklamalar ve darphane de var)
                       _buildInfoCard(v),
                       
                       // Görseller
                       if (_images.isNotEmpty) ...[
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12), // 16'dan 12'ye düşürüldü
                         _buildImagesSection(),
                       ],
                       
                       // Koordinat
                       if (v.coordinates != null) ...[
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12), // 16'dan 12'ye düşürüldü
                         _buildCoordinatesCard(v),
                       ],
                       
                       // Kaynak
                       if (v.sourceCitation != null) ...[
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12), // 16'dan 12'ye düşürüldü
                         _buildSourceCard(v),
                       ],
                     ],
@@ -370,18 +373,18 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
     
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // 16'dan 12'ye düşürüldü
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Sikke Bilgileri',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600, // bold → w600
                   ),
             ),
             const Divider(),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6), // 8'den 6'ya düşürüldü
             
             // Temel bilgiler
             _buildInfoRow('UID', v.uid),
@@ -397,9 +400,9 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
             
             // Darphane bilgisi
             if (hasMeta) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 8), // 12'den 8'e düşürüldü
               const Divider(),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8), // 12'den 8'e düşürüldü
               if (v.authorityName != null && v.authorityName!.isNotEmpty)
                 _buildInfoRow('Otorite', v.authorityName!),
               if (v.mintName != null && v.mintName!.isNotEmpty)
@@ -408,36 +411,46 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
             
             // Açıklamalar - en sonda
             if (hasDescriptions) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 8), // 12'den 8'e düşürüldü
               const Divider(),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8), // 12'den 8'e düşürüldü
               if (hasObverse) ...[
                 const Text(
                   'Ön Yüz',
                   style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontWeight: FontWeight.w500, // w600 → w500
+                    fontSize: 13, // 14'ten 13'e düşürüldü
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4), // 6'dan 4'e düşürüldü
                 Text(
                   obverseText!,
-                  style: const TextStyle(height: 1.5, fontSize: 14, color: Colors.black87),
+                  style: const TextStyle(
+                    height: 1.4, // 1.5'ten 1.4'e
+                    fontSize: 13, // 14'ten 13'e düşürüldü
+                    fontWeight: FontWeight.w300, // ince font
+                    color: Colors.black87,
+                  ),
                 ),
-                if (hasReverse) const SizedBox(height: 12),
+                if (hasReverse) const SizedBox(height: 8), // 12'den 8'e düşürüldü
               ],
               if (hasReverse) ...[
                 const Text(
                   'Arka Yüz',
                   style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
+                    fontWeight: FontWeight.w500, // w600 → w500
+                    fontSize: 13, // 14'ten 13'e düşürüldü
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4), // 6'dan 4'e düşürüldü
                 Text(
                   reverseText!,
-                  style: const TextStyle(height: 1.5, fontSize: 14, color: Colors.black87),
+                  style: const TextStyle(
+                    height: 1.4, // 1.5'ten 1.4'e
+                    fontSize: 13, // 14'ten 13'e düşürüldü
+                    fontWeight: FontWeight.w300, // ince font
+                    color: Colors.black87,
+                  ),
                 ),
               ],
             ],
@@ -449,16 +462,17 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3), // 4'ten 3'e düşürüldü
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: 110, // 120'den 110'a düşürüldü
             child: Text(
               label,
               style: const TextStyle(
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500, // w600 → w500
+                fontSize: 13, // eklendi
                 color: Colors.black87,
               ),
             ),
@@ -466,7 +480,11 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(color: Colors.black54),
+              style: const TextStyle(
+                fontSize: 13, // eklendi
+                fontWeight: FontWeight.w300, // ince font
+                color: Colors.black54,
+              ),
             ),
           ),
         ],
@@ -492,25 +510,58 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
       );
     }
 
+    // Pro üyelik kontrolü
+    final subscription = ref.watch(subscriptionProvider);
+    final showWatermarkInfo = !subscription.isPro;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // 16'dan 12'ye düşürüldü
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // "(${_images.length} görsel)" kısmı kaldırıldı
                 Text(
-                  'Sikke Örnekleri (${_images.length} görsel)',
+                  'Sikke Görselleri',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600, // bold → w600
                       ),
                 ),
+                // Pro kullanıcı değilse filigran bilgisi
+                if (showWatermarkInfo)
+                  InkWell(
+                    onTap: () => _showFeatureLockedDialog('Filigransız Görseller'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.amber.shade200),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.star_border, size: 14, color: Colors.amber.shade700),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Pro',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.amber.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
             const Divider(),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6), // 8'den 6'ya düşürüldü
             _buildImageGrid(),
           ],
         ),
@@ -545,7 +596,7 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
     
     return Column(
       children: rows.map((row) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.only(bottom: 12), // 16'dan 12'ye düşürüldü
         child: row,
       )).toList(),
     );
@@ -602,9 +653,9 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
                     ),
                     // Metrics alanı - boş bile olsa yer tutsun (yükseklik eşitliği için)
                     Container(
-                      padding: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(6), // 8'den 6'ya düşürüldü
                       color: Colors.grey[100],
-                      constraints: const BoxConstraints(minHeight: 48),
+                      constraints: const BoxConstraints(minHeight: 42), // 48'den 42'ye düşürüldü
                       child: isFirstInRow && hasMetrics
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -612,12 +663,18 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
                                 if (firstImage.weight != null && firstImage.weight!.isNotEmpty)
                                   Text(
                                     '⚖️ ${firstImage.weight} g',
-                                    style: const TextStyle(fontSize: 12),
+                                    style: const TextStyle(
+                                      fontSize: 11, // 12'den 11'e düşürüldü
+                                      fontWeight: FontWeight.w300, // ince font
+                                    ),
                                   ),
                                 if (firstImage.diameter != null && firstImage.diameter!.isNotEmpty)
                                   Text(
                                     '📏 ${firstImage.diameter} mm',
-                                    style: const TextStyle(fontSize: 12),
+                                    style: const TextStyle(
+                                      fontSize: 11, // 12'den 11'e düşürüldü
+                                      fontWeight: FontWeight.w300, // ince font
+                                    ),
                                   ),
                               ],
                             )
@@ -647,18 +704,18 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
     
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // 16'dan 12'ye düşürüldü
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Açıklamalar',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600, // bold → w600
                   ),
             ),
             const Divider(),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8), // 12'den 8'e düşürüldü
             if (hasObverse) ...[
               const Row(
                 children: [
@@ -667,19 +724,23 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
                   Text(
                     'Ön Yüz',
                     style: TextStyle(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500, // w600 → w500
                       color: Colors.blue,
-                      fontSize: 16,
+                      fontSize: 15, // 16'dan 15'e düşürüldü
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6), // 8'den 6'ya düşürüldü
               Text(
                 obverseText!,
-                style: const TextStyle(height: 1.5, fontSize: 14),
+                style: const TextStyle(
+                  height: 1.4, // 1.5'ten 1.4'e
+                  fontSize: 13, // 14'ten 13'e düşürüldü
+                  fontWeight: FontWeight.w300, // ince font
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12), // 16'dan 12'ye düşürüldü
             ],
             if (hasReverse) ...[
               const Row(
@@ -689,17 +750,21 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
                   Text(
                     'Arka Yüz',
                     style: TextStyle(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500, // w600 → w500
                       color: Colors.red,
-                      fontSize: 16,
+                      fontSize: 15, // 16'dan 15'e düşürüldü
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6), // 8'den 6'ya düşürüldü
               Text(
                 reverseText!,
-                style: const TextStyle(height: 1.5, fontSize: 14),
+                style: const TextStyle(
+                  height: 1.4, // 1.5'ten 1.4'e
+                  fontSize: 13, // 14'ten 13'e düşürüldü
+                  fontWeight: FontWeight.w300, // ince font
+                ),
               ),
             ],
           ],
@@ -711,18 +776,18 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
   Widget _buildMetaCard(Variant v) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // 16'dan 12'ye düşürüldü
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Meta Bilgiler',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600, // bold → w600
                   ),
             ),
             const Divider(),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6), // 8'den 6'ya düşürüldü
             if (v.authorityName != null)
               _buildInfoRow('Otorite', v.authorityName!),
             if (v.mintName != null) _buildInfoRow('Darphane', v.mintName!),
@@ -737,24 +802,30 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
   Widget _buildCoordinatesCard(Variant v) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // 16'dan 12'ye düşürüldü
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Konum',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600, // bold → w600
                   ),
             ),
             const Divider(),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6), // 8'den 6'ya düşürüldü
             Row(
               children: [
                 const Icon(Icons.location_on, color: Colors.red),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(v.coordinates ?? '-'),
+                  child: Text(
+                    v.coordinates ?? '-',
+                    style: const TextStyle(
+                      fontSize: 13, // eklendi
+                      fontWeight: FontWeight.w300, // ince font
+                    ),
+                  ),
                 ),
                 IconButton(
                   onPressed: _openInMaps,
@@ -772,22 +843,24 @@ class _VariantDetailPageState extends ConsumerState<VariantDetailPage> {
   Widget _buildSourceCard(Variant v) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // 16'dan 12'ye düşürüldü
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Kaynak',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600, // bold → w600
                   ),
             ),
             const Divider(),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6), // 8'den 6'ya düşürüldü
             Text(
               v.sourceCitation!,
               style: const TextStyle(
                 fontStyle: FontStyle.italic,
+                fontSize: 13, // eklendi
+                fontWeight: FontWeight.w300, // ince font
                 color: Colors.black54,
               ),
             ),
