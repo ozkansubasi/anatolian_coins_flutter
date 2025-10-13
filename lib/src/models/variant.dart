@@ -10,15 +10,21 @@ class Variant {
   final int? dateTo;
   final String? updatedAt;
   
-  // Ek detaylar
-  final String? authority;
-  final String? mint;
-  final double? latitude;
-  final double? longitude;
+  // Yeni alanlar
+  final String? mintName;
+  final String? mintUri;
+  final String? authorityName;
+  final String? authorityUri;
+  final String? denominationName;
+  final String? denominationUri;
   final String? obverseDesc;
+  final String? obverseDescTr;
   final String? reverseDesc;
-  final String? weight;
-  final String? diameter;
+  final String? reverseDescTr;
+  final String? findspotName;
+  final String? findspotUri;
+  final String? coordinates;
+  final String? sourceCitation;
 
   Variant({
     required this.articleId,
@@ -31,62 +37,52 @@ class Variant {
     this.dateFrom,
     this.dateTo,
     this.updatedAt,
-    this.authority,
-    this.mint,
-    this.latitude,
-    this.longitude,
+    this.mintName,
+    this.mintUri,
+    this.authorityName,
+    this.authorityUri,
+    this.denominationName,
+    this.denominationUri,
     this.obverseDesc,
+    this.obverseDescTr,
     this.reverseDesc,
-    this.weight,
-    this.diameter,
+    this.reverseDescTr,
+    this.findspotName,
+    this.findspotUri,
+    this.coordinates,
+    this.sourceCitation,
   });
 
   String get title => titleTr ?? titleEn ?? slug;
 
   factory Variant.fromJson(Map<String, dynamic> j) {
-    int parseId(dynamic value) {
-      if (value == null) return 0;
-      if (value is int) return value;
-      if (value is String) return int.tryParse(value) ?? 0;
-      return 0;
-    }
-
-    int? parseYear(dynamic value) {
-      if (value == null) return null;
-      if (value is int) return value;
-      if (value is String) return int.tryParse(value);
-      return null;
-    }
-    
-    double? parseDouble(dynamic value) {
-      if (value == null) return null;
-      if (value is double) return value;
-      if (value is int) return value.toDouble();
-      if (value is String) return double.tryParse(value);
-      return null;
-    }
-
     return Variant(
-      articleId: parseId(j['article_id'] ?? j['id']),
-      uid: j['uid']?.toString() ?? '',
-      slug: j['slug']?.toString() ?? '',
-      titleTr: j['title_tr']?.toString() ?? j['title']?.toString(),
-      titleEn: j['title_en']?.toString() ?? j['title']?.toString(),
-      regionCode: j['region_code']?.toString() ?? j['region']?.toString(),
-      material: j['material']?.toString() ?? j['material_value']?.toString() ?? j['metal']?.toString(),
-      dateFrom: parseYear(j['date_from']),
-      dateTo: parseYear(j['date_to']),
-      updatedAt: j['updated_at']?.toString(),
-      
-      // Ek alanlar
-      authority: j['authority']?.toString() ?? j['authority_value']?.toString(),
-      mint: j['mint']?.toString() ?? j['mint_value']?.toString() ?? j['mint_name']?.toString(),
-      latitude: parseDouble(j['latitude'] ?? j['lat']),
-      longitude: parseDouble(j['longitude'] ?? j['lng'] ?? j['lon']),
-      obverseDesc: j['obverse_desc']?.toString() ?? j['obverse']?.toString(),
-      reverseDesc: j['reverse_desc']?.toString() ?? j['reverse']?.toString(),
-      weight: j['weight']?.toString() ?? j['weight_nominal']?.toString(),
-      diameter: j['diameter']?.toString() ?? j['diameter_nominal']?.toString(),
+      articleId: j['article_id'] ?? j['variant_id'] ?? 0, // variant_id de dene
+      uid: j['uid'] ?? '',
+      slug: j['slug'] ?? '',
+      titleTr: j['title_tr'] ?? j['title'], // title de dene
+      titleEn: j['title_en'],
+      regionCode: j['region_code'] ?? j['region'], // region de dene
+      material: j['material_value'] ?? j['material'] ?? j['metal'], // material/metal/material_value dene
+      dateFrom: j['date_from'],
+      dateTo: j['date_to'],
+      updatedAt: j['updated_at'],
+      mintName: j['mint_name'] ?? j['mint'], // mint de dene
+      mintUri: j['mint_uri'],
+      authorityName: j['authority_name'] ?? j['authority'], // authority de dene
+      authorityUri: j['authority_uri'],
+      denominationName: j['denomination_name'],
+      denominationUri: j['denomination_uri'],
+      obverseDesc: j['obverse_desc'],
+      obverseDescTr: j['obverse_desc_tr'],
+      reverseDesc: j['reverse_desc'],
+      reverseDescTr: j['reverse_desc_tr'],
+      findspotName: j['findspot_name'],
+      findspotUri: j['findspot_uri'],
+      coordinates: j['coordinates'] ?? (j['latitude'] != null && j['longitude'] != null 
+          ? '${j['latitude']},${j['longitude']}' 
+          : null), // latitude/longitude varsa birleştir
+      sourceCitation: j['source_citation'],
     );
   }
 }

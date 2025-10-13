@@ -1,6 +1,6 @@
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 import '../core/env.dart';
 import 'token_interceptor.dart';
 
@@ -10,47 +10,45 @@ class ApiClient {
 
   factory ApiClient(Ref ref) {
     final dio = Dio(BaseOptions(
-      baseUrl: Env.baseUrl, // https://www.numistr.org/api/index.php/v1
-      connectTimeout: const Duration(seconds: 30), // 15 → 30
-      receiveTimeout: const Duration(seconds: 60), // 30 → 60
+      baseUrl: Env.baseUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 60),
       headers: {'Accept': 'application/json'},
-      responseType: ResponseType.plain, // ✅ String olarak al, sonra parse et
+      responseType: ResponseType.plain, // ✅ String olarak al, manuel parse edeceğiz
     ));
 
-    // JSON parse interceptor ekle
+    // JSON parse interceptor - String response'u Map'e çevir
     dio.interceptors.add(InterceptorsWrapper(
       onResponse: (response, handler) {
-        // String ise JSON'a çevir
-        if (response.data is String && response.data.toString().isNotEmpty) {
+        // Debug: Response'u logla
+        if (response.requestOptions.path.contains('variants')) {
+          print('🔍 Response for ${response.requestOptions.path}');
+          print('🔍 Response data type: ${response.data.runtimeType}');
+          if (response.data is String) {
+            final preview = (response.data as String).substring(
+              0, 
+              (response.data as String).length > 500 ? 500 : (response.data as String).length
+            );
+            print('🔍 Response preview: $preview...');
+          }
+        }
+        
+        if (response.data is String) {
           try {
             response.data = jsonDecode(response.data);
+            print('✅ JSON parsed successfully');
           } catch (e) {
-            print('❌ JSON Parse Error: $e');
+            print('⚠️ JSON parse error: $e');
           }
         }
         handler.next(response);
       },
-      onError: (error, handler) async {
-        // Timeout hatası varsa 1 kez daha dene
-        if (error.type == DioExceptionType.receiveTimeout || 
-            error.type == DioExceptionType.connectionTimeout) {
-          print('⚠️ Timeout - retrying...');
-          try {
-            final response = await dio.fetch(error.requestOptions);
-            handler.resolve(response);
-            return;
-          } catch (e) {
-            print('❌ Retry failed: $e');
-          }
-        }
-        handler.next(error);
-      },
     ));
 
-    // İstek/yanıt debug logu
+    // Debug log
     dio.interceptors.add(LogInterceptor(
       requestBody: false,
-      responseBody: false,
+      responseBody: false, // String çok uzun olduğu için kapatıyoruz
       requestHeader: false,
       responseHeader: false,
       logPrint: (o) => print('[DIO] $o'),

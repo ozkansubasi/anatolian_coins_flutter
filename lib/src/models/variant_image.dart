@@ -20,6 +20,17 @@ class VariantImage {
   });
 
   factory VariantImage.fromJson(Map<String, dynamic> j) {
+    String url = j['url'] ?? '';
+    String urlRaw = j['url_raw'] ?? '';
+    
+    // Eğer relative URL ise absolute yap
+    if (url.startsWith('/')) {
+      url = 'https://www.numistr.org$url';
+    }
+    if (urlRaw.startsWith('/')) {
+      urlRaw = 'https://www.numistr.org$urlRaw';
+    }
+    
     return VariantImage(
       imageId: j['image_id'] ?? 0,
       variantId: j['variant_id'] ?? 0,
@@ -27,8 +38,8 @@ class VariantImage {
       weight: j['weight'],
       diameter: j['diameter'],
       ordering: j['ordering'],
-      url: j['url'] ?? '',
-      urlRaw: j['url_raw'] ?? '',
+      url: url,
+      urlRaw: urlRaw,
     );
   }
 }

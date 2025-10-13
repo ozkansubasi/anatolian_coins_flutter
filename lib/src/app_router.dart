@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/variants/variant_list_page.dart';
 import 'features/variants/variant_detail_page.dart';
 import 'features/account/account_page.dart';
+import 'features/subscription/subscription_page.dart';
 import 'auth/auth_controller.dart';
 
 /// Stream -> Listenable köprüsü: stream bir olay yayınlayınca router'ı yeniler.
@@ -38,6 +39,10 @@ GoRouter appRouter(WidgetRef ref) {
           GoRoute(
             path: 'account',
             builder: (context, state) => const AccountPage(),
+          ),
+          GoRoute(
+            path: 'subscription',
+            builder: (context, state) => const SubscriptionPage(),
           ),
         ],
       ),

@@ -1,7 +1,7 @@
 name: anatolian_coins
 description: Anatolian Coins (NumisTR-backed) mobile app with OIDC login (PKCE).
 publish_to: "none"
-version: 0.3.1+1
+version: 0.4.0+1
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -17,6 +17,14 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   flutter_appauth: ^6.0.2
   url_launcher: ^6.3.1
+  
+  # Yeni eklenenler
+  share_plus: ^10.0.2              # Paylaşma
+  path_provider: ^2.1.4            # Dosya yolu
+  flutter_cache_manager: ^3.4.1   # Gelişmiş cache
+  sqflite: ^2.3.3                  # Çevrimdışı veritabanı
+  path: ^1.9.0                     # Dosya yolu yardımcıları
+  permission_handler: ^11.3.1     # İzinler (çevrimdışı için)
 
 dev_dependencies:
   flutter_test:
