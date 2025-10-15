@@ -4,6 +4,10 @@
 <dict>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Görselleri kaydetmek için gerekli</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Sikkeleri tanımlamak için kamera kullanımı gereklidir</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Kamera kullanımı için mikrofon erişimi gereklidir</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

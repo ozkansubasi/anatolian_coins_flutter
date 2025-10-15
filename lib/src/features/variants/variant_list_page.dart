@@ -70,6 +70,8 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
           ? _searchCtrl.text.trim()
           : _selectedMint;
       
+      print('🔵 API Request: region=$_selectedRegion, mint=$mintParam, page=$_page');
+      
       final (list, meta) = await api.list(
         region: _selectedRegion,
         mint: mintParam,
@@ -78,6 +80,8 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
         perPage: 20,
         sort: _sort,
       );
+      
+      print('✅ API Response: ${list.length} items, total=${meta['total']}');
       
       if (mounted) {
         setState(() {
@@ -90,6 +94,7 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
         _loadThumbnails(list);
       }
     } catch (e) {
+      print('❌ API Error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -151,45 +156,48 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
       ),
       body: Column(
         children: [
-          // Filtre bölümü - padding azaltıldı
+          // Filtre bölümü
           Container(
-            padding: const EdgeInsets.all(10), // 12'den 10'a
+            padding: const EdgeInsets.all(10),
             color: Colors.grey[100],
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Bölge seçimi
+                // ✅ BÖLGE DROPDOWN - Siyah text + beyaz arka plan
                 DropdownButtonFormField<String>(
                   value: _selectedRegion,
                   decoration: InputDecoration(
                     labelText: 'Bölge',
                     labelStyle: const TextStyle(
-                      fontSize: 13, // Font boyutu küçültüldü
+                      fontSize: 13,
                       fontWeight: FontWeight.w400,
+                      color: Colors.black87, // ✅ Label rengi
                     ),
-                    prefixIcon: const Icon(Icons.map, size: 20),
+                    prefixIcon: const Icon(Icons.map, size: 20, color: Colors.black87),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: Colors.white, // ✅ Arka plan beyaz
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 12,
-                      vertical: 10, // padding azaltıldı
+                      vertical: 10,
                     ),
                   ),
+                  dropdownColor: Colors.white, // ✅ Dropdown arka plan beyaz
                   style: const TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w300, // ince font
+                    fontWeight: FontWeight.w400, // ✅ w300'den w400'e (daha okunur)
+                    color: Colors.black, // ✅ Text rengi
                   ),
                   items: [
                     const DropdownMenuItem(
                       value: null,
-                      child: Text('Tüm Bölgeler'),
+                      child: Text('Tüm Bölgeler', style: TextStyle(color: Colors.black)),
                     ),
                     ...allRegions.map((entry) => DropdownMenuItem(
                       value: entry.key,
-                      child: Text(entry.value),
+                      child: Text(entry.value, style: const TextStyle(color: Colors.black)),
                     )),
                   ],
                   onChanged: (value) {
@@ -201,9 +209,9 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                   },
                 ),
                 
-                const SizedBox(height: 10), // 12'den 10'a
+                const SizedBox(height: 10),
                 
-                // Darphane seçimi veya arama
+                // ✅ DARPHANE DROPDOWN/SEARCH - Siyah text + beyaz arka plan
                 Row(
                   children: [
                     Expanded(
@@ -212,23 +220,25 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                               controller: _searchCtrl,
                               style: const TextStyle(
                                 fontSize: 13,
-                                fontWeight: FontWeight.w300, // ince font
+                                fontWeight: FontWeight.w400, // ✅ w300'den w400'e
+                                color: Colors.black, // ✅ Text rengi
                               ),
                               decoration: InputDecoration(
                                 labelText: 'Darphane Ara',
                                 labelStyle: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w400,
+                                  color: Colors.black87, // ✅ Label rengi
                                 ),
-                                prefixIcon: const Icon(Icons.search, size: 20),
+                                prefixIcon: const Icon(Icons.search, size: 20, color: Colors.black87),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: Colors.white, // ✅ Arka plan beyaz
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 12,
-                                  vertical: 10, // padding azaltıldı
+                                  vertical: 10,
                                 ),
                               ),
                               onSubmitted: (_) => _load(reset: true),
@@ -240,30 +250,36 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                                 labelStyle: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w400,
+                                  color: Colors.black87, // ✅ Label rengi
                                 ),
-                                prefixIcon: const Icon(Icons.location_city, size: 20),
+                                prefixIcon: const Icon(Icons.location_city, size: 20, color: Colors.black87),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 filled: true,
-                                fillColor: Colors.white,
+                                fillColor: Colors.white, // ✅ Arka plan beyaz
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 12,
-                                  vertical: 10, // padding azaltıldı
+                                  vertical: 10,
                                 ),
                               ),
+                              dropdownColor: Colors.white, // ✅ Dropdown arka plan beyaz
                               style: const TextStyle(
                                 fontSize: 13,
-                                fontWeight: FontWeight.w300, // ince font
+                                fontWeight: FontWeight.w400, // ✅ w300'den w400'e
+                                color: Colors.black, // ✅ Text rengi
                               ),
                               items: [
                                 const DropdownMenuItem(
                                   value: null,
-                                  child: Text('Tüm Darphaneler'),
+                                  child: Text('Tüm Darphaneler', style: TextStyle(color: Colors.black)),
                                 ),
                                 ...availableMints.map((mint) => DropdownMenuItem(
                                   value: mint,
-                                  child: Text(mint.replaceAll('_', ' ').toUpperCase()),
+                                  child: Text(
+                                    mint.replaceAll('_', ' ').toUpperCase(),
+                                    style: const TextStyle(color: Colors.black),
+                                  ),
                                 )),
                               ],
                               onChanged: availableMints.isEmpty ? null : (value) {
@@ -293,7 +309,7 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                   ],
                 ),
                 
-                const SizedBox(height: 10), // 12'den 10'a
+                const SizedBox(height: 10),
                 
                 // Sıralama ve filtreler
                 Row(
@@ -306,33 +322,36 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                           labelStyle: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w400,
+                            color: Colors.black87, // ✅ Label rengi
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: Colors.white, // ✅ Arka plan beyaz
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12,
-                            vertical: 8, // padding azaltıldı
+                            vertical: 8,
                           ),
                         ),
+                        dropdownColor: Colors.white, // ✅ Dropdown arka plan beyaz
                         style: const TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w300, // ince font
+                          fontWeight: FontWeight.w400, // ✅ w300'den w400'e
+                          color: Colors.black, // ✅ Text rengi
                         ),
                         items: const [
                           DropdownMenuItem(
                             value: 'uid_asc',
-                            child: Text('UID ↑'),
+                            child: Text('UID ↑', style: TextStyle(color: Colors.black)),
                           ),
                           DropdownMenuItem(
                             value: 'uid_desc',
-                            child: Text('UID ↓'),
+                            child: Text('UID ↓', style: TextStyle(color: Colors.black)),
                           ),
                           DropdownMenuItem(
                             value: 'updated_at_desc',
-                            child: Text('Güncelleme ↓'),
+                            child: Text('Güncelleme ↓', style: TextStyle(color: Colors.black)),
                           ),
                         ],
                         onChanged: (v) {
@@ -394,7 +413,7 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                               'Farklı filtreler deneyin',
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: FontWeight.w300, // ince font
+                                fontWeight: FontWeight.w300,
                                 color: Colors.grey[500],
                               ),
                             ),
@@ -410,7 +429,7 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                           itemBuilder: (context, index) {
                             if (index >= _items.length) {
                               return const Padding(
-                                padding: EdgeInsets.all(12), // 16'dan 12'ye
+                                padding: EdgeInsets.all(12),
                                 child: Center(child: CircularProgressIndicator()),
                               );
                             }
@@ -420,11 +439,11 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                             
                             return ListTile(
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, // 16'dan 12'ye
-                                vertical: 6, // 8'den 6'ya
+                                horizontal: 12,
+                                vertical: 6,
                               ),
                               leading: SizedBox(
-                                width: 56, // 60'dan 56'ya
+                                width: 56,
                                 height: 56,
                                 child: thumbnailUrl == null
                                     ? Container(
@@ -473,7 +492,7 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontSize: 14,
-                                  fontWeight: FontWeight.w500, // w600'dan w500'e
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                               subtitle: Padding(
@@ -482,8 +501,8 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                                   '${RegionData.getRegionName(v.regionCode)} • ${v.material ?? '-'}',
                                   style: TextStyle(
                                     color: Colors.grey[600],
-                                    fontSize: 12, // 13'ten 12'ye
-                                    fontWeight: FontWeight.w300, // ince font
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w300,
                                   ),
                                 ),
                               ),
@@ -498,6 +517,12 @@ class _VariantListPageState extends ConsumerState<VariantListPage> {
                       ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/recognition'),
+        icon: const Icon(Icons.camera_alt),
+        label: const Text('Scan Coin'),
+        backgroundColor: Theme.of(context).primaryColor,
       ),
     );
   }

@@ -20,6 +20,8 @@ class VariantsApi {
     int perPage = 20,
     String sort = 'uid_asc',
   }) async {
+    print('🔵 API Request - region: $region, mint: $mint');
+    
     final res = await _client.dio.get('/variants', queryParameters: {
       if (mint != null && mint.isNotEmpty) 'filter[mint]': mint,
       if (authority != null && authority.isNotEmpty) 'filter[authority]': authority,
@@ -33,7 +35,12 @@ class VariantsApi {
       'sort': sort,
     });
     
-    print('🔍 List response type: ${res.data.runtimeType}');
+    print('🔍 API Response type: ${res.data.runtimeType}');
+    
+    if (res.data['data'] != null && (res.data['data'] as List).isNotEmpty) {
+      print('🔍 First item keys: ${(res.data['data'] as List).first.keys.toList()}');
+      print('🔍 First item region: ${(res.data['data'] as List).first['region_code']}');
+    }
     
     final data = (res.data['data'] as List).map((e) => Variant.fromJson(e)).toList();
     return (data, Map<String, dynamic>.from(res.data['meta'] ?? {}));
@@ -62,7 +69,7 @@ class VariantsApi {
     
     final res = await _client.dio.get('/variants/$articleId/images', queryParameters: {
       'wm': wm ? 1 : 0,
-      'abs': abs ? 1 : 0, // ✅ Bu parametre doğru gönderiliyor
+      'abs': abs ? 1 : 0,
     });
     
     print('🔍 Images response type: ${res.data.runtimeType}');
@@ -89,7 +96,6 @@ class VariantsApi {
     return [];
   }
 
-  /// İlk görselin URL'ini döndür (liste için thumb)
   Future<String?> getFirstImageUrl(int articleId, {bool wm = true}) async {
     try {
       final imgs = await images(articleId, wm: wm, abs: true);
