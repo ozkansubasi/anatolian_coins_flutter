@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 
@@ -13,7 +14,7 @@ class FavoritesApi {
       return data.map((e) => (e['article_id'] ?? 0) as int).toList();
     } catch (e) {
       // Backend henüz hazır değilse veya hata varsa boş liste döndür
-      print('⚠️ Favorites API error (ignoring): $e');
+      debugPrint('⚠️ Favorites API error (ignoring): $e');
       return [];
     }
   }
@@ -25,7 +26,7 @@ class FavoritesApi {
         'article_id': articleId,
       });
     } catch (e) {
-      print('⚠️ Add favorite error: $e');
+      debugPrint('⚠️ Add favorite error: $e');
       rethrow;
     }
   }
@@ -35,7 +36,7 @@ class FavoritesApi {
     try {
       await _client.dio.delete('/favorites/$articleId');
     } catch (e) {
-      print('⚠️ Remove favorite error: $e');
+      debugPrint('⚠️ Remove favorite error: $e');
       rethrow;
     }
   }

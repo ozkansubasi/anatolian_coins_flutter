@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../core/api_client.dart';
@@ -20,7 +21,7 @@ class VariantsApi {
     int perPage = 20,
     String sort = 'uid_asc',
   }) async {
-    print('🔵 API Request - region: $region, mint: $mint');
+    debugPrint('🔵 API Request - region: $region, mint: $mint');
     
     final res = await _client.dio.get('/variants', queryParameters: {
       if (mint != null && mint.isNotEmpty) 'filter[mint]': mint,
@@ -35,11 +36,11 @@ class VariantsApi {
       'sort': sort,
     });
     
-    print('🔍 API Response type: ${res.data.runtimeType}');
+    debugPrint('🔍 API Response type: ${res.data.runtimeType}');
     
     if (res.data['data'] != null && (res.data['data'] as List).isNotEmpty) {
-      print('🔍 First item keys: ${(res.data['data'] as List).first.keys.toList()}');
-      print('🔍 First item region: ${(res.data['data'] as List).first['region_code']}');
+      debugPrint('🔍 First item keys: ${(res.data['data'] as List).first.keys.toList()}');
+      debugPrint('🔍 First item region: ${(res.data['data'] as List).first['region_code']}');
     }
     
     final data = (res.data['data'] as List).map((e) => Variant.fromJson(e)).toList();
@@ -47,61 +48,71 @@ class VariantsApi {
   }
 
   Future<Variant> getVariant(int articleId, {bool includeImages = true}) async {
-    print('🔵 GET variant: $articleId');
+    debugPrint('🔵 GET variant: $articleId');
     
     final res = await _client.dio.get('/variants/$articleId', queryParameters: {
       if (includeImages) 'include': 'images',
     });
     
-    print('🔍 Variant response type: ${res.data.runtimeType}');
-    print('🔍 Variant response keys: ${(res.data as Map).keys.toList()}');
+    debugPrint('🔍 Variant response type: ${res.data.runtimeType}');
+    debugPrint('🔍 Variant response keys: ${(res.data as Map).keys.toList()}');
     
     final j = res.data['data'] as Map<String, dynamic>;
     
-    print('📊 Raw data: article_id=${j['article_id']}, uid=${j['uid']}');
-    print('📊 Raw data: region=${j['region_code']}, material=${j['material_value']}');
+    debugPrint('📊 Raw data: article_id=${j['article_id']}, uid=${j['uid']}');
+    debugPrint('📊 Raw data: region=${j['region_code']}, material=${j['material_value']}');
     
     return Variant.fromJson({...j, ...?j['_raw']});
   }
 
   Future<List<VariantImage>> images(int articleId, {bool wm = true, bool abs = true}) async {
-    print('🔵 GET images: article_id=$articleId, wm=$wm, abs=$abs');
+    debugPrint('🔵 GET images: article_id=$articleId, wm=$wm, abs=$abs');
     
     final res = await _client.dio.get('/variants/$articleId/images', queryParameters: {
       'wm': wm ? 1 : 0,
       'abs': abs ? 1 : 0,
     });
     
-    print('🔍 Images response type: ${res.data.runtimeType}');
+    debugPrint('🔍 Images response type: ${res.data.runtimeType}');
     
     if (res.data is Map && res.data['data'] is List) {
       final imgList = res.data['data'] as List;
-      print('🖼️ Images count in response: ${imgList.length}');
+      debugPrint('🖼️ Images count in response: ${imgList.length}');
       
       if (imgList.isNotEmpty) {
-        print('🔗 First image raw: ${imgList[0]}');
+        debugPrint('🔗 First image raw: ${imgList[0]}');
       }
       
       final images = imgList.map((e) => VariantImage.fromJson(e)).toList();
       
       if (images.isNotEmpty) {
-        print('🔗 First image URL: ${images.first.url}');
-        print('🔗 First image URL_RAW: ${images.first.urlRaw}');
+        debugPrint('🔗 First image URL: ${images.first.url}');
+        debugPrint('🔗 First image URL_RAW: ${images.first.urlRaw}');
       }
       
       return images;
     }
     
-    print('⚠️ Unexpected response format for images');
+    debugPrint('⚠️ Unexpected response format for images');
     return [];
   }
 
   Future<String?> getFirstImageUrl(int articleId, {bool wm = true}) async {
     try {
       final imgs = await images(articleId, wm: wm, abs: true);
-      return imgs.isNotEmpty ? imgs.first.url : null;
+      if (imgs.isEmpty) return null;
+
+      final firstImage = imgs.first;
+      // Try primary URL first, fallback to remote URL
+      if (firstImage.url.isNotEmpty) {
+        return firstImage.url;
+      } else if (firstImage.remoteUrl != null && firstImage.remoteUrl!.isNotEmpty) {
+        debugPrint('🌐 Using remote URL for image_id=${firstImage.imageId}');
+        return firstImage.remoteUrl;
+      }
+      return null;
     } catch (e) {
-      print('⚠️ getFirstImageUrl error: $e');
+      debugPrint('⚠️ getFirstImageUrl error: $e');
       return null;
     }
   }

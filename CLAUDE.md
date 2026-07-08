@@ -46,11 +46,11 @@ flutter test test/widget_test.dart
 
 ### Build
 ```bash
-# Build APK (Android)
+# Build APK (Android) — dev config (default)
 flutter build apk
 
-# Build App Bundle (Android)
-flutter build appbundle
+# Build App Bundle (Android) — PROD config (store releases)
+flutter build appbundle --dart-define-from-file=env/prod.json
 
 # Build iOS
 flutter build ios
@@ -60,7 +60,7 @@ flutter build ios
 
 The app uses **Auth0 OIDC with PKCE** for secure authentication:
 
-- **Auth Configuration:** `lib/src/core/env.dart` contains Auth0 issuer, client ID, and redirect URLs
+- **Auth Configuration:** `lib/src/core/env.dart` reads Auth0 issuer, client ID, and redirect URLs from `--dart-define` (defaults = dev environment). Prod builds MUST pass `--dart-define-from-file=env/prod.json`; dev values live in `env/dev.json`.
 - **Auth Repository:** `lib/src/auth/auth_repository.dart` handles login, logout, token refresh
 - **Auth Controller:** `lib/src/auth/auth_controller.dart` manages auth state (StateNotifier)
 - **Token Storage:** Uses `flutter_secure_storage` via `lib/src/core/secure_storage.dart`

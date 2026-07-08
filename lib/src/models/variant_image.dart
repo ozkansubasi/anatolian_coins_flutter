@@ -7,6 +7,7 @@ class VariantImage {
   final int? ordering;
   final String url;
   final String urlRaw;
+  final String? remoteUrl;
 
   VariantImage({
     required this.imageId,
@@ -17,12 +18,14 @@ class VariantImage {
     this.ordering,
     required this.url,
     required this.urlRaw,
+    this.remoteUrl,
   });
 
   factory VariantImage.fromJson(Map<String, dynamic> j) {
     String url = j['url'] ?? '';
     String urlRaw = j['url_raw'] ?? '';
-    
+    String? remoteUrl = j['remote_url'];
+
     // Eğer relative URL ise absolute yap
     if (url.startsWith('/')) {
       url = 'https://www.numistr.org$url';
@@ -30,7 +33,7 @@ class VariantImage {
     if (urlRaw.startsWith('/')) {
       urlRaw = 'https://www.numistr.org$urlRaw';
     }
-    
+
     return VariantImage(
       imageId: j['image_id'] ?? 0,
       variantId: j['variant_id'] ?? 0,
@@ -40,6 +43,7 @@ class VariantImage {
       ordering: j['ordering'],
       url: url,
       urlRaw: urlRaw,
+      remoteUrl: remoteUrl,
     );
   }
 }

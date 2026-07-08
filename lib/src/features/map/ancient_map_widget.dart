@@ -1,0 +1,692 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:nb_utils/nb_utils.dart';
+import '../../core/region_data.dart';
+import '../../prokit_ui/numistr_colors.dart';
+import '../../l10n/app_localizations.dart';
+
+/// Antik Anadolu haritası için veri modelleri
+class AncientMapRegion {
+  final String name;
+  final String nameTr;
+  final double lat;
+  final double lng;
+  final String regionCode;
+  final String? desc;
+
+  AncientMapRegion({
+    required this.name,
+    required this.nameTr,
+    required this.lat,
+    required this.lng,
+    required this.regionCode,
+    this.desc,
+  });
+
+  factory AncientMapRegion.fromJson(Map<String, dynamic> json) {
+    return AncientMapRegion(
+      name: json['name'] ?? '',
+      nameTr: json['nameTr'] ?? json['name'] ?? '',
+      lat: (json['lat'] ?? 0).toDouble(),
+      lng: (json['lng'] ?? 0).toDouble(),
+      regionCode: json['regionCode'] ?? '',
+      desc: json['desc'],
+    );
+  }
+}
+
+class AncientMapMint {
+  final String name;
+  final String nameTr;
+  final double lat;
+  final double lng;
+  final String region;
+  final String? desc;
+
+  AncientMapMint({
+    required this.name,
+    required this.nameTr,
+    required this.lat,
+    required this.lng,
+    required this.region,
+    this.desc,
+  });
+
+  factory AncientMapMint.fromJson(Map<String, dynamic> json) {
+    return AncientMapMint(
+      name: json['name'] ?? '',
+      nameTr: json['nameTr'] ?? json['name'] ?? '',
+      lat: (json['lat'] ?? 0).toDouble(),
+      lng: (json['lng'] ?? 0).toDouble(),
+      region: json['region'] ?? '',
+      desc: json['desc'],
+    );
+  }
+}
+
+class AncientMapData {
+  final List<AncientMapRegion> regions;
+  final List<AncientMapMint> mints;
+
+  AncientMapData({required this.regions, required this.mints});
+
+  factory AncientMapData.fromJson(Map<String, dynamic> json) {
+    return AncientMapData(
+      regions: (json['regions'] as List?)
+              ?.map((r) => AncientMapRegion.fromJson(r))
+              .toList() ??
+          [],
+      mints: (json['mints'] as List?)
+              ?.map((m) => AncientMapMint.fromJson(m))
+              .toList() ??
+          [],
+    );
+  }
+}
+
+/// Antik harita widget'ı - flutter_map kullanarak OpenStreetMap tabanlı
+class AncientMapWidget extends StatefulWidget {
+  /// Odaklanılacak koordinatlar (opsiyonel)
+  final LatLng? focusPoint;
+
+  /// Vurgulanacak darphane adı (opsiyonel)
+  final String? highlightMint;
+
+  /// Bölge filtreleme (opsiyonel)
+  final String? filterRegion;
+
+  /// Tam ekran modunda mı
+  final bool isFullScreen;
+
+  /// Dışarıdan paylaşılan harita kontrolcüsü (opsiyonel).
+  /// Verilmezse widget kendi kontrolcüsünü oluşturur.
+  final MapController? controller;
+
+  const AncientMapWidget({
+    super.key,
+    this.focusPoint,
+    this.highlightMint,
+    this.filterRegion,
+    this.isFullScreen = false,
+    this.controller,
+  });
+
+  @override
+  State<AncientMapWidget> createState() => _AncientMapWidgetState();
+}
+
+class _AncientMapWidgetState extends State<AncientMapWidget> {
+  AncientMapData? _mapData;
+  bool _loading = true;
+  String? _error;
+  // Dışarıdan kontrolcü verilmişse onu kullan, yoksa kendi kontrolcümüzü oluştur.
+  late final MapController _mapController = widget.controller ?? MapController();
+
+  // Görüntüleme seçenekleri
+  bool _showRegionLabels = true;
+  bool _showMintMarkers = true;
+
+  // Seçili marker
+  AncientMapMint? _selectedMint;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMapData();
+  }
+
+  Future<void> _loadMapData() async {
+    try {
+      final jsonString = await rootBundle.loadString('assets/data/ancient_map_data.json');
+      final jsonData = json.decode(jsonString);
+      setState(() {
+        _mapData = AncientMapData.fromJson(jsonData);
+        _loading = false;
+      });
+
+      // Vurgulu mint varsa onu bul ve seç
+      if (widget.highlightMint != null && _mapData != null) {
+        final mint = _mapData!.mints.firstWhere(
+          (m) => m.name.toLowerCase() == widget.highlightMint!.toLowerCase() ||
+                 m.nameTr.toLowerCase() == widget.highlightMint!.toLowerCase(),
+          orElse: () => _mapData!.mints.first,
+        );
+        setState(() => _selectedMint = mint);
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    if (_loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: numPrimary),
+      );
+    }
+
+    if (_error != null || _mapData == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
+            16.height,
+            Text(
+              l10n.translate('map_load_error'),
+              style: boldTextStyle(size: 16),
+            ),
+            8.height,
+            Text(
+              _error ?? 'Unknown error',
+              style: secondaryTextStyle(size: 12),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Başlangıç konumu
+    final initialCenter = widget.focusPoint ?? const LatLng(38.5, 32.0); // Anadolu merkezi
+    final initialZoom = widget.focusPoint != null ? 8.0 : 6.0;
+
+    return Stack(
+      children: [
+        // Harita
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: initialCenter,
+            initialZoom: initialZoom,
+            minZoom: 4,
+            maxZoom: 12,
+            onTap: (_, __) {
+              setState(() => _selectedMint = null);
+            },
+          ),
+          children: [
+            // Antik harita görünümü - Stamen Watercolor benzeri
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.anatoliancoins.app',
+              tileBuilder: _antiqueTileBuilder,
+            ),
+
+            // Bölge etiketleri
+            if (_showRegionLabels) _buildRegionLabels(),
+
+            // Darphane markerları
+            if (_showMintMarkers) _buildMintMarkers(),
+          ],
+        ),
+
+        // Kontrol paneli (tam ekran modunda)
+        if (widget.isFullScreen)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: _buildControlPanel(l10n),
+          ),
+
+        // Seçili darphane bilgi kartı
+        if (_selectedMint != null)
+          Positioned(
+            bottom: 16,
+            left: 16,
+            right: 16,
+            child: _buildMintInfoCard(l10n),
+          ),
+
+        // Lejant
+        if (widget.isFullScreen)
+          Positioned(
+            bottom: _selectedMint != null ? 140 : 16,
+            left: 16,
+            child: _buildLegend(l10n),
+          ),
+      ],
+    );
+  }
+
+  /// Tile'ları antik görünümlü yapar
+  Widget _antiqueTileBuilder(BuildContext context, Widget tileWidget, TileImage tile) {
+    return ColorFiltered(
+      colorFilter: const ColorFilter.matrix(<double>[
+        0.393, 0.769, 0.189, 0, 0,
+        0.349, 0.686, 0.168, 0, 0,
+        0.272, 0.534, 0.131, 0, 0,
+        0, 0, 0, 1, 0,
+      ]),
+      child: tileWidget,
+    );
+  }
+
+  /// Bölge etiketlerini oluşturur
+  Widget _buildRegionLabels() {
+    final filteredRegions = widget.filterRegion != null
+        ? _mapData!.regions.where((r) => r.regionCode == widget.filterRegion).toList()
+        : _mapData!.regions;
+
+    return MarkerLayer(
+      markers: filteredRegions.map((region) {
+        final color = getRegionColor(region.regionCode.replaceAll('-coins', ''));
+        return Marker(
+          point: LatLng(region.lat, region.lng),
+          width: 120,
+          height: 40,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: color, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Text(
+              region.nameTr,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  /// Darphane markerlarını oluşturur
+  Widget _buildMintMarkers() {
+    final filteredMints = widget.filterRegion != null
+        ? _mapData!.mints.where((m) => m.region == widget.filterRegion).toList()
+        : _mapData!.mints;
+
+    return MarkerLayer(
+      markers: filteredMints.map((mint) {
+        final isHighlighted = widget.highlightMint != null &&
+            (mint.name.toLowerCase() == widget.highlightMint!.toLowerCase() ||
+             mint.nameTr.toLowerCase() == widget.highlightMint!.toLowerCase());
+        final isSelected = _selectedMint == mint;
+        final color = getRegionColor(mint.region.replaceAll('-coins', ''));
+
+        return Marker(
+          point: LatLng(mint.lat, mint.lng),
+          width: isHighlighted || isSelected ? 40 : 28,
+          height: isHighlighted || isSelected ? 40 : 28,
+          child: GestureDetector(
+            onTap: () {
+              setState(() => _selectedMint = mint);
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: isHighlighted || isSelected
+                    ? numPrimary
+                    : color.withValues(alpha: 0.9),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: isHighlighted || isSelected ? 3 : 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: (isHighlighted || isSelected ? numPrimary : color).withValues(alpha: 0.4),
+                    blurRadius: isHighlighted || isSelected ? 8 : 4,
+                    spreadRadius: isHighlighted || isSelected ? 2 : 0,
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.location_on,
+                size: isHighlighted || isSelected ? 24 : 16,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  /// Kontrol paneli
+  Widget _buildControlPanel(AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildControlButton(
+            icon: Icons.zoom_in,
+            onPressed: () => _mapController.move(
+              _mapController.camera.center,
+              _mapController.camera.zoom + 1,
+            ),
+          ),
+          4.height,
+          _buildControlButton(
+            icon: Icons.zoom_out,
+            onPressed: () => _mapController.move(
+              _mapController.camera.center,
+              _mapController.camera.zoom - 1,
+            ),
+          ),
+          const Divider(height: 16),
+          _buildToggleButton(
+            icon: Icons.label,
+            isActive: _showRegionLabels,
+            onPressed: () => setState(() => _showRegionLabels = !_showRegionLabels),
+            tooltip: l10n.translate('show_regions'),
+          ),
+          4.height,
+          _buildToggleButton(
+            icon: Icons.location_on,
+            isActive: _showMintMarkers,
+            onPressed: () => setState(() => _showMintMarkers = !_showMintMarkers),
+            tooltip: l10n.translate('show_mints'),
+          ),
+          const Divider(height: 16),
+          _buildControlButton(
+            icon: Icons.center_focus_strong,
+            onPressed: () => _mapController.move(
+              const LatLng(38.5, 32.0),
+              6.0,
+            ),
+            tooltip: l10n.translate('reset_view'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    String? tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip ?? '',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.brown.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 20, color: Colors.brown.shade700),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggleButton({
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onPressed,
+    String? tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip ?? '',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: isActive ? numPrimary : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 20, color: isActive ? Colors.white : Colors.grey.shade600),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Darphane bilgi kartı
+  Widget _buildMintInfoCard(AppLocalizations l10n) {
+    if (_selectedMint == null) return const SizedBox.shrink();
+
+    final mint = _selectedMint!;
+    final color = getRegionColor(mint.region.replaceAll('-coins', ''));
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Bölge rengi göstergesi
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+              border: Border.all(color: color, width: 2),
+            ),
+            child: Icon(Icons.account_balance, color: color, size: 24),
+          ),
+          16.width,
+          // Darphane bilgileri
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  mint.nameTr,
+                  style: boldTextStyle(size: 16),
+                ),
+                4.height,
+                Text(
+                  mint.desc ?? l10n.translate('ancient_mint'),
+                  style: secondaryTextStyle(size: 12),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                4.height,
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 12, color: Colors.grey.shade500),
+                    4.width,
+                    Text(
+                      '${mint.lat.toStringAsFixed(3)}, ${mint.lng.toStringAsFixed(3)}',
+                      style: secondaryTextStyle(size: 10),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Kapat butonu
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => setState(() => _selectedMint = null),
+            iconSize: 20,
+            color: Colors.grey.shade600,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Lejant
+  Widget _buildLegend(AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            l10n.translate('legend'),
+            style: boldTextStyle(size: 12),
+          ),
+          8.height,
+          _buildLegendItem(Icons.location_on, numPrimary, l10n.translate('highlighted_mint')),
+          4.height,
+          _buildLegendItem(Icons.location_on, Colors.blue, l10n.translate('mint_location')),
+          4.height,
+          _buildLegendItem(Icons.label, Colors.brown, l10n.translate('region_label')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(IconData icon, Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        6.width,
+        Text(label, style: secondaryTextStyle(size: 10)),
+      ],
+    );
+  }
+}
+
+/// Tam ekran antik harita sayfası - yatay modda gösterim
+class FullScreenAncientMapPage extends StatefulWidget {
+  final String? coordinates;
+  final String? mintName;
+  final String? regionCode;
+
+  const FullScreenAncientMapPage({
+    super.key,
+    this.coordinates,
+    this.mintName,
+    this.regionCode,
+  });
+
+  @override
+  State<FullScreenAncientMapPage> createState() => _FullScreenAncientMapPageState();
+}
+
+class _FullScreenAncientMapPageState extends State<FullScreenAncientMapPage> {
+  LatLng? _focusPoint;
+  final MapController _mapController = MapController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Yatay moda zorla
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+
+    // Koordinatları parse et
+    if (widget.coordinates != null) {
+      try {
+        final coords = widget.coordinates!.split(',');
+        if (coords.length == 2) {
+          final lat = double.parse(coords[0].trim());
+          final lng = double.parse(coords[1].trim());
+          _focusPoint = LatLng(lat, lng);
+        }
+      } catch (e) {
+        // Parse hatası - varsayılan konum kullan
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    // Normal oryantasyona geri dön
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5E6D3), // Antik kağıt rengi
+      appBar: AppBar(
+        backgroundColor: Colors.brown.shade700,
+        foregroundColor: Colors.white,
+        title: Text(
+          widget.mintName ?? l10n.translate('ancient_map'),
+          style: boldTextStyle(size: 16, color: Colors.white),
+        ),
+        actions: [
+          if (_focusPoint != null)
+            IconButton(
+              icon: const Icon(Icons.my_location),
+              onPressed: () => _mapController.move(_focusPoint!, 9.0),
+              tooltip: l10n.translate('go_to_location'),
+            ),
+        ],
+      ),
+      body: AncientMapWidget(
+        controller: _mapController,
+        focusPoint: _focusPoint,
+        highlightMint: widget.mintName,
+        filterRegion: widget.regionCode,
+        isFullScreen: true,
+      ),
+    );
+  }
+}

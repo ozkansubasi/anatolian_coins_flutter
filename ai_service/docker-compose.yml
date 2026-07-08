@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # NumisTR AI Recognition Service
+  ai-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: numistr_ai
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Model paths
+      - EFFICIENTNET_PATH=/app/models/efficientnet_b3_coins_quantized.onnx
+      - FAISS_INDEX_PATH=/app/index/coins.index
+      - FAISS_METADATA_PATH=/app/index/metadata.json
+
+      # Recognition settings
+      - TOP_K=50
+      - CONFIDENCE_THRESHOLD=0.6
+      - OCR_MIN_CONFIDENCE=0.5
+
+      # Google AutoML (optional)
+      - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID:-}
+      - GOOGLE_MODEL_ID=${GOOGLE_MODEL_ID:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/google-credentials.json
+
+      # Database (for metadata queries)
+      - DB_HOST=${DB_HOST:-localhost}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME:-joomla}
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD:-}
+
+      # FastAPI settings
+      - WORKERS=4
+      - LOG_LEVEL=info
+
+    volumes:
+      # Mount models and index (for easy updates without rebuild)
+      - ./models:/app/models:ro
+      - ./index:/app/index:ro
+
+      # Mount Google credentials if using AutoML
+      - ./credentials:/app/credentials:ro
+
+      # Optional: mount logs
+      - ./logs:/app/logs
+
+    networks:
+      - numistr-network
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Resource limits (adjust based on server capacity)
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '2'
+          memory: 2G
+
+  # Optional: Nginx reverse proxy for production
+  # DISABLED - Using system Nginx instead
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: numistr_nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - ai-service
+  #   networks:
+  #     - numistr-network
+
+networks:
+  numistr-network:
+    driver: bridge

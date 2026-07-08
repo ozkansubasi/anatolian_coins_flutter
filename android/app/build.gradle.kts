@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -5,8 +8,15 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Upload keystore bilgileri android/key.properties'ten okunur (git'e girmez)
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    namespace = "com.example.anatolian_coins"
+    namespace = "com.anatoliancoins.app"
     compileSdk = flutter.compileSdkVersion
 
     // ❗ NDK sürümünü pluginlerin istediği 27.0.12077973'e sabitle
@@ -23,8 +33,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Uygulama kimliğini kendi paket adına göre değiştirebilirsin.
-        applicationId = "com.example.anatolian_coins"
+        applicationId = "com.anatoliancoins.app"
 
         // Flutter değişkenleri
         minSdk = flutter.minSdkVersion
@@ -39,14 +48,35 @@ android {
         )
     }
 
+    signingConfigs {
+        if (keystorePropertiesFile.exists()) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Şimdilik debug imzası ile; release için kendi imzanı ekleyebilirsin.
-            signingConfig = signingConfigs.getByName("debug")
+            // key.properties varsa upload anahtarıyla, yoksa debug imzasıyla
+            // (Play'e yükleme için key.properties ZORUNLU)
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Required for flutter_appauth (Chrome Custom Tabs)
+    implementation("androidx.browser:browser:1.8.0")
 }

@@ -1,6 +1,6 @@
 <!-- AndroidManifest.xml (main) -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.anatolian_coins">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- İnternet izni -->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -11,6 +11,25 @@
 	<uses-permission android:name="android.permission.CAMERA"/>
 	<uses-feature android:name="android.hardware.camera" android:required="false"/>
 	<uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+
+    <!-- Android 11+ browser intent requirement -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="http" />
+        </intent>
+        <!-- Explicit browser packages for Auth0 -->
+        <package android:name="com.android.chrome" />
+        <package android:name="com.android.browser" />
+        <package android:name="com.sec.android.app.sbrowser" />
+        <package android:name="org.mozilla.firefox" />
+    </queries>
 
     <application
         android:label="Anatolian Coins"
@@ -36,7 +55,16 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- Auth0 / flutter_appauth redirect (scheme placeholder'ını build.gradle.kts'te verdik) -->
+        </activity>
+
+        <!-- Separate activity for auth redirect handling -->
+        <activity
+            android:name="net.openid.appauth.RedirectUriReceiverActivity"
+            android:exported="true"
+            android:theme="@style/AuthRedirectTheme"
+            tools:node="replace">
+
+            <!-- Auth0 callback -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
@@ -44,6 +72,16 @@
                 <data
                     android:scheme="${appAuthRedirectScheme}"
                     android:host="callback"/>
+            </intent-filter>
+
+            <!-- Logout callback -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="${appAuthRedirectScheme}"
+                    android:host="logout"/>
             </intent-filter>
         </activity>
 

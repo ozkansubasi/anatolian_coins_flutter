@@ -1,0 +1,18 @@
+# NumisTR Database Configuration
+# Copy this file to database.yaml and fill in your credentials
+
+database:
+  host: localhost
+  port: 3306
+  user: your_db_user
+  password: your_db_password
+  database: your_joomla_database
+
+# Image storage path (absolute path to sikke directory)
+image_base_path: /path/to/sikke
+
+# Optional: Connection pool settings
+pool:
+  max_connections: 10
+  min_connections: 2
+  timeout: 30
