@@ -74,7 +74,8 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           8.width,
           Text(
             l10n.translate('app_name'),
-            style: boldTextStyle(size: 16, color: isDark ? Colors.white : numTextPrimary),
+            // Sayfa başlığı standardı: NumTypo.title (18), Inter w600
+            style: boldTextStyle(size: 18, color: isDark ? Colors.white : numTextPrimary),
           ),
         ],
       ),
@@ -142,7 +143,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
     ];
 
     return Container(
-      height: 180,
+      height: 150,
       margin: const EdgeInsets.only(top: 16),
       child: Stack(
         alignment: Alignment.bottomCenter,
@@ -263,7 +264,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           },
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
               gradient: numGradientPrimary,
               borderRadius: BorderRadius.circular(16),
@@ -272,14 +273,14 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
               children: [
                 // Icon
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha(50),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.qr_code_scanner,
-                    size: 40,
+                    size: 28,
                     color: Colors.white,
                   ),
                 ),
@@ -625,7 +626,7 @@ class _BannerCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             decoration: BoxDecoration(
               gradient: gradient,
               borderRadius: BorderRadius.circular(16),
@@ -639,10 +640,11 @@ class _BannerCard extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: boldTextStyle(size: 22, color: Colors.white),
+                        // Kart başlığı standardı: NumTypo.title (18)
+                        style: boldTextStyle(size: 18, color: Colors.white),
                         maxLines: 2,
                       ),
-                      8.height,
+                      4.height,
                       Text(
                         subtitle,
                         style: secondaryTextStyle(size: 14, color: Colors.white70),
@@ -652,12 +654,12 @@ class _BannerCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha(40),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(icon, size: 48, color: Colors.white),
+                  child: Icon(icon, size: 28, color: Colors.white),
                 ),
               ],
             ),
@@ -760,7 +762,7 @@ class _QuickFeatureCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      width: 85,
+      width: 96,
       height: 100,
       margin: const EdgeInsets.symmetric(horizontal: 4),
       child: Material(
@@ -781,12 +783,12 @@ class _QuickFeatureCard extends StatelessWidget {
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: feature.color.withAlpha(30),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(feature.icon, color: feature.color, size: 20),
+                      child: Icon(feature.icon, color: feature.color, size: 22),
                     ),
                     if (feature.badge != null)
                       Positioned(
@@ -810,14 +812,18 @@ class _QuickFeatureCard extends StatelessWidget {
                       ),
                   ],
                 ),
-                4.height,
+                6.height,
+                // Tek satır + sığmazsa küçülterek sığdır ("Koleksiyonlarım"
+                // gibi uzun etiketlerin kelime ortasından kırılmasını önler)
                 Flexible(
-                  child: Text(
-                    feature.title,
-                    style: secondaryTextStyle(size: 10, color: isDark ? Colors.white70 : numTextPrimary),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      feature.title,
+                      style: secondaryTextStyle(size: 12, color: isDark ? Colors.white70 : numTextPrimary),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                    ),
                   ),
                 ),
               ],
@@ -932,7 +938,7 @@ class _MenuBottomSheet extends StatelessWidget {
               children: [
                 Text(
                   l10n.translate('menu'),
-                  style: boldTextStyle(size: 20),
+                  style: boldTextStyle(size: 18),
                 ),
                 16.height,
                 // Regions option
