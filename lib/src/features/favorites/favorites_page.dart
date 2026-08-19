@@ -242,7 +242,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
           Text(
             'Sikke detay sayfasından favorilere ekleyebilirsiniz',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               color: Colors.grey[500],
             ),
             textAlign: TextAlign.center,

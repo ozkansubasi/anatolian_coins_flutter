@@ -229,7 +229,7 @@ Widget numListCard({
               numHeading(title, size: 16, maxLines: 2),
               if (subtitle != null) ...[
                 const SizedBox(height: 4),
-                numBody(subtitle, size: 13, maxLines: 2),
+                numBody(subtitle, size: 14, maxLines: 2),
               ],
             ],
           ),

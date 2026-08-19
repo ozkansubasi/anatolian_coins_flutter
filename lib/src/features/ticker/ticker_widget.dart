@@ -198,7 +198,7 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
                 TextSpan(
                   text: currentItem.factTitle,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: textColor,
                     letterSpacing: 0.2,
@@ -207,7 +207,7 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
                 TextSpan(
                   text: ': ',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: textColor.withValues(alpha: 0.9),
                   ),

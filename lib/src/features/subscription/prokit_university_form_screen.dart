@@ -379,7 +379,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                         8.height,
                         Text(
                           l10n.translate('id_card_info'),
-                          style: secondaryTextStyle(size: 13),
+                          style: secondaryTextStyle(size: 14),
                         ),
                         16.height,
 
@@ -415,7 +415,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                                 Expanded(
                                   child: Text(
                                     _submitError!,
-                                    style: primaryTextStyle(size: 13, color: numError),
+                                    style: primaryTextStyle(size: 14, color: numError),
                                   ),
                                 ),
                               ],
@@ -503,7 +503,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                 8.height,
                 Text(
                   l10n.translate('university_pro_info_desc'),
-                  style: primaryTextStyle(size: 13),
+                  style: primaryTextStyle(size: 14),
                 ),
               ],
             ),
@@ -534,7 +534,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
               backgroundColor: numTextHint.withValues(alpha: 0.2),
               borderRadius: radius(8),
             ),
-            child: Text(subtitle, style: secondaryTextStyle(size: 11)),
+            child: Text(subtitle, style: secondaryTextStyle(size: 12)),
           ),
         ],
       ],
@@ -627,7 +627,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                               4.width,
                               Text(
                                 l10n.translate('uploaded'),
-                                style: boldTextStyle(size: 11, color: Colors.white),
+                                style: boldTextStyle(size: 12, color: Colors.white),
                               ),
                             ],
                           ),
@@ -715,7 +715,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                 Text(
                   l10n.translate('interest_$interest'),
                   style: boldTextStyle(
-                    size: 13,
+                    size: 14,
                     color: isSelected ? Colors.white : numTextSecondary,
                   ),
                 ),

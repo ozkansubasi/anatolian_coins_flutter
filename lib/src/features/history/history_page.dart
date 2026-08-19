@@ -466,7 +466,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               color: Colors.grey[500],
             ),
             textAlign: TextAlign.center,

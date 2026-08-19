@@ -98,7 +98,7 @@ class CollectionsPage extends ConsumerWidget {
           Text(
             'Sikkelerinizi organize etmek için koleksiyon oluşturun',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               color: Colors.grey[500],
             ),
             textAlign: TextAlign.center,
@@ -224,7 +224,7 @@ class _CollectionListItem extends ConsumerWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 color: Colors.grey[600],
               ),
             ),

@@ -607,7 +607,7 @@ class _SocialLoginButton extends StatelessWidget {
             12.width,
             Text(
               label,
-              style: boldTextStyle(size: 15, color: textColor),
+              style: boldTextStyle(size: 16, color: textColor),
             ),
           ],
         ),

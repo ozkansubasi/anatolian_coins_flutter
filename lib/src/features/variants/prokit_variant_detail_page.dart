@@ -454,7 +454,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                           children: [
                             Text(
                               l10n.translate('obverse'),
-                              style: boldTextStyle(size: 13, color: Colors.blue),
+                              style: boldTextStyle(size: 14, color: Colors.blue),
                             ),
                             4.height,
                             Text(
@@ -492,7 +492,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                           children: [
                             Text(
                               l10n.translate('reverse'),
-                              style: boldTextStyle(size: 13, color: Colors.red),
+                              style: boldTextStyle(size: 14, color: Colors.red),
                             ),
                             4.height,
                             Text(
@@ -623,7 +623,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                             24.height,
                             Text(
                               l10n.translate('tap_for_fullscreen'),
-                              style: secondaryTextStyle(size: 11, color: Colors.white60),
+                              style: secondaryTextStyle(size: 12, color: Colors.white60),
                             ),
                           ],
                         ),
@@ -932,10 +932,10 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
         children: [
           SizedBox(
             width: 100,
-            child: Text(label, style: secondaryTextStyle(size: 13)),
+            child: Text(label, style: secondaryTextStyle(size: 14)),
           ),
           Expanded(
-            child: Text(value, style: primaryTextStyle(size: 13)),
+            child: Text(value, style: primaryTextStyle(size: 14)),
           ),
         ],
       ),

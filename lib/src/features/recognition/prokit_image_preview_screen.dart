@@ -619,7 +619,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
         Expanded(
           child: Text(
             text,
-            style: primaryTextStyle(size: 13, color: Colors.grey[300]),
+            style: primaryTextStyle(size: 14, color: Colors.grey[300]),
           ),
         ),
       ],

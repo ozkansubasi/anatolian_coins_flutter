@@ -348,7 +348,7 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
           Text(
             'Sikke detay sayfasından koleksiyona ekleyebilirsiniz',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               color: Colors.grey[500],
             ),
             textAlign: TextAlign.center,

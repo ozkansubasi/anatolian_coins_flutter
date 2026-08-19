@@ -425,7 +425,7 @@ class _CategoryChip extends StatelessWidget {
         child: Text(
           label,
           style: boldTextStyle(
-            size: 13,
+            size: 14,
             color: isSelected ? Colors.white : numTextSecondary,
           ),
         ),
@@ -480,7 +480,7 @@ class _ArticleCard extends StatelessWidget {
                     ),
                     child: Text(
                       article.category,
-                      style: boldTextStyle(size: 11, color: numPrimary),
+                      style: boldTextStyle(size: 12, color: numPrimary),
                     ),
                   ),
                   const Spacer(),
@@ -516,7 +516,7 @@ class _ArticleCard extends StatelessWidget {
                 children: [
                   Text(
                     l10n.translate('read_more'),
-                    style: boldTextStyle(size: 13, color: numPrimary),
+                    style: boldTextStyle(size: 14, color: numPrimary),
                   ),
                   4.width,
                   Icon(Icons.arrow_forward_ios, size: 12, color: numPrimary),

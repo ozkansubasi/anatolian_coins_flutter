@@ -103,7 +103,7 @@ class _ArticleCard extends StatelessWidget {
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: theme.colorScheme.primary,
-                      fontSize: 13,
+                      fontSize: 14,
                     ),
                   ),
                   const Spacer(),
@@ -137,7 +137,7 @@ class _ArticleCard extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.onPrimaryContainer,
                   height: 1.2,
-                  fontSize: 15,
+                  fontSize: 16,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -177,7 +177,7 @@ class _ArticleCard extends StatelessWidget {
                       Text(
                         formattedDate,
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           color: theme.colorScheme.onPrimaryContainer
                               .withOpacity(0.6),
                         ),

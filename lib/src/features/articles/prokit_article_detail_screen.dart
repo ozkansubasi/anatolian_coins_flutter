@@ -152,7 +152,7 @@ class _ArticleContent extends StatelessWidget {
                     // Title
                     Text(
                       article.title,
-                      style: boldTextStyle(size: 17),
+                      style: boldTextStyle(size: 18),
                     ),
                     16.height,
 

@@ -689,14 +689,14 @@ class _CoinGridCard extends StatelessWidget {
                   children: [
                     Text(
                       variant.title,
-                      style: boldTextStyle(size: 9),
+                      style: boldTextStyle(size: 10),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const Spacer(),
                     Row(
                       children: [
-                        Icon(Icons.location_on_outlined, size: 9, color: numTextSecondary),
+                        Icon(Icons.location_on_outlined, size: 10, color: numTextSecondary),
                         2.width,
                         Expanded(
                           child: Text(
@@ -1086,7 +1086,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                             4.height,
                             Text(
                               l10n.translate('hide_no_images'),
-                              style: secondaryTextStyle(size: 11, color: numTextSecondary),
+                              style: secondaryTextStyle(size: 12, color: numTextSecondary),
                             ),
                           ],
                         ),

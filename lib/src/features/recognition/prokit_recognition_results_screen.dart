@@ -288,12 +288,12 @@ class _ProkitRecognitionResultsScreenState
                   children: [
                     Text(
                       l10n.translate('showing_top_matches'),
-                      style: boldTextStyle(size: 13, color: numPrimary),
+                      style: boldTextStyle(size: 14, color: numPrimary),
                     ),
                     4.height,
                     Text(
                       '${filteredMatches.length} sonuç bulundu',
-                      style: secondaryTextStyle(size: 11, color: numTextSecondary),
+                      style: secondaryTextStyle(size: 12, color: numTextSecondary),
                     ),
                   ],
                 ),
@@ -572,7 +572,7 @@ class _ProkitRecognitionResultsScreenState
           Expanded(
             child: Text(
               text,
-              style: secondaryTextStyle(size: 11, color: numTextSecondary),
+              style: secondaryTextStyle(size: 12, color: numTextSecondary),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -734,7 +734,7 @@ class _ProkitRecognitionResultsScreenState
       children: [
         Text(title, style: boldTextStyle(size: 14, color: numTextPrimary)),
         8.height,
-        Text(text, style: secondaryTextStyle(size: 13, color: numTextSecondary)),
+        Text(text, style: secondaryTextStyle(size: 14, color: numTextSecondary)),
       ],
     );
   }

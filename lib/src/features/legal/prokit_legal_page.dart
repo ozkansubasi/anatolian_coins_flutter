@@ -90,7 +90,7 @@ class ProkitLegalPage extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       '${l10n.translate('last_updated')}: $lastUpdated',
-                      style: primaryTextStyle(size: 13, color: numInfo),
+                      style: primaryTextStyle(size: 14, color: numInfo),
                     ),
                   ),
                 ],
@@ -135,7 +135,7 @@ class ProkitLegalPage extends ConsumerWidget {
                   12.height,
                   Text(
                     'destek@numistr.org',
-                    style: primaryTextStyle(size: 13, color: numPrimary),
+                    style: primaryTextStyle(size: 14, color: numPrimary),
                   ),
                 ],
               ),
@@ -179,14 +179,14 @@ class ProkitLegalPage extends ConsumerWidget {
           ),
           title: Text(
             l10n.translate(section.titleKey),
-            style: boldTextStyle(size: 15, color: numTextPrimary),
+            style: boldTextStyle(size: 16, color: numTextPrimary),
           ),
           children: [
             // Section content
             if (section.contentKey != null)
               Text(
                 l10n.translate(section.contentKey!),
-                style: secondaryTextStyle(size: 13, height: 1.6),
+                style: secondaryTextStyle(size: 14, height: 1.6),
               ),
 
             // Bullet points
@@ -212,7 +212,7 @@ class ProkitLegalPage extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             l10n.translate(key),
-                            style: secondaryTextStyle(size: 13, height: 1.5),
+                            style: secondaryTextStyle(size: 14, height: 1.5),
                           ),
                         ),
                       ],
@@ -238,7 +238,7 @@ class ProkitLegalPage extends ConsumerWidget {
                       children: [
                         Text(
                           l10n.translate(sub.titleKey),
-                          style: boldTextStyle(size: 13, color: numTextPrimary),
+                          style: boldTextStyle(size: 14, color: numTextPrimary),
                         ),
                         8.height,
                         Text(

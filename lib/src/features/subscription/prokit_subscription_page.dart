@@ -617,7 +617,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
               children: [
                 Expanded(
                   flex: 2,
-                  child: Text(l10n.translate('feature'), style: boldTextStyle(size: 13)),
+                  child: Text(l10n.translate('feature'), style: boldTextStyle(size: 14)),
                 ),
                 Expanded(
                   child: Text(
@@ -635,7 +635,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                     ),
                     child: Text(
                       l10n.translate('pro_tier'),
-                      style: boldTextStyle(size: 11, color: white),
+                      style: boldTextStyle(size: 12, color: white),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -669,7 +669,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
         children: [
           Expanded(
             flex: 2,
-            child: Text(feature, style: primaryTextStyle(size: 13)),
+            child: Text(feature, style: primaryTextStyle(size: 14)),
           ),
           Expanded(
             child: _buildComparisonValue(freeValue, false),

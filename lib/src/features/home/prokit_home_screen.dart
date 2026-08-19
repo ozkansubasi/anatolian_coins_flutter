@@ -298,7 +298,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
                         authState.authenticated
                             ? l10n.translate('coin_recognition_subtitle')
                             : l10n.translate('sign_in_to_scan'),
-                        style: secondaryTextStyle(size: 13, color: Colors.white70),
+                        style: secondaryTextStyle(size: 14, color: Colors.white70),
                       ),
                     ],
                   ),
@@ -436,7 +436,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           12.height,
           Text(
             l10n.translate('about_numistr_text'),
-            style: secondaryTextStyle(size: 13, color: numTextSecondary),
+            style: secondaryTextStyle(size: 14, color: numTextSecondary),
           ),
           16.height,
           Row(
@@ -722,7 +722,7 @@ class _RegionChip extends StatelessWidget {
               width: 60,
               child: Text(
                 regionName,
-                style: secondaryTextStyle(size: 9, color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : numTextPrimary),
+                style: secondaryTextStyle(size: 10, color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : numTextPrimary),
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -802,7 +802,7 @@ class _QuickFeatureCard extends StatelessWidget {
                             feature.badge!,
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 9,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -814,7 +814,7 @@ class _QuickFeatureCard extends StatelessWidget {
                 Flexible(
                   child: Text(
                     feature.title,
-                    style: secondaryTextStyle(size: 9, color: isDark ? Colors.white70 : numTextPrimary),
+                    style: secondaryTextStyle(size: 10, color: isDark ? Colors.white70 : numTextPrimary),
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

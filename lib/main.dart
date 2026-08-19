@@ -8,11 +8,15 @@ import 'src/app_router.dart';
 import 'src/l10n/app_localizations.dart';
 import 'src/core/locale_provider.dart';
 import 'src/core/app_theme.dart';
+import 'src/core/app_typography.dart';
 import 'src/core/env.dart';
 import 'src/features/settings/settings_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Tipografi seti: nb_utils (ProKit) stil varsayılanlarını tek kaynağa bağlar
+  initNumistrTypography();
 
   // Release build'de debug loglarını tamamen sustur
   if (kReleaseMode) {
