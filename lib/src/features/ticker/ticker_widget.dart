@@ -23,7 +23,7 @@ class NumistrTicker extends ConsumerStatefulWidget {
     this.category,
     this.language,
     this.itemCount = 20,
-    this.height = 68, // Height for 3 lines of text
+    this.height = 88, // Height for 4 lines of text
     this.backgroundColor,
     this.textColor,
     this.fadeInterval = const Duration(seconds: 8), // Time between transitions
@@ -225,7 +225,7 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
               ],
             ),
             textAlign: TextAlign.center,
-            maxLines: 3, // Increased from 2 to 3 lines
+            maxLines: 4, // Uzun ipuçlarının sonu kesilmesin (3→4 satır)
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -243,7 +243,7 @@ class RegionTicker extends ConsumerWidget {
   const RegionTicker({
     super.key,
     required this.region,
-    this.height = 68, // Height for 3 lines of text
+    this.height = 88, // Height for 4 lines of text
   });
 
   @override

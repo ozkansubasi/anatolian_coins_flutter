@@ -74,8 +74,14 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
       final uri = GoRouterState.of(context).uri;
       final regionParam = uri.queryParameters['region'];
       final mintParam = uri.queryParameters['mint'];
+      final searchParam = uri.queryParameters['search'];
 
       bool hasParams = false;
+
+      if (searchParam != null && searchParam.trim().isNotEmpty) {
+        _searchCtrl.text = searchParam.trim();
+        hasParams = true;
+      }
 
       if (regionParam != null && regionParam.trim().isNotEmpty) {
         _selectedRegion = regionParam.trim();
@@ -471,7 +477,14 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     return RefreshIndicator(
       onRefresh: () => _load(reset: true),
       color: numPrimary,
-      child: _isGridView ? _buildGridView() : _buildListView(),
+      // Kalıcı scrollbar: listenin uzunluğu/konumu görünür olsun
+      child: Scrollbar(
+        controller: _scroll,
+        thumbVisibility: true,
+        interactive: true,
+        radius: const Radius.circular(8),
+        child: _isGridView ? _buildGridView() : _buildListView(),
+      ),
     );
   }
 

@@ -204,7 +204,8 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         numSectionHeader(
           title: l10n.translate('ancient_regions'),
           actionText: l10n.translate('see_all'),
-          onAction: () => context.go('/browse'),
+          // Tümü → bölge dizini (sikke arama değil)
+          onAction: () => context.go('/regions'),
         ),
         SizedBox(
           height: 100,

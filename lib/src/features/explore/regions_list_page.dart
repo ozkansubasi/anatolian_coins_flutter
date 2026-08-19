@@ -4,10 +4,24 @@ import 'package:nb_utils/nb_utils.dart';
 import '../../core/region_data.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../ticker/ticker_widget.dart';
 
-/// Tüm bölgeleri listeleyen sayfa
+/// Bölge dizini: tüm bölge kartları + tüm bölgelerden karışık ipuçları
+/// + arama. Bilerek sikke listesi YOK (10K+ varyantı burada listelemek
+/// anlamsız; liste bölge sayfalarında ve aramada).
 class RegionsListPage extends StatelessWidget {
   const RegionsListPage({super.key});
+
+  String _joomlaLanguage(BuildContext context) {
+    switch (Localizations.localeOf(context).languageCode) {
+      case 'tr':
+        return 'tr-TR';
+      case 'en':
+        return 'en-GB';
+      default:
+        return '*';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,23 +39,78 @@ class RegionsListPage extends StatelessWidget {
         backgroundColor: numPrimary,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: GridView.builder(
+      body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 1.2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-        ),
-        itemCount: regions.length,
-        itemBuilder: (context, index) {
-          final region = regions[index];
-          return _RegionCard(
-            regionCode: region.key,
-            regionName: region.value,
-            onTap: () => context.go('/browse?region=${region.key}'),
-          );
+        children: [
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 1.2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            itemCount: regions.length,
+            itemBuilder: (context, index) {
+              final region = regions[index];
+              return _RegionCard(
+                regionCode: region.key,
+                regionName: region.value,
+                onTap: () => context.go('/browse?region=${region.key}'),
+              );
+            },
+          ),
+          16.height,
+          // Tüm bölgelerden karışık ipuçları (region verilmez)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: NumistrTicker(language: _joomlaLanguage(context)),
+          ),
+          16.height,
+          _SearchField(l10n: l10n),
+        ],
+      ),
+    );
+  }
+}
+
+/// Aramayı /browse sayfasına taşıyan giriş alanı
+class _SearchField extends StatelessWidget {
+  final AppLocalizations l10n;
+  const _SearchField({required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? numCardDark : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        style: primaryTextStyle(size: 14),
+        textInputAction: TextInputAction.search,
+        onSubmitted: (q) {
+          final query = q.trim();
+          if (query.isNotEmpty) {
+            context.go('/browse?search=${Uri.encodeQueryComponent(query)}');
+          }
         },
+        decoration: InputDecoration(
+          hintText: l10n.translate('search_hint'),
+          hintStyle: secondaryTextStyle(size: 14),
+          prefixIcon: const Icon(Icons.search, color: numTextSecondary),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
       ),
     );
   }
