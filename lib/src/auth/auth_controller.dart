@@ -79,6 +79,32 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  /// In-app signup: hesabı oluşturur, başarılıysa otomatik giriş yapar.
+  ///
+  /// Dönüş: null = başarı; aksi hâlde l10n anahtarı (signup_user_exists,
+  /// signup_weak_password, signup_failed) — UI çevirip gösterir.
+  Future<String?> signUpWithPassword(String email, String password) async {
+    debugPrint('🔵 AuthController.signUpWithPassword() started');
+    state = state.copyWith(loading: true);
+
+    try {
+      await _repo.signUp(email, password);
+      final t = await _repo.signInWithPassword(email, password);
+      state = _stateFromTokens(t);
+      return null;
+    } on SignUpException catch (e) {
+      state = state.copyWith(loading: false);
+      return e.code;
+    } on AuthException {
+      // Hesap oluştu ama otomatik giriş başarısız — kullanıcı login'den girer.
+      state = state.copyWith(loading: false);
+      return 'signup_login_failed';
+    } catch (e) {
+      state = state.copyWith(loading: false);
+      return 'signup_failed';
+    }
+  }
+
   /// Sign in with social provider (Google, Apple - opens browser)
   Future<void> signInWithSocial(String connection) async {
     debugPrint('🔵 AuthController.signInWithSocial($connection) started');

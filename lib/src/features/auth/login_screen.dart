@@ -1,9 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart' hide ContextExtensions;
-import 'package:url_launcher/url_launcher.dart';
 import '../../auth/auth_controller.dart';
+import '../../core/env.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../prokit_ui/widgets/num_bottom_nav.dart';
@@ -45,6 +46,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _errorMessage = error);
     } else if (mounted) {
       context.go('/');
+    }
+  }
+
+  /// Auth0 şifre sıfırlama e-postası ister.
+  ///
+  /// Auth0'ın `/dbconnections/change_password` ucu bir API'dir (tarayıcıda
+  /// açılmaz); tenant ve client_id Env'den gelir, sabit yazılmaz.
+  Future<bool> _requestPasswordReset(String email) async {
+    try {
+      final response = await Dio().post(
+        '${Env.oidcIssuer}/dbconnections/change_password',
+        data: {
+          'client_id': Env.oidcClientId,
+          'email': email,
+          'connection': 'Username-Password-Authentication',
+        },
+        options: Options(
+          contentType: Headers.jsonContentType,
+          // Auth0 düz metin döner; hata durumlarını kendimiz değerlendirelim
+          responseType: ResponseType.plain,
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+
+      final ok = (response.statusCode ?? 500) < 300;
+
+      if (!ok) {
+        debugPrint('! Password reset failed (${response.statusCode}): ${response.data}');
+      }
+
+      return ok;
+    } catch (e) {
+      debugPrint('! Password reset error: $e');
+      return false;
     }
   }
 
@@ -313,10 +348,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: loading ? null : () async {
-                // Auth0 password reset URL
-                final url = Uri.parse('https://numistr.eu.auth0.com/dbconnections/change_password');
-                final email = _emailController.text.trim();
-                
                 // Show password reset dialog
                 showDialog(
                   context: context,
@@ -357,20 +388,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             return;
                           }
                           Navigator.pop(ctx);
-                          
-                          // Open Auth0 password reset in browser
-                          final resetUrl = Uri.parse(
-                            'https://numistr.eu.auth0.com/dbconnections/change_password?'
-                            'client_id=your_client_id&'
-                            'email=$resetEmail&'
-                            'connection=Username-Password-Authentication'
-                          );
-                          
-                          try {
-                            await launchUrl(resetUrl, mode: LaunchMode.externalApplication);
-                          } catch (e) {
-                            toast(l10n.translate('error_opening_browser'));
-                          }
+
+                          final sent = await _requestPasswordReset(resetEmail);
+                          if (!mounted) return;
+
+                          toast(l10n.translate(
+                            sent ? 'password_reset_sent' : 'password_reset_failed',
+                          ));
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: numPrimary,
@@ -521,10 +545,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           style: secondaryTextStyle(),
         ),
         TextButton(
-          onPressed: () {
-            // TODO: Navigate to register screen or open Auth0 signup
-            toast(l10n.translate('coming_soon'));
-          },
+          onPressed: () => context.push('/register'),
           child: Text(
             l10n.translate('sign_up'),
             style: boldTextStyle(color: numPrimary),

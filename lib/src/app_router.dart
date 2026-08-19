@@ -21,6 +21,7 @@ import 'features/history/history_page.dart';
 import 'features/collections/collections_page.dart';
 import 'features/collections/collection_detail_page.dart';
 import 'features/auth/login_screen.dart';
+import 'features/auth/register_screen.dart';
 import 'features/legal/legal.dart';
 
 /// Stream -> Listenable köprüsü: stream bir olay yayınlayınca router'ı yeniler.
@@ -100,6 +101,10 @@ GoRouter appRouter(WidgetRef ref) {
           GoRoute(
             path: 'login',
             builder: (context, state) => const LoginScreen(),
+          ),
+          GoRoute(
+            path: 'register',
+            builder: (context, state) => const RegisterScreen(),
           ),
           GoRoute(
             path: 'subscription',

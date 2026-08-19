@@ -283,6 +283,61 @@ class AuthRepository {
     }
   }
 
+  /// Auth0 Database Connection'da yeni kullanıcı oluşturur (in-app signup).
+  ///
+  /// `/dbconnections/signup` ucu public client_id ile çalışır; başarılıysa
+  /// çağıran taraf [signInWithPassword] ile oturum açmalıdır. Hata durumunda
+  /// [SignUpException] fırlatır — `code` alanı UI'da l10n anahtarına eşlenir.
+  Future<void> signUp(String email, String password) async {
+    debugPrint('🔵 AuthRepository.signUp() started');
+
+    try {
+      final response = await Dio().post(
+        '${_cfg.issuer}/dbconnections/signup',
+        options: Options(
+          contentType: Headers.jsonContentType,
+          validateStatus: (status) => status != null && status < 500,
+        ),
+        data: {
+          'client_id': _cfg.clientId,
+          'email': email,
+          'password': password,
+          'connection': 'Username-Password-Authentication',
+        },
+      );
+
+      if ((response.statusCode ?? 500) < 300) {
+        debugPrint('✅ Sign up successful');
+        return;
+      }
+
+      debugPrint('❌ Sign up failed (${response.statusCode}): ${response.data}');
+      throw _mapSignUpError(response.data);
+    } on SignUpException {
+      rethrow;
+    } catch (e) {
+      debugPrint('❌ Sign up exception: $e');
+      throw SignUpException.generic();
+    }
+  }
+
+  /// Auth0 signup hata gövdesini tipli hataya çevirir.
+  /// Bilinen gövdeler: {"code":"invalid_signup"} (kullanıcı zaten var),
+  /// {"name":"PasswordStrengthError","code":"invalid_password"} (zayıf şifre).
+  SignUpException _mapSignUpError(dynamic data) {
+    if (data is Map) {
+      final code = data['code']?.toString() ?? '';
+      final name = data['name']?.toString() ?? '';
+      if (code == 'invalid_signup' || code == 'user_exists') {
+        return SignUpException('signup_user_exists');
+      }
+      if (code == 'invalid_password' || name == 'PasswordStrengthError') {
+        return SignUpException('signup_weak_password');
+      }
+    }
+    return SignUpException.generic();
+  }
+
   /// Sign in with Social Provider (Google, Apple, etc.)
   /// This opens Auth0 Universal Login in browser
   Future<AuthTokens?> signInWithSocial(String connection) async {
@@ -369,4 +424,16 @@ class AuthException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// Signup hatası — [code] bir l10n anahtarıdır (signup_user_exists,
+/// signup_weak_password, signup_failed); UI çevirisini kendisi yapar.
+class SignUpException implements Exception {
+  final String code;
+  SignUpException(this.code);
+
+  SignUpException.generic() : code = 'signup_failed';
+
+  @override
+  String toString() => code;
 }
