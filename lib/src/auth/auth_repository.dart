@@ -245,6 +245,16 @@ class AuthRepository {
         // Use ID token for API calls (same as social login)
         final tokenToUse = idToken ?? accessToken;
 
+        // Tanı: sunucu 401 verdiğinde token'ın gerçekte ne taşıdığını görmek için
+        if (idToken != null) {
+          final c = AuthTokens.decodeJwtClaims(idToken);
+          debugPrint('🔎 ROPG idToken claims: email=${c?['email']} '
+              'email_verified=${c?['email_verified']} aud=${c?['aud']} '
+              'iss=${c?['iss']} sub=${c?['sub']}');
+        } else {
+          debugPrint('🔎 ROPG yanıtında idToken YOK — accessToken kullanılacak');
+        }
+
         // Extract identity claims from ID token
         final extractedEmail = idToken != null
             ? AuthTokens.extractEmailFromJwt(idToken)

@@ -91,6 +91,16 @@ class AnatolianCoinsApp extends ConsumerWidget {
       ],
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: appRouter(ref),
+
+      // Sistem yazı-boyutu ayarını makul aralığa sıkıştır. Cihaz %125+ font
+      // ölçeğindeyken tüm tipografi seti şişiyor ve yerleşimler bozuluyordu;
+      // %90-110 aralığı erişilebilirlik tercihine kısmen saygı gösterirken
+      // tasarım ölçeğini korur.
+      builder: (context, child) => MediaQuery.withClampedTextScaling(
+        minScaleFactor: 0.9,
+        maxScaleFactor: 1.1,
+        child: child!,
+      ),
     );
   }
 }
