@@ -36,6 +36,13 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
   // Kalici controller + animateToPage ile senkron.
   final PageController _pageController = PageController();
 
+  // Faz B: istege bagli koleksiyoner nitelikleri
+  String? _metal;
+  final TextEditingController _weightCtrl = TextEditingController();
+  final TextEditingController _diameterCtrl = TextEditingController();
+  bool _showDetails = false;
+  static const List<String> _metals = ['silver', 'bronze', 'gold', 'electrum', 'copper', 'lead'];
+
   void _goToTab(int index) {
     setState(() => _selectedTab = index);
     if (_pageController.hasClients) {
@@ -50,6 +57,8 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
   @override
   void dispose() {
     _pageController.dispose();
+    _weightCtrl.dispose();
+    _diameterCtrl.dispose();
     super.dispose();
   }
 
@@ -143,12 +152,13 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
       }
 
       if (mounted) {
-        final extra = _reverseFile != null
-            ? {
-                'obverse': compressedObverse.path,
-                'reverse': compressedReverse!.path,
-              }
-            : compressedObverse.path;
+        final extra = <String, dynamic>{
+          'obverse': compressedObverse.path,
+          if (_reverseFile != null) 'reverse': compressedReverse!.path,
+          if (_metal != null) 'metal': _metal,
+          if (_weightCtrl.text.trim().isNotEmpty) 'weight_g': _weightCtrl.text.trim(),
+          if (_diameterCtrl.text.trim().isNotEmpty) 'diameter_mm': _diameterCtrl.text.trim(),
+        };
 
         context.push('/recognition/results', extra: extra);
       }
@@ -509,6 +519,10 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
               ],
             ),
 
+          // Faz B: istege bagli detaylar (metal / agirlik / cap)
+          _buildOptionalDetails(l10n),
+          12.height,
+
           // Identify button
           SizedBox(
             width: double.infinity,
@@ -580,6 +594,128 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOptionalDetails(AppLocalizations l10n) {
+    return Container(
+      decoration: boxDecorationWithRoundedCorners(
+        backgroundColor: numSurfaceDark,
+        borderRadius: radius(12),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() => _showDetails = !_showDetails),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.tune, size: 18, color: numPrimaryLight),
+                  8.width,
+                  Expanded(
+                    child: Text(
+                      l10n.translate('optional_details'),
+                      style: boldTextStyle(size: 13, color: Colors.grey[300]),
+                    ),
+                  ),
+                  Icon(
+                    _showDetails ? Icons.expand_less : Icons.expand_more,
+                    color: Colors.grey[400],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_showDetails)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Column(
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: _metal,
+                    dropdownColor: numCardDark,
+                    decoration: InputDecoration(
+                      labelText: l10n.translate('attr_metal'),
+                      labelStyle: secondaryTextStyle(size: 12, color: Colors.grey[400]),
+                      isDense: true,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: radius(8),
+                        borderSide: BorderSide(color: Colors.grey[700]!),
+                      ),
+                      border: OutlineInputBorder(borderRadius: radius(8)),
+                    ),
+                    style: primaryTextStyle(size: 13, color: white),
+                    items: [
+                      DropdownMenuItem<String>(
+                        value: null,
+                        child: Text(l10n.translate('attr_metal_none'),
+                            style: primaryTextStyle(size: 13, color: Colors.grey[400])),
+                      ),
+                      ..._metals.map((m) => DropdownMenuItem(
+                            value: m,
+                            child: Text(l10n.translate('metal_' + m),
+                                style: primaryTextStyle(size: 13, color: white)),
+                          )),
+                    ],
+                    onChanged: _isProcessing ? null : (v) => setState(() => _metal = v),
+                  ),
+                  10.height,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _weightCtrl,
+                          enabled: !_isProcessing,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: primaryTextStyle(size: 13, color: white),
+                          decoration: InputDecoration(
+                            labelText: l10n.translate('attr_weight'),
+                            hintText: '3.85',
+                            hintStyle: secondaryTextStyle(size: 12, color: Colors.grey[600]),
+                            labelStyle: secondaryTextStyle(size: 12, color: Colors.grey[400]),
+                            isDense: true,
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: radius(8),
+                              borderSide: BorderSide(color: Colors.grey[700]!),
+                            ),
+                            border: OutlineInputBorder(borderRadius: radius(8)),
+                          ),
+                        ),
+                      ),
+                      10.width,
+                      Expanded(
+                        child: TextField(
+                          controller: _diameterCtrl,
+                          enabled: !_isProcessing,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: primaryTextStyle(size: 13, color: white),
+                          decoration: InputDecoration(
+                            labelText: l10n.translate('attr_diameter'),
+                            hintText: '18',
+                            hintStyle: secondaryTextStyle(size: 12, color: Colors.grey[600]),
+                            labelStyle: secondaryTextStyle(size: 12, color: Colors.grey[400]),
+                            isDense: true,
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: radius(8),
+                              borderSide: BorderSide(color: Colors.grey[700]!),
+                            ),
+                            border: OutlineInputBorder(borderRadius: radius(8)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  6.height,
+                  Text(
+                    l10n.translate('attr_hint'),
+                    style: secondaryTextStyle(size: 11, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

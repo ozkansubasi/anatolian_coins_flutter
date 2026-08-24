@@ -46,6 +46,22 @@ AMBIG_TOP = 0.50                # ambiguity only flagged when top1 below this
 SHARP_MIN = 25.0                # Laplacian variance on 224px crop; below = low detail
 QUALITY_CONF = 0.50             # quality reasons only claimed when top conf below this
 
+# ---- Faz B: optional collector-provided attributes (metal / weight / diameter) ----
+# Small cosine bonus/penalty so attributes re-rank near-ties without overpowering vision.
+ATTR_METAL_BONUS, ATTR_METAL_PENALTY = 0.010, -0.015
+ATTR_W_TOL, ATTR_W_FAR = 0.12, 0.30          # relative weight tolerance / far bound
+ATTR_W_BONUS, ATTR_W_PENALTY = 0.010, -0.012
+ATTR_D_TOL, ATTR_D_FAR = 0.08, 0.25          # relative diameter tolerance / far bound
+ATTR_D_BONUS, ATTR_D_PENALTY = 0.008, -0.010
+METAL_ALIASES = {
+    'gumus': 'silver', 'gümüş': 'silver', 'ag': 'silver', 'ar': 'silver', 'silver': 'silver',
+    'bronz': 'copper', 'bronze': 'copper', 'ae': 'copper', 'bakir': 'copper', 'bakır': 'copper', 'copper': 'copper',
+    'altin': 'gold', 'altın': 'gold', 'au': 'gold', 'av': 'gold', 'gold': 'gold',
+    'elektron': 'electrum', 'electrum': 'electrum', 'el': 'electrum',
+    'kursun': 'lead', 'kurşun': 'lead', 'lead': 'lead', 'pb': 'lead',
+    'billon': 'billon', 'potin': 'potin', 'orichalcum': 'orichalcum', 'orikalkum': 'orichalcum',
+}
+
 
 def _conf(d: float) -> float:
     return float(np.clip((float(d) - DIST_LO) / (DIST_HI - DIST_LO), 0.0, 1.0))
@@ -77,10 +93,22 @@ class RecognitionService:
             self.faiss_index = faiss.read_index(INDEX_PATH)
             self.metadata = json.load(open(META_PATH))
             self.art = [m["article_id"] for m in self.metadata]
+            self.attrs = {}
             for m in self.metadata:
                 a = m["article_id"]
                 if a not in self.by_art:
                     self.by_art[a] = m
+                at = self.attrs.setdefault(a, {'mat': None, 'w': [], 'd': []})
+                if m.get('material'):
+                    raw = str(m['material']).strip().lower()
+                    at['mat'] = METAL_ALIASES.get(raw, raw)
+                for src, dst in (('weight', 'w'), ('diameter', 'd')):
+                    try:
+                        v = float(str(m.get(src, '')).replace(',', '.'))
+                        if v > 0:
+                            at[dst].append(v)
+                    except Exception:
+                        pass
             logger.info("✓ DINOv3+SAM2 loaded (fazA): %d vectors, %d articles"
                         % (self.faiss_index.ntotal, len(self.by_art)))
         except Exception as e:
@@ -169,11 +197,43 @@ class RecognitionService:
                     best[a] = float(d)
         return best
 
-    async def recognize(self, obverse_bytes: bytes, reverse_bytes: bytes = None) -> Dict[str, Any]:
+    def _attr_adjust(self, article_id, metal, weight_g, diameter_mm) -> float:
+        """Faz B: cosine adjustment from optional collector attributes. 0 when unknown."""
+        at = getattr(self, 'attrs', {}).get(article_id)
+        if not at:
+            return 0.0
+        adj = 0.0
+        if metal and at['mat']:
+            adj += ATTR_METAL_BONUS if at['mat'] == metal else ATTR_METAL_PENALTY
+        for user_v, vals, tol, far, bon, pen in (
+            (weight_g, at['w'], ATTR_W_TOL, ATTR_W_FAR, ATTR_W_BONUS, ATTR_W_PENALTY),
+            (diameter_mm, at['d'], ATTR_D_TOL, ATTR_D_FAR, ATTR_D_BONUS, ATTR_D_PENALTY),
+        ):
+            if user_v and vals:
+                rel = min(abs(user_v - v) / max(v, 1e-6) for v in vals)
+                if rel <= tol:
+                    adj += bon
+                elif rel >= far:
+                    adj += pen
+        return adj
+
+    async def recognize(self, obverse_bytes: bytes, reverse_bytes: bytes = None,
+                        metal: str = None, weight_g: float = None,
+                        diameter_mm: float = None) -> Dict[str, Any]:
         if self.encoder is None or self.faiss_index is None:
             return self._stub_response()
         try:
             start = datetime.utcnow()
+
+            metal = METAL_ALIASES.get(str(metal).strip().lower()) if metal else None
+            try:
+                weight_g = float(str(weight_g).replace(',', '.')) if weight_g not in (None, '') else None
+            except Exception:
+                weight_g = None
+            try:
+                diameter_mm = float(str(diameter_mm).replace(',', '.')) if diameter_mm not in (None, '') else None
+            except Exception:
+                diameter_mm = None
 
             obv = self._side(obverse_bytes)
             rev = self._side(reverse_bytes) if reverse_bytes else None
@@ -191,6 +251,10 @@ class RecognitionService:
                     fused[a] = W_OBV * do + W_REV * dr
                 else:
                     fused[a] = do if do is not None else dr
+
+            if metal or weight_g or diameter_mm:
+                fused = {a: d + self._attr_adjust(a, metal, weight_g, diameter_mm)
+                         for a, d in fused.items()}
 
             ranked = sorted(fused.items(), key=lambda kv: kv[1], reverse=True)
 
@@ -264,7 +328,7 @@ class RecognitionService:
             return {
                 'matches': matches,
                 'confidence': top,
-                'method': 'dinov3_sam2_fazA',
+                'method': 'dinov3_sam2_fazAB',
                 'processing_time_ms': int((end - start).total_seconds() * 1000),
                 'ocr_extracted': None,
                 'no_match': no_match,

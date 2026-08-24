@@ -35,20 +35,33 @@ class _ProkitRecognitionResultsScreenState
       try {
         File obverseFile;
         File? reverseFile;
+        var attrs = const <String, String>{};
         if (widget.imageData is Map) {
           final map = widget.imageData as Map<String, dynamic>;
           obverseFile = File(map['obverse'] as String);
-          reverseFile = File(map['reverse'] as String);
+          final reversePath = map['reverse'] as String?;
+          reverseFile = reversePath != null ? File(reversePath) : null;
+          // Faz B: istege bagli nitelikler (metal / agirlik / cap)
+          attrs = RecognitionService.attrFields(
+            metal: map['metal'] as String?,
+            weightG: map['weight_g'] as String?,
+            diameterMm: map['diameter_mm'] as String?,
+          );
+        } else {
+          obverseFile = File(widget.imageData as String);
+        }
+        if (reverseFile != null) {
           debugPrint('Starting dual recognition');
           await ref.read(recognitionControllerProvider.notifier).recognizeDual(
                 obverseFile,
                 reverseFile,
+                attrs: attrs,
               );
         } else {
-          final imagePath = widget.imageData as String;
-          obverseFile = File(imagePath);
-          debugPrint('Starting single recognition for: $imagePath');
-          await ref.read(recognitionControllerProvider.notifier).recognize(obverseFile);
+          debugPrint('Starting single recognition for: ${obverseFile.path}');
+          await ref
+              .read(recognitionControllerProvider.notifier)
+              .recognize(obverseFile, attrs: attrs);
         }
         debugPrint('Recognition completed successfully');
         ref.invalidate(scanQuotaProvider);

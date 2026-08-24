@@ -71,7 +71,17 @@ class RecognitionService {
   /// Upload single image and get recognition results
   /// Returns list of matching coins with confidence scores
   /// Uses Joomla API endpoint which proxies to AI service
-  Future<RecognitionResponse> recognize(File imageFile, {bool skipPreFlight = false}) async {
+  /// Faz B: koleksiyonerin isteğe bağlı verdiği nitelikler (yeniden sıralamada kullanılır).
+  static Map<String, String> attrFields({String? metal, String? weightG, String? diameterMm}) {
+    final f = <String, String>{};
+    if (metal != null && metal.isNotEmpty) f['metal'] = metal;
+    if (weightG != null && weightG.isNotEmpty) f['weight_g'] = weightG;
+    if (diameterMm != null && diameterMm.isNotEmpty) f['diameter_mm'] = diameterMm;
+    return f;
+  }
+
+  Future<RecognitionResponse> recognize(File imageFile,
+      {bool skipPreFlight = false, Map<String, String> attrs = const {}}) async {
     try {
       // Pre-flight check (can be skipped for retry attempts)
       if (!skipPreFlight) {
@@ -89,6 +99,7 @@ class RecognitionService {
           imageFile.path,
           filename: 'coin.jpg',
         ),
+        ...attrs,
       });
 
       debugPrint('🔵 [RecognitionService] Sending POST request to ${Env.baseUrl}/recognize...');
@@ -153,7 +164,8 @@ class RecognitionService {
   /// Upload dual images (obverse + reverse) and get recognition results
   /// Returns list of matching coins with confidence scores
   /// Backend now supports dual images via 'image' (obverse) and 'reverse' fields
-  Future<RecognitionResponse> recognizeDual(File obverseFile, File reverseFile, {bool skipPreFlight = false}) async {
+  Future<RecognitionResponse> recognizeDual(File obverseFile, File reverseFile,
+      {bool skipPreFlight = false, Map<String, String> attrs = const {}}) async {
     try {
       // Pre-flight check (can be skipped for retry attempts)
       if (!skipPreFlight) {
@@ -178,6 +190,7 @@ class RecognitionService {
           reverseFile.path,
           filename: 'coin_reverse.jpg',
         ),
+        ...attrs,
       });
 
       debugPrint('🔵 [RecognitionService] Sending POST request to ${Env.baseUrl}/recognize (dual images)...');
@@ -483,22 +496,22 @@ class RecognitionController extends StateNotifier<AsyncValue<RecognitionResponse
 
   RecognitionController(this._service) : super(const AsyncValue.loading());
 
-  Future<void> recognize(File imageFile, {bool skipPreFlight = false}) async {
+  Future<void> recognize(File imageFile, {bool skipPreFlight = false, Map<String, String> attrs = const {}}) async {
     state = const AsyncValue.loading();
 
     try {
-      final result = await _service.recognize(imageFile, skipPreFlight: skipPreFlight);
+      final result = await _service.recognize(imageFile, skipPreFlight: skipPreFlight, attrs: attrs);
       state = AsyncValue.data(result);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }
   }
 
-  Future<void> recognizeDual(File obverseFile, File reverseFile, {bool skipPreFlight = false}) async {
+  Future<void> recognizeDual(File obverseFile, File reverseFile, {bool skipPreFlight = false, Map<String, String> attrs = const {}}) async {
     state = const AsyncValue.loading();
 
     try {
-      final result = await _service.recognizeDual(obverseFile, reverseFile, skipPreFlight: skipPreFlight);
+      final result = await _service.recognizeDual(obverseFile, reverseFile, skipPreFlight: skipPreFlight, attrs: attrs);
       state = AsyncValue.data(result);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
