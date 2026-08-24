@@ -282,12 +282,24 @@ class RecognitionResponse {
   final String? ocrText;
   final String? message;
 
+  /// Faz A (2026-08): servis eslesme bulamadiginda nedenli fallback dondurur.
+  final bool noMatch;
+
+  /// no_coin_detected | low_detail_surface | below_confidence | ambiguous_match
+  final String? noMatchReason;
+
+  /// Yuz basina girdi kalitesi: {'obverse': {'coin_detected': bool, 'sharpness': num}, ...}
+  final Map<String, dynamic>? quality;
+
   RecognitionResponse({
     required this.matches,
     this.quota,
     this.processingTimeMs,
     this.ocrText,
     this.message,
+    this.noMatch = false,
+    this.noMatchReason,
+    this.quality,
   });
 
   /// Convenience getter for remaining scans (backward compatibility)
@@ -314,6 +326,9 @@ class RecognitionResponse {
       processingTimeMs: data['processing_time_ms'] as int?,
       ocrText: data['ocr_text'] as String?,
       message: json['message'] as String?,
+      noMatch: data['no_match'] as bool? ?? matches.isEmpty,
+      noMatchReason: data['no_match_reason'] as String?,
+      quality: data['quality'] as Map<String, dynamic>?,
     );
   }
 }
@@ -330,6 +345,10 @@ class CoinMatch {
   final String? thumbnailUrl;
   final String? explanation;
 
+  /// Faz A: yuz basina benzerlik skorlari (varsa).
+  final double? obverseScore;
+  final double? reverseScore;
+
   CoinMatch({
     required this.articleId,
     required this.title,
@@ -340,6 +359,8 @@ class CoinMatch {
     this.dateRange,
     this.thumbnailUrl,
     this.explanation,
+    this.obverseScore,
+    this.reverseScore,
   });
 
   factory CoinMatch.fromJson(Map<String, dynamic> json) {
@@ -365,6 +386,8 @@ class CoinMatch {
       dateRange: dateRange ?? json['date_range'] as String?, // Fallback to direct field
       thumbnailUrl: json['thumbnail_url'] as String?, // Not provided by AI service yet
       explanation: json['explanation'] as String?,
+      obverseScore: (json['obverse_score'] as num?)?.toDouble(),
+      reverseScore: (json['reverse_score'] as num?)?.toDouble(),
     );
   }
 
@@ -378,6 +401,8 @@ class CoinMatch {
         'date_range': dateRange,
         'thumbnail_url': thumbnailUrl,
         'explanation': explanation,
+        'obverse_score': obverseScore,
+        'reverse_score': reverseScore,
       };
 }
 

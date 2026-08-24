@@ -255,8 +255,10 @@ class _ProkitRecognitionResultsScreenState
     }
 
     if (filteredMatches.isEmpty) {
-      return _buildNoResults(l10n);
+      return _buildNoResults(l10n, results.noMatchReason);
     }
+
+    final isAmbiguous = results.noMatchReason == 'ambiguous_match';
 
     return Column(
       children: [
@@ -302,6 +304,29 @@ class _ProkitRecognitionResultsScreenState
           ),
         ),
 
+        // Ambiguity warning (Faz A: dusuk marj)
+        if (isAmbiguous)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            padding: const EdgeInsets.all(12),
+            decoration: boxDecorationWithRoundedCorners(
+              backgroundColor: numWarning.withOpacity(0.12),
+              borderRadius: radius(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: numWarning, size: 20),
+                12.width,
+                Expanded(
+                  child: Text(
+                    l10n.translate('reason_ambiguous_match'),
+                    style: secondaryTextStyle(size: 12, color: numTextSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
         // Results list
         Expanded(
           child: ListView.builder(
@@ -320,7 +345,22 @@ class _ProkitRecognitionResultsScreenState
     );
   }
 
-  Widget _buildNoResults(AppLocalizations l10n) {
+  Widget _buildNoResults(AppLocalizations l10n, [String? reason]) {
+    final reasonKey = switch (reason) {
+      'no_coin_detected' => 'reason_no_coin_detected',
+      'low_detail_surface' => 'reason_low_detail_surface',
+      'below_confidence' => 'reason_below_confidence',
+      _ => null,
+    };
+    final title = reasonKey != null ? l10n.translate(reasonKey) : l10n.translate('no_matches');
+    final desc = reasonKey != null
+        ? l10n.translate('${reasonKey}_desc')
+        : l10n.translate('try_clearer_photo');
+    final icon = switch (reason) {
+      'no_coin_detected' => Icons.image_search,
+      'low_detail_surface' => Icons.texture,
+      _ => Icons.search_off,
+    };
     return Column(
       children: [
         // Header
@@ -340,16 +380,17 @@ class _ProkitRecognitionResultsScreenState
                       color: numTextHint.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.search_off, size: 50, color: numTextHint),
+                    child: Icon(icon, size: 50, color: numTextHint),
                   ),
                   24.height,
                   Text(
-                    l10n.translate('no_matches'),
+                    title,
+                    textAlign: TextAlign.center,
                     style: boldTextStyle(size: 20, color: numTextPrimary),
                   ),
                   12.height,
                   Text(
-                    l10n.translate('try_clearer_photo'),
+                    desc,
                     textAlign: TextAlign.center,
                     style: secondaryTextStyle(size: 14, color: numTextSecondary),
                   ),
@@ -398,6 +439,8 @@ class _ProkitRecognitionResultsScreenState
       ),
     );
   }
+
+  AppLocalizations get _l10n => AppLocalizations.of(context);
 
   Widget _buildMatchCard(CoinMatch match, int rank) {
     final isTopMatch = rank == 1;
@@ -546,6 +589,18 @@ class _ProkitRecognitionResultsScreenState
                           8.height,
                           // Confidence bar
                           _buildConfidenceBar(match.confidence),
+                          if (match.obverseScore != null || match.reverseScore != null) ...[
+                            4.height,
+                            Text(
+                              [
+                                if (match.obverseScore != null)
+                                  '${_l10n.translate('obverse')}: ${(match.obverseScore! * 100).toInt()}%',
+                                if (match.reverseScore != null)
+                                  '${_l10n.translate('reverse')}: ${(match.reverseScore! * 100).toInt()}%',
+                              ].join('  ·  '),
+                              style: secondaryTextStyle(size: 11, color: numTextHint),
+                            ),
+                          ],
                         ],
                       ),
                     ),

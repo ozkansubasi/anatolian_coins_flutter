@@ -31,6 +31,27 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
   double _reverseRotation = 0;
   bool _isProcessing = false;
   int _selectedTab = 0; // 0 = obverse, 1 = reverse
+  // BUGFIX (Faz C): her build'de yeni PageController(initialPage:) yaratmak
+  // PageView'i guncellemiyordu -> sekmeye basinca gorsel degismiyordu.
+  // Kalici controller + animateToPage ile senkron.
+  final PageController _pageController = PageController();
+
+  void _goToTab(int index) {
+    setState(() => _selectedTab = index);
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -210,7 +231,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _selectedTab = 0),
+              onTap: () => _goToTab(0),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: boxDecorationWithRoundedCorners(
@@ -240,7 +261,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
           ),
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _selectedTab = 1),
+              onTap: () => _goToTab(1),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: boxDecorationWithRoundedCorners(
@@ -275,7 +296,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
 
   Widget _buildDualImagePreview(AppLocalizations l10n) {
     return PageView(
-      controller: PageController(initialPage: _selectedTab),
+      controller: _pageController,
       onPageChanged: (index) => setState(() => _selectedTab = index),
       children: [
         _buildImageCard(
