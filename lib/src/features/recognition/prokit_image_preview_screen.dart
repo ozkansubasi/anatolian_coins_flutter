@@ -346,7 +346,11 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
   }) {
     return Container(
       margin: const EdgeInsets.all(16),
-      child: Column(
+      child: LayoutBuilder(builder: (context, constraints) {
+        // Detaylar bölümü/klavye açıkken alan daralır; döndürme çubuğu
+        // sığmıyorsa gizlenir (24px RenderFlex overflow fix — 2026-08-25 cihaz testi)
+        final bool showRotateBar = constraints.maxHeight >= 240;
+        return Column(
         children: [
           // Image card
           Expanded(
@@ -435,6 +439,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
             ),
           ),
 
+          if (showRotateBar) ...[
           16.height,
 
           // Rotation controls
@@ -476,8 +481,10 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
               ],
             ),
           ),
+          ],
         ],
-      ),
+      );
+      }),
     );
   }
 
@@ -634,33 +641,21 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: Column(
                 children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: _metal,
-                    dropdownColor: numCardDark,
-                    decoration: InputDecoration(
-                      labelText: l10n.translate('attr_metal'),
-                      labelStyle: secondaryTextStyle(size: 12, color: Colors.grey[400]),
-                      isDense: true,
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: radius(8),
-                        borderSide: BorderSide(color: Colors.grey[700]!),
-                      ),
-                      border: OutlineInputBorder(borderRadius: radius(8)),
+                  // Metal seçimi: radio (mobilde dropdown yavaşlatıyor — 2026-08-25 kullanıcı geri bildirimi)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l10n.translate('attr_metal'),
+                      style: secondaryTextStyle(size: 12, color: Colors.grey[400]),
                     ),
-                    style: primaryTextStyle(size: 13, color: white),
-                    items: [
-                      DropdownMenuItem<String>(
-                        value: null,
-                        child: Text(l10n.translate('attr_metal_none'),
-                            style: primaryTextStyle(size: 13, color: Colors.grey[400])),
-                      ),
-                      ..._metals.map((m) => DropdownMenuItem(
-                            value: m,
-                            child: Text(l10n.translate('metal_' + m),
-                                style: primaryTextStyle(size: 13, color: white)),
-                          )),
+                  ),
+                  4.height,
+                  Wrap(
+                    spacing: 2,
+                    children: [
+                      _buildMetalRadio(null, l10n.translate('attr_metal_none')),
+                      ..._metals.map((m) => _buildMetalRadio(m, l10n.translate('metal_' + m))),
                     ],
-                    onChanged: _isProcessing ? null : (v) => setState(() => _metal = v),
                   ),
                   10.height,
                   Row(
@@ -708,15 +703,37 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
                       ),
                     ],
                   ),
-                  6.height,
-                  Text(
-                    l10n.translate('attr_hint'),
-                    style: secondaryTextStyle(size: 11, color: Colors.grey[500]),
-                  ),
                 ],
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMetalRadio(String? value, String label) {
+    final bool selected = _metal == value;
+
+    return InkWell(
+      onTap: _isProcessing ? null : () => setState(() => _metal = value),
+      borderRadius: radius(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              size: 18,
+              color: selected ? numPrimaryLight : Colors.grey[500],
+            ),
+            4.width,
+            Text(
+              label,
+              style: primaryTextStyle(size: 13, color: selected ? white : Colors.grey[400]),
+            ),
+          ],
+        ),
       ),
     );
   }
