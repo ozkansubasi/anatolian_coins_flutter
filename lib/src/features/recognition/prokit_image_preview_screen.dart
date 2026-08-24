@@ -41,7 +41,8 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
   final TextEditingController _weightCtrl = TextEditingController();
   final TextEditingController _diameterCtrl = TextEditingController();
   bool _showDetails = false;
-  static const List<String> _metals = ['silver', 'bronze', 'gold', 'electrum', 'copper', 'lead'];
+  // Sıra ve adlar /v1/materials (katalog) ile hizalı — 2026-08-25
+  static const List<String> _metals = ['bronze', 'silver', 'gold', 'electrum', 'copper', 'lead', 'iron'];
 
   void _goToTab(int index) {
     setState(() => _selectedTab = index);
