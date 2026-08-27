@@ -67,8 +67,28 @@ class AuthTokens {
 
 class AuthRepository {
   static const _k = 'auth_tokens';
+
+  /// `LocaleNotifier`'in dili sakladigi anahtar (core/locale_provider.dart).
+  /// Ayni depo okunur ki Auth0'a gonderilen dil ile uygulamanin dili ayrismasin.
+  static const _localeKey = 'app_locale';
+
   final _appAuth = const FlutterAppAuth();
   final _cfg = AuthConfig();
+
+  /// Auth0'a gonderilecek dil kodu. Kullanici dil secmemisse Turkce.
+  ///
+  /// Iki yerde kullanilir:
+  /// - `ui_locales` → Auth0 Universal Login **sayfalarinin** dili
+  /// - signup `user_metadata.locale` → Auth0 **e-postalarinin** dili
+  ///   (sablonlar Liquid ile bu alana bakar; bkz. claudedocs/auth0/README.md)
+  Future<String> _localeCode() async {
+    try {
+      final saved = await SecureStore.read(_localeKey);
+      return saved == 'en' ? 'en' : 'tr';
+    } catch (_) {
+      return 'tr';
+    }
+  }
 
   Future<AuthTokens?> load() async {
     final s = await SecureStore.read(_k);
@@ -152,6 +172,7 @@ class AuthRepository {
           scopes: _cfg.scopes,
           preferEphemeralSession: true, // Try Custom Tabs again with explicit browser packages
           promptValues: ['login'], // Force Auth0 to always show account selection screen
+          additionalParameters: {'ui_locales': await _localeCode()},
           allowInsecureConnections: false,
         ),
       );
@@ -313,6 +334,8 @@ class AuthRepository {
           'email': email,
           'password': password,
           'connection': 'Username-Password-Authentication',
+          // E-posta sablonlari bu alana bakar (dogrulama + sifre sifirlama).
+          'user_metadata': {'locale': await _localeCode()},
         },
       );
 
@@ -363,6 +386,7 @@ class AuthRepository {
           preferEphemeralSession: true,
           additionalParameters: {
             'connection': connection, // google-oauth2, apple, etc.
+            'ui_locales': await _localeCode(),
           },
           allowInsecureConnections: false,
         ),
