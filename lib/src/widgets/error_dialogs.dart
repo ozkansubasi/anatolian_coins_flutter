@@ -153,7 +153,7 @@ class ErrorDialogs {
         ),
         title: const Text('Tarama Limiti Doldu'),
         content: const Text(
-          'Bu ay için ücretsiz tarama hakkınız doldu.\n\nSınırsız tarama ve daha fazlası için Pro\'ya yükseltin!',
+          'Bu ay için ücretsiz tarama hakkınız doldu.\n\nYüksek kapasiteli tarama ve daha fazlası için Pro\'ya yükseltin!',
           textAlign: TextAlign.center,
         ),
         actions: [

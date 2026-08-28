@@ -249,7 +249,7 @@ class RecognitionError implements Exception {
 
   factory RecognitionError.quotaExceeded() => RecognitionError(
         message: 'Quota exceeded',
-        userMessage: 'Aylık tarama limitiniz doldu.\nSınırsız tarama için Pro\'ya yükseltin.',
+        userMessage: 'Aylık tarama limitiniz doldu.\nYüksek kapasiteli tarama için Pro\'ya yükseltin.',
         type: RecognitionErrorType.quotaExceeded,
       );
 
