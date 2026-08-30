@@ -10,7 +10,7 @@ class KvkkPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProkitLegalPage(
       titleKey: 'kvkk_title',
-      lastUpdated: '29.11.2025',
+      lastUpdated: '30.08.2026',
       headerIcon: Icons.shield,
       headerColor: const Color(0xFF1565C0), // Deep blue for official/legal
       sections: const [
@@ -41,6 +41,10 @@ class KvkkPage extends StatelessWidget {
             LegalSubSection(
               titleKey: 'kvkk_transaction_data_title',
               contentKey: 'kvkk_transaction_data_content',
+            ),
+            LegalSubSection(
+              titleKey: 'kvkk_visual_data_title',
+              contentKey: 'kvkk_visual_data_content',
             ),
           ],
           icon: Icons.category,

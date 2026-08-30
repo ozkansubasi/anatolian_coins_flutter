@@ -10,7 +10,7 @@ class PrivacyPolicyPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProkitLegalPage(
       titleKey: 'privacy_policy',
-      lastUpdated: '29.11.2025',
+      lastUpdated: '30.08.2026',
       headerIcon: Icons.privacy_tip,
       headerColor: numSecondary,
       sections: const [
@@ -39,6 +39,10 @@ class PrivacyPolicyPage extends StatelessWidget {
               contentKey: 'pp_visual_data_content',
             ),
             LegalSubSection(
+              titleKey: 'pp_recognition_data_title',
+              contentKey: 'pp_recognition_data_content',
+            ),
+            LegalSubSection(
               titleKey: 'pp_technical_data_title',
               contentKey: 'pp_technical_data_content',
             ),
@@ -57,10 +61,9 @@ class PrivacyPolicyPage extends StatelessWidget {
           bulletKeys: [
             'pp_purpose_service',
             'pp_purpose_academic',
-            'pp_purpose_api',
             'pp_purpose_communication',
             'pp_purpose_improvement',
-            'pp_purpose_personalization',
+            'pp_purpose_security',
             'pp_purpose_legal',
           ],
           icon: Icons.analytics,
@@ -81,6 +84,7 @@ class PrivacyPolicyPage extends StatelessWidget {
             'pp_legal_basis_1',
             'pp_legal_basis_2',
             'pp_legal_basis_3',
+            'pp_legal_basis_4',
           ],
           icon: Icons.gavel,
           iconColor: numWarning,
@@ -96,7 +100,7 @@ class PrivacyPolicyPage extends StatelessWidget {
             ),
           ],
           bulletKeys: [
-            'pp_transfer_analytics',
+            'pp_transfer_recognition',
             'pp_transfer_authorities',
           ],
           icon: Icons.share,
@@ -109,18 +113,42 @@ class PrivacyPolicyPage extends StatelessWidget {
           bulletKeys: [
             'pp_camera_1',
             'pp_camera_2',
+            'pp_camera_3',
+            'pp_camera_4',
+            'pp_camera_5',
           ],
           icon: Icons.camera_alt,
           iconColor: numInfo,
         ),
-        // 8. Veri Güvenliği
+        // 8. Saklama Süreleri
+        LegalSection(
+          titleKey: 'pp_retention_title',
+          contentKey: 'pp_retention_content',
+          bulletKeys: [
+            'pp_retention_1',
+            'pp_retention_2',
+            'pp_retention_3',
+            'pp_retention_4',
+            'pp_retention_5',
+          ],
+          icon: Icons.schedule,
+          iconColor: numWarning,
+        ),
+        // 9. Veri Güvenliği
         LegalSection(
           titleKey: 'pp_security_title',
           contentKey: 'pp_security_content',
           icon: Icons.security,
           iconColor: numSuccess,
         ),
-        // 9. Kişisel Veri Sahibinin Hakları (KVKK Madde 11 / GDPR)
+        // 10. Çocukların Verileri
+        LegalSection(
+          titleKey: 'pp_children_title',
+          contentKey: 'pp_children_content',
+          icon: Icons.child_care,
+          iconColor: numInfo,
+        ),
+        // 11. Kişisel Veri Sahibinin Hakları (KVKK Madde 11 / GDPR)
         LegalSection(
           titleKey: 'pp_rights_title',
           contentKey: 'pp_rights_content',
@@ -134,10 +162,23 @@ class PrivacyPolicyPage extends StatelessWidget {
             'pp_right_7',
             'pp_right_8',
           ],
+          subSections: [
+            LegalSubSection(
+              titleKey: 'pp_rights_application_title',
+              contentKey: 'pp_rights_application_content',
+            ),
+          ],
           icon: Icons.person,
           iconColor: numPrimary,
         ),
-        // 10. İletişim
+        // 12. Değişiklikler
+        LegalSection(
+          titleKey: 'pp_changes_title',
+          contentKey: 'pp_changes_content',
+          icon: Icons.update,
+          iconColor: numSecondary,
+        ),
+        // 13. İletişim
         LegalSection(
           titleKey: 'pp_contact_title',
           contentKey: 'pp_contact_content',
