@@ -568,7 +568,7 @@ class AppLocalizations {
       'tos_contact_title': 'İletişim',
       'tos_contact_content': 'Bu Kullanım Koşulları hakkında sorularınız varsa, lütfen bizimle iletişime geçin:',
       'tos_company_name': 'AE TELEKOM BİLGİ TEKNOLOJİLERİ YAZILIM VE TİCARET ANONİM ŞİRKETİ',
-      'tos_company_email': 'E-posta: admin@numistr.org',
+      'tos_company_email': 'E-posta: bilgi@numistr.org  ·  KEP: aetelekom@hs01.kep.tr',
 
       // Privacy Policy
       'privacy_policy': 'Gizlilik Politikası',
@@ -1284,7 +1284,7 @@ class AppLocalizations {
       'tos_contact_title': 'Contact',
       'tos_contact_content': 'If you have any questions about these Terms of Service, please contact us:',
       'tos_company_name': 'AE TELEKOM BİLGİ TEKNOLOJİLERİ YAZILIM VE TİCARET ANONİM ŞİRKETİ',
-      'tos_company_email': 'Email: admin@numistr.org',
+      'tos_company_email': 'E-mail: bilgi@numistr.org  ·  KEP: aetelekom@hs01.kep.tr',
 
       // Privacy Policy (GDPR Compliant)
       'privacy_policy': 'Privacy Policy',
