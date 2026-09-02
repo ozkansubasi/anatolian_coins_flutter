@@ -580,7 +580,7 @@ class AppLocalizations {
       'pp_identity_data_title': 'Kimlik ve İletişim Bilgileri',
       'pp_identity_data_content': 'Ad, soyadı ve e-posta adresi. Şifreniz Şirket tarafından saklanmaz; kimlik doğrulama ayrı bir sağlayıcı üzerinden yapılır. Google ile giriş yaparsanız Google; adınızı, e-posta adresinizi ve profil görselinizi kimlik sağlayıcımız aracılığıyla bize iletir.',
       'pp_academic_data_title': 'Akademik Bilgiler (Sadece Öğrenci Aboneliği İçin)',
-      'pp_academic_data_content': 'Öğrenci üyeliği için başvurduğunuzda: üniversite, bölüm, ilgi alanları ve yüklediğiniz öğrenci kimlik belgesi görseli. Belge, web\'den doğrudan erişime kapalı bir dizinde saklanır ve yalnızca öğrencilik statüsünün teyidi amacıyla görüntülenir.',
+      'pp_academic_data_content': 'Öğrenci üyeliği için başvurduğunuzda: üniversite, bölüm, ilgi alanları ve yüklediğiniz öğrenci belgesi görseli. Belge, web\'den doğrudan erişime kapalı bir dizinde saklanır ve yalnızca öğrencilik statüsünün teyidi amacıyla görüntülenir.',
       'pp_visual_data_title': 'Sikke Fotoğrafları',
       'pp_visual_data_content': 'Tanıma özelliğini kullandığınızda çektiğiniz veya galerinizden seçtiğiniz sikke fotoğrafları. Bu görsellerin nasıl işlendiği ve saklanmadığı, "Kamera, Galeri ve Fotoğraflarınız" bölümünde ayrıntılı olarak açıklanmıştır.',
       'pp_technical_data_title': 'Teknik ve İşlem Güvenliği Bilgileri',
@@ -672,7 +672,7 @@ class AppLocalizations {
       'kvkk_application_title': 'Başvuru Yöntemi',
       'kvkk_application_content': 'Haklarınızı kullanmak için bilgi@numistr.org adresine veya KEP adresimize (aetelekom@hs01.kep.tr) başvurabilirsiniz. Başvurular, "Veri Sorumlusuna Başvuru Usul ve Esasları Hakkında Tebliğ" uyarınca en geç 30 gün içinde ücretsiz olarak sonuçlandırılır. Başvurunuzun reddedilmesi veya süresinde yanıt verilmemesi hâlinde Kişisel Verileri Koruma Kurulu\'na şikâyette bulunabilirsiniz.',
       'kvkk_retention_title': 'Saklama Süresi',
-      'kvkk_retention_content': 'Kişisel verileriniz, işleme amacının gerektirdiği süre ve mevzuatta öngörülen yasal saklama süreleri boyunca saklanır: sikke fotoğrafları saklanmaz; üyelik, abonelik ve tanıma kayıtları üyeliğiniz sürdüğü sürece; öğrenci kimlik belgesi başvurunun sonuçlanmasından sonra en geç 6 ay; ödeme ve fatura kayıtları 10 yıl; sunucu erişim kayıtları en çok 30 gün.',
+      'kvkk_retention_content': 'Kişisel verileriniz, işleme amacının gerektirdiği süre ve mevzuatta öngörülen yasal saklama süreleri boyunca saklanır: sikke fotoğrafları saklanmaz; üyelik, abonelik ve tanıma kayıtları üyeliğiniz sürdüğü sürece; öğrenci belgesi başvurunun sonuçlanmasından sonra en geç 6 ay; ödeme ve fatura kayıtları 10 yıl; sunucu erişim kayıtları en çok 30 gün.',
 
       // Subscription Agreement
       'subscription_agreement': 'Abonelik Sözleşmesi',
@@ -726,7 +726,7 @@ class AppLocalizations {
       'pp_retention_content': 'Kişisel verileriniz, işleme amacının gerektirdiği süre boyunca ve mevzuatta öngörülen yasal saklama süreleri boyunca saklanır:',
       'pp_retention_1': 'Sikke fotoğrafları: saklanmaz — işlem sırasında bellekte tutulur, işlem bitince silinir.',
       'pp_retention_2': 'Üyelik, profil, abonelik bilgileri ve tanıma kayıtları: üyeliğiniz devam ettiği sürece; hesabınızı sildirdiğinizde silinir.',
-      'pp_retention_3': 'Öğrenci kimlik belgesi: başvurunun sonuçlandırılmasının ardından en geç 6 ay içinde silinir.',
+      'pp_retention_3': 'Öğrenci belgesi: başvurunun sonuçlandırılmasının ardından en geç 6 ay içinde silinir.',
       'pp_retention_4': 'Ödeme ve fatura kayıtları: vergi ve ticaret mevzuatı gereği 10 yıl.',
       'pp_retention_5': 'Sunucu erişim kayıtları (log): en çok 30 gün.',
       'pp_children_title': 'Çocukların Verileri',
@@ -1296,7 +1296,7 @@ class AppLocalizations {
       'pp_identity_data_title': 'Identity and Contact Information',
       'pp_identity_data_content': 'Name, surname and e-mail address. We do not store your password; authentication runs through a separate provider. If you sign in with Google, Google passes your name, e-mail address and profile picture to us through our identity provider.',
       'pp_academic_data_title': 'Academic Information (Student Subscription Only)',
-      'pp_academic_data_content': 'If you apply for student membership: university, department, areas of interest and the student ID document you upload. The document is stored in a directory that is not directly reachable from the web and is viewed only to verify student status.',
+      'pp_academic_data_content': 'If you apply for student membership: university, department, areas of interest and the student status document you upload. The document is stored in a directory that is not directly reachable from the web and is viewed only to verify student status.',
       'pp_visual_data_title': 'Coin Photographs',
       'pp_visual_data_content': 'The coin photos you take or choose from your gallery when you use recognition. How they are processed - and why they are not stored - is set out under "Camera, Gallery and Your Photographs".',
       'pp_technical_data_title': 'Technical and Transaction Security Information',
@@ -1391,7 +1391,7 @@ class AppLocalizations {
       'kvkk_application_title': 'Application Method',
       'kvkk_application_content': 'To exercise your rights, apply to bilgi@numistr.org or to our KEP address (aetelekom@hs01.kep.tr). Applications are concluded free of charge within 30 days at the latest, in line with the Communiqué on the Procedures and Principles of Application to the Data Controller. If your application is refused or no reply is given in time, you may lodge a complaint with the Turkish Personal Data Protection Board.',
       'kvkk_retention_title': 'Retention Period',
-      'kvkk_retention_content': 'Your personal data is kept for as long as the purpose of processing requires and for the statutory retention periods: coin photographs are not retained; membership, subscription and recognition records for as long as your membership lasts; the student ID document up to 6 months after the application is concluded; payment and invoice records for 10 years; server access logs up to 30 days.',
+      'kvkk_retention_content': 'Your personal data is kept for as long as the purpose of processing requires and for the statutory retention periods: coin photographs are not retained; membership, subscription and recognition records for as long as your membership lasts; the student status document up to 6 months after the application is concluded; payment and invoice records for 10 years; server access logs up to 30 days.',
 
       // Subscription Agreement
       'subscription_agreement': 'Subscription Agreement',
@@ -1442,7 +1442,7 @@ class AppLocalizations {
       'pp_camera_5': 'The image travels over an encrypted connection (HTTPS) and is not sent to any third-party image-processing service.',
       'pp_retention_1': 'Coin photographs: not retained - held in memory during processing, discarded immediately afterwards.',
       'pp_retention_2': 'Membership, profile, subscription data and recognition records: for as long as your membership lasts; deleted when you close your account.',
-      'pp_retention_3': 'Student ID document: deleted within 6 months of the application being concluded.',
+      'pp_retention_3': 'Student status document: deleted within 6 months of the application being concluded.',
       'pp_retention_4': 'Payment and invoice records: 10 years, as required by tax and commercial law.',
       'pp_retention_5': 'Server access logs: up to 30 days.',
       'pp_children_title': 'Children\'s Data',
