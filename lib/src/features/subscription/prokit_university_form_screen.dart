@@ -375,7 +375,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                         24.height,
 
                         // ID Card Upload Section
-                        _buildSectionTitle(l10n.translate('id_card_upload'), Icons.credit_card),
+                        _buildSectionTitle(l10n.translate('id_card_upload'), Icons.description_outlined),
                         8.height,
                         Text(
                           l10n.translate('id_card_info'),
