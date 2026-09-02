@@ -144,37 +144,40 @@ class RevenueCatService {
   }
 
   /// Satın alma işlemi yap
-  Future<PurchaseResult> purchasePackage(Package package) async {
+  Future<PurchaseOutcome> purchasePackage(Package package) async {
     if (!_isInitialized) await initialize();
 
     try {
-      final customerInfo = await Purchases.purchasePackage(package);
+      // purchases_flutter 9+ : purchasePackage artik CustomerInfo degil
+      // PurchaseResult donduruyor (customerInfo + storeTransaction).
+      final purchase = await Purchases.purchasePackage(package);
+      final customerInfo = purchase.customerInfo;
       final isPro = customerInfo.entitlements.active.containsKey(RevenueCatConfig.proEntitlementId);
 
       if (isPro) {
         debugPrint('RevenueCat purchase successful - Pro active');
-        return PurchaseResult(
+        return PurchaseOutcome(
           success: true,
           isPro: true,
           expirationDate: _getExpirationFromCustomerInfo(customerInfo),
         );
       } else {
         debugPrint('RevenueCat purchase completed but Pro not active');
-        return PurchaseResult(
+        return PurchaseOutcome(
           success: false,
           error: 'Satın alma tamamlandı ancak Pro aktif değil',
         );
       }
     } on PurchasesErrorCode catch (e) {
       debugPrint('RevenueCat purchase error: $e');
-      return PurchaseResult(
+      return PurchaseOutcome(
         success: false,
         error: _getErrorMessage(e),
         isCancelled: e == PurchasesErrorCode.purchaseCancelledError,
       );
     } catch (e) {
       debugPrint('RevenueCat purchase failed: $e');
-      return PurchaseResult(
+      return PurchaseOutcome(
         success: false,
         error: e.toString(),
       );
@@ -182,21 +185,21 @@ class RevenueCatService {
   }
 
   /// Satın almaları geri yükle
-  Future<PurchaseResult> restorePurchases() async {
+  Future<PurchaseOutcome> restorePurchases() async {
     if (!_isInitialized) await initialize();
 
     try {
       final customerInfo = await Purchases.restorePurchases();
       final isPro = customerInfo.entitlements.active.containsKey(RevenueCatConfig.proEntitlementId);
 
-      return PurchaseResult(
+      return PurchaseOutcome(
         success: true,
         isPro: isPro,
         expirationDate: isPro ? _getExpirationFromCustomerInfo(customerInfo) : null,
       );
     } catch (e) {
       debugPrint('RevenueCat restore failed: $e');
-      return PurchaseResult(
+      return PurchaseOutcome(
         success: false,
         error: 'Satın almalar geri yüklenemedi: $e',
       );
@@ -248,14 +251,14 @@ class RevenueCatService {
 }
 
 /// Satın alma sonucu
-class PurchaseResult {
+class PurchaseOutcome {
   final bool success;
   final bool isPro;
   final DateTime? expirationDate;
   final String? error;
   final bool isCancelled;
 
-  PurchaseResult({
+  PurchaseOutcome({
     required this.success,
     this.isPro = false,
     this.expirationDate,

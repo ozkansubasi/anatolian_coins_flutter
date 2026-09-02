@@ -141,7 +141,7 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
   }
 
   /// Satın alma işlemi
-  Future<PurchaseResult> purchase(Package package) async {
+  Future<PurchaseOutcome> purchase(Package package) async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -164,12 +164,12 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
       return result;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
-      return PurchaseResult(success: false, error: e.toString());
+      return PurchaseOutcome(success: false, error: e.toString());
     }
   }
 
   /// Satın almaları geri yükle
-  Future<PurchaseResult> restorePurchases() async {
+  Future<PurchaseOutcome> restorePurchases() async {
     state = state.copyWith(isLoading: true, error: null);
 
     try {
@@ -192,7 +192,7 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
       return result;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
-      return PurchaseResult(success: false, error: e.toString());
+      return PurchaseOutcome(success: false, error: e.toString());
     }
   }
 
