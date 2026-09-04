@@ -35,6 +35,20 @@ class Env {
     defaultValue: '5AFSce7JEdmyxBrwjwEI7IcnRnvXKF8c',
   );
 
+  // Auth0'ın KANONİK tenant alan adı — [oidcIssuer] custom domain'e (login.numistr.org)
+  // geçse bile bu DEĞİŞMEZ. Management API'nin (`/api/v2/`) tanımlayıcısı her zaman kanonik
+  // alan adıdır; audience olarak custom domain verilirse Auth0 "Service not enabled within
+  // domain" döndürür. Auth0 dokümanı: "Continue to use your default tenant domain name
+  // (such as https://YOUR_DOMAIN/userinfo and https://YOUR_DOMAIN/api/v2/) instead of your
+  // custom domain when specifying an audience."
+  static const oidcCanonicalDomain = String.fromEnvironment(
+    'OIDC_CANONICAL_DOMAIN',
+    defaultValue: 'dev-ja5k8sumb7005j4n.us.auth0.com',
+  );
+
+  /// ROPG (uygulama içi e-posta/şifre girişi) için Management API audience'ı.
+  static String get oidcManagementAudience => 'https://$oidcCanonicalDomain/api/v2/';
+
   // Callback & Logout URI'leri (Auth0 Allowed URLs ile birebir)
   static const oidcRedirectUrl = String.fromEnvironment(
     'OIDC_REDIRECT_URL',

@@ -246,7 +246,7 @@ class AuthRepository {
           'username': email,
           'password': password,
           'scope': _cfg.scopes.join(' '),
-          'audience': 'https://${issuer.host}/api/v2/',
+          'audience': _cfg.managementAudience,
         },
       );
 
