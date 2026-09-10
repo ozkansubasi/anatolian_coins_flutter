@@ -51,6 +51,13 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- DIKKAT: Bu scheme bundle id ile ayni DEGIL, oyle olmasi da gerekmiyor.
+	     Bundle id 2026-09-10'da org.numistr.anatoliancoins'e tasindi (iOS-02:
+	     com.anatoliancoins.app ucretsiz kisisel takimin elinde kalmisti).
+	     Auth0 callback'i com.anatoliancoins.app://callback olarak DURUYOR:
+	     iOS'ta URL scheme bundle id'den bagimsizdir, Android ayni scheme'i
+	     kullanir ve Auth0 Allowed Callback listesi degistirilmedi.
+	     Buradaki degeri bundle id'ye uydurmaya CALISMA - giris kirilir. -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
