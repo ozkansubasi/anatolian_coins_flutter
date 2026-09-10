@@ -18,12 +18,35 @@ class RevenueCatConfig {
 }
 
 /// RevenueCat servis sınıfı
+///
+/// DAYANIKLILIK KURALI (iOS-01, 2026-09-07):
+/// `Purchases.*` metodları SDK yapılandırılmamışken çağrılırsa native tarafta
+/// **Swift fatalError** üretir ("Purchases has not been configured").
+/// Bu bir Dart istisnası DEĞİLDİR — `try/catch` onu yakalayamaz, süreç
+/// `signal 5` ile ölür. Bu yüzden native tarafa giden HER metod, `try` bloğuna
+/// girmeden önce [_ensureConfigured] kapısından geçmek zorundadır.
+///
+/// iOS'ta anahtar boş (uygulama RevenueCat'e henüz eklenmedi), Android'de dolu;
+/// ama Android'de de yapılandırma herhangi bir sebeple başarısız olabilir —
+/// kapı iki platform için de gereklidir.
 class RevenueCatService {
   static final RevenueCatService _instance = RevenueCatService._internal();
   factory RevenueCatService() => _instance;
   RevenueCatService._internal();
 
   bool _isInitialized = false;
+
+  /// SDK gerçekten yapılandırıldı mı? (Satın alma arayüzü bunu gizlemek için kullanabilir.)
+  bool get isConfigured => _isInitialized;
+
+  /// Native tarafa gitmeden önceki tek kapı.
+  ///
+  /// Bir kez [initialize] denemesi yapar; SDK yine kurulu değilse `false` döner
+  /// ve çağıran metod güvenli varsayılanla çıkar — `Purchases.*` asla çağrılmaz.
+  Future<bool> _ensureConfigured() async {
+    if (!_isInitialized) await initialize();
+    return _isInitialized;
+  }
 
   /// RevenueCat'i başlat
   Future<void> initialize() async {
@@ -63,7 +86,10 @@ class RevenueCatService {
 
   /// Kullanıcı ID'si ile giriş yap (Auth sonrası çağır)
   Future<void> login(String userId) async {
-    if (!_isInitialized) await initialize();
+    if (!await _ensureConfigured()) {
+      debugPrint('RevenueCat login atlandı: SDK yapılandırılmadı');
+      return;
+    }
 
     try {
       final result = await Purchases.logIn(userId);
@@ -87,7 +113,7 @@ class RevenueCatService {
 
   /// Mevcut abonelik durumunu kontrol et
   Future<bool> checkProStatus() async {
-    if (!_isInitialized) await initialize();
+    if (!await _ensureConfigured()) return false;
 
     try {
       final customerInfo = await Purchases.getCustomerInfo();
@@ -102,7 +128,7 @@ class RevenueCatService {
 
   /// Müşteri bilgilerini al
   Future<CustomerInfo?> getCustomerInfo() async {
-    if (!_isInitialized) await initialize();
+    if (!await _ensureConfigured()) return null;
 
     try {
       return await Purchases.getCustomerInfo();
@@ -114,7 +140,7 @@ class RevenueCatService {
 
   /// Abonelik bitiş tarihini al
   Future<DateTime?> getExpirationDate() async {
-    if (!_isInitialized) await initialize();
+    if (!await _ensureConfigured()) return null;
 
     try {
       final customerInfo = await Purchases.getCustomerInfo();
@@ -131,7 +157,7 @@ class RevenueCatService {
 
   /// Mevcut teklifleri (offerings) al
   Future<Offerings?> getOfferings() async {
-    if (!_isInitialized) await initialize();
+    if (!await _ensureConfigured()) return null;
 
     try {
       final offerings = await Purchases.getOfferings();
@@ -145,7 +171,12 @@ class RevenueCatService {
 
   /// Satın alma işlemi yap
   Future<PurchaseOutcome> purchasePackage(Package package) async {
-    if (!_isInitialized) await initialize();
+    if (!await _ensureConfigured()) {
+      return PurchaseOutcome(
+        success: false,
+        error: 'Satın alma bu cihazda şu anda kullanılamıyor',
+      );
+    }
 
     try {
       // purchases_flutter 9+ : purchasePackage artik CustomerInfo degil
@@ -186,7 +217,12 @@ class RevenueCatService {
 
   /// Satın almaları geri yükle
   Future<PurchaseOutcome> restorePurchases() async {
-    if (!_isInitialized) await initialize();
+    if (!await _ensureConfigured()) {
+      return PurchaseOutcome(
+        success: false,
+        error: 'Satın alma bu cihazda şu anda kullanılamıyor',
+      );
+    }
 
     try {
       final customerInfo = await Purchases.restorePurchases();
@@ -240,12 +276,17 @@ class RevenueCatService {
   }
 
   /// Abonelik değişikliklerini dinle
+  ///
+  /// SDK kurulu değilse sessizce atlanır — dinleyici kaydı da native tarafa
+  /// gider ve yapılandırılmamış SDK'da fatalError üretir.
   void addCustomerInfoListener(void Function(CustomerInfo) listener) {
+    if (!_isInitialized) return;
     Purchases.addCustomerInfoUpdateListener(listener);
   }
 
   /// Dinleyiciyi kaldır
   void removeCustomerInfoListener(void Function(CustomerInfo) listener) {
+    if (!_isInitialized) return;
     Purchases.removeCustomerInfoUpdateListener(listener);
   }
 }
