@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../auth/auth_controller.dart';
+import 'api_client.dart';
 import 'revenuecat_service.dart';
 
 /// Kullanıcının abonelik durumu
@@ -18,12 +19,19 @@ class SubscriptionState {
   final bool isLoading;
   final String? error;
 
+  /// Abonelik mağaza (App Store / Play) üzerinden mi yönetiliyor?
+  ///
+  /// `false` + [isPro] `true` ⇒ üyelik web tarafından (iyzico) geliyor; kullanıcı
+  /// iptal/değişiklik için numistr.org'a yönlendirilmeli, mağaza ayarlarına DEĞİL.
+  final bool managedByStore;
+
   SubscriptionState({
     required this.tier,
     required this.isActive,
     this.expiryDate,
     this.isLoading = false,
     this.error,
+    this.managedByStore = false,
   });
 
   bool get isPro => tier == SubscriptionTier.pro && isActive;
@@ -35,6 +43,7 @@ class SubscriptionState {
     DateTime? expiryDate,
     bool? isLoading,
     String? error,
+    bool? managedByStore,
   }) {
     return SubscriptionState(
       tier: tier ?? this.tier,
@@ -42,6 +51,7 @@ class SubscriptionState {
       expiryDate: expiryDate ?? this.expiryDate,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      managedByStore: managedByStore ?? this.managedByStore,
     );
   }
 }
@@ -49,9 +59,17 @@ class SubscriptionState {
 /// Abonelik kontrolcüsü - RevenueCat entegrasyonlu
 class SubscriptionController extends StateNotifier<SubscriptionState> {
   final RevenueCatService _revenueCat;
+  final ApiClient _api;
   late final void Function(CustomerInfo) _customerInfoListener;
 
-  SubscriptionController(this._revenueCat)
+  /// Backend'in (Joomla) son bildirdiği Pro durumu.
+  ///
+  /// Neden ayrı tutuluyor: iki bağımsız ödeme kanalı var (mağaza ve web/iyzico) ve
+  /// hiçbiri diğerini görmüyor. RevenueCat listener'ı tetiklendiğinde state'i
+  /// baştan kurduğu için, web kaynaklı üyeliğin kaybolmaması adına burada saklanır.
+  bool _backendPro = false;
+
+  SubscriptionController(this._revenueCat, this._api)
       : super(SubscriptionState(
           tier: SubscriptionTier.free,
           isActive: true,
@@ -78,25 +96,35 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
     }
   }
 
-  /// CustomerInfo'dan state güncelle
+  /// CustomerInfo + backend durumundan state güncelle
+  ///
+  /// Pro = mağaza entitlement'ı aktif **VEYA** backend Pro diyor. İki kanaldan
+  /// biri Pro diyorsa Pro sayılır; aksi halde web'den ödeme yapan kullanıcı
+  /// uygulamada ücretsiz görünür ve aynı üyeliği ikinci kez satın alabilir.
   void _updateFromCustomerInfo(CustomerInfo customerInfo) {
-    final isPro = customerInfo.entitlements.active.containsKey(
+    final storePro = customerInfo.entitlements.active.containsKey(
       RevenueCatConfig.proEntitlementId,
     );
+    final isPro = storePro || _backendPro;
 
     DateTime? expiryDate;
-    if (isPro) {
+    if (storePro) {
       final entitlement = customerInfo.entitlements.active[RevenueCatConfig.proEntitlementId];
       if (entitlement?.expirationDate != null) {
         expiryDate = DateTime.parse(entitlement!.expirationDate!);
       }
     }
+    // Web kaynaklı üyelikte bitiş tarihi yok: /v1/user/subscription yalnızca
+    // is_pro/type/features döndürüyor, tarih taşımıyor.
+
+    debugPrint('Subscription: store=$storePro backend=$_backendPro -> isPro=$isPro');
 
     state = SubscriptionState(
       tier: isPro ? SubscriptionTier.pro : SubscriptionTier.free,
       isActive: true,
       expiryDate: expiryDate,
       isLoading: false,
+      managedByStore: storePro,
     );
   }
 
@@ -115,6 +143,7 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
   Future<void> logoutUser() async {
     if (_lastLoginId == null) return;
     _lastLoginId = null;
+    _backendPro = false;
     await _revenueCat.logout();
     state = SubscriptionState(
       tier: SubscriptionTier.free,
@@ -123,20 +152,46 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
     );
   }
 
-  /// Aboneliği kontrol et (backend'den)
+  /// Aboneliği iki kaynaktan kontrol et: mağaza (RevenueCat) + backend (Joomla)
   Future<void> checkSubscription() async {
     state = state.copyWith(isLoading: true, error: null);
+
+    _backendPro = await _fetchBackendPro();
 
     try {
       final customerInfo = await _revenueCat.getCustomerInfo();
       if (customerInfo != null) {
         _updateFromCustomerInfo(customerInfo);
       } else {
-        state = state.copyWith(isLoading: false);
+        // Mağaza SDK'sı yok/yapılandırılmadı (ör. anahtar boş): yalnız backend'e göre karar ver.
+        state = SubscriptionState(
+          tier: _backendPro ? SubscriptionTier.pro : SubscriptionTier.free,
+          isActive: true,
+          isLoading: false,
+          managedByStore: false,
+        );
       }
     } catch (e) {
-      debugPrint('Check subscription error: $e');
+      debugPrint('Check subscription error: \$e');
       state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  /// `GET /v1/user/subscription` → `data.is_pro`
+  ///
+  /// Giriş yapılmamışsa uç 401 döner; bu bir hata değil, "Pro değil" demektir.
+  /// Ağ hatasında da false döner — mağaza tarafı yine kendi başına değerlendirilir.
+  Future<bool> _fetchBackendPro() async {
+    try {
+      final response = await _api.dio.get('/user/subscription');
+      final body = response.data;
+      if (body is Map && body['data'] is Map) {
+        return (body['data'] as Map)['is_pro'] == true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Backend subscription check skipped: \$e');
+      return false;
     }
   }
 
@@ -238,7 +293,7 @@ final subscriptionProvider =
     StateNotifierProvider<SubscriptionController, SubscriptionState>(
   (ref) {
     final revenueCat = ref.watch(revenueCatServiceProvider);
-    final controller = SubscriptionController(revenueCat);
+    final controller = SubscriptionController(revenueCat, ref.watch(apiClientProvider));
 
     ref.listen<AuthState>(
       authControllerProvider,

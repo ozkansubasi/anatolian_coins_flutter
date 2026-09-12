@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/subscription_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
@@ -132,7 +133,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () => _showManageSubscriptionInfo(context, l10n),
+                    onPressed: () => _showManageSubscriptionInfo(
+                        context, l10n, subscription.managedByStore),
                     icon: const Icon(Icons.settings),
                     label: Text(l10n.translate('manage_subscription')),
                     style: OutlinedButton.styleFrom(
@@ -877,7 +879,21 @@ class ProkitSubscriptionPage extends ConsumerWidget {
     }
   }
 
-  void _showManageSubscriptionInfo(BuildContext context, AppLocalizations l10n) {
+  /// Aboneliği yönetme bilgisi — kaynağa göre ayrışır.
+  ///
+  /// Mağaza aboneliği iOS/Android ayarlarından iptal edilir; web (iyzico)
+  /// aboneliği edilemez, kullanıcı numistr.org Hesabım sayfasına yönlendirilir.
+  /// Yanlış yönlendirme, iptal edemeyen kullanıcı demek.
+  void _showManageSubscriptionInfo(
+    BuildContext context,
+    AppLocalizations l10n,
+    bool managedByStore,
+  ) {
+    final isTr = Localizations.localeOf(context).languageCode == 'tr';
+    final accountUrl = Uri.parse(isTr
+        ? 'https://www.numistr.org/tr/hesabim'
+        : 'https://www.numistr.org/en/my-account');
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -886,14 +902,30 @@ class ProkitSubscriptionPage extends ConsumerWidget {
           children: [
             const Icon(Icons.settings, color: numPrimary),
             12.width,
-            Text(l10n.translate('manage_subscription'), style: boldTextStyle(size: 18)),
+            Expanded(
+              child: Text(l10n.translate('manage_subscription'),
+                  style: boldTextStyle(size: 18)),
+            ),
           ],
         ),
         content: Text(
-          l10n.translate('manage_subscription_info'),
+          l10n.translate(managedByStore
+              ? 'manage_subscription_info'
+              : 'manage_subscription_info_web'),
           style: secondaryTextStyle(size: 14),
         ),
         actions: [
+          if (!managedByStore)
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                if (await canLaunchUrl(accountUrl)) {
+                  await launchUrl(accountUrl, mode: LaunchMode.externalApplication);
+                }
+              },
+              child: Text(l10n.translate('open_web_account'),
+                  style: primaryTextStyle(color: numPrimary)),
+            ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(l10n.translate('ok'), style: primaryTextStyle(color: numPrimary)),

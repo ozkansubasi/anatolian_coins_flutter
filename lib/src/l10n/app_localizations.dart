@@ -21,6 +21,12 @@ class AppLocalizations {
   // Translations map
   static final Map<String, Map<String, String>> _localizedValues = {
     'tr': {
+      'manage_subscription_info_web': 'Aboneliğiniz numistr.org üzerinden yönetiliyor. İptal ve değişiklik işlemlerini Hesabım sayfasından yapabilirsiniz.',
+      'open_web_account': 'Hesabım sayfasını aç',
+      'choose_your_plan': 'Planını seç',
+      'unlock_all_features': 'Tüm özelliklerin kilidini aç',
+      'subscription_valid': 'Aboneliğiniz geçerli',
+      'kvkk': 'KVKK Aydınlatma Metni',
       // Common
       'app_name': 'Anadolu\'nun Sikkeleri',
       'welcome': 'Hoş geldin!',
@@ -739,6 +745,13 @@ class AppLocalizations {
       'kvkk_visual_data_content': 'Tanıma için yüklediğiniz sikke fotoğrafları. Bu görseller diske yazılmaz; yalnızca bellekte işlenir ve işlem biter bitmez silinir. Geriye yalnızca geri döndürülemez bir özet (SHA-256) ile tanıma sonucu kalır.',
     },
     'en': {
+      'manage_subscription_info_web': 'Your subscription is managed on numistr.org. You can cancel or change it from the My Account page.',
+      'open_web_account': 'Open My Account',
+      'choose_your_plan': 'Choose your plan',
+      'unlock_all_features': 'Unlock all features',
+      'subscription_valid': 'Your subscription is active',
+      'kvkk': 'Data Protection Notice',
+      'hide_no_images': 'Hide items without images',
       // Common
       'app_name': 'Anatolian Coins',
       'welcome': 'Welcome!',
