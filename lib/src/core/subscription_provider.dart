@@ -69,6 +69,13 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
   /// baştan kurduğu için, web kaynaklı üyeliğin kaybolmaması adına burada saklanır.
   bool _backendPro = false;
 
+  /// Web (iyzico) aboneliğinin dönem sonu — yalnız GELECEKTEKİ tarih tutulur.
+  ///
+  /// Backend geçmiş bir tarih de döndürebilir (housekeeping cron'u henüz süpürmemişse);
+  /// "şu tarihe kadar geçerli" kartında geçmiş tarih göstermek yanlış olur, burada süzülür.
+  /// Mağaza aboneliğinde tarih RevenueCat'ten gelir, backend'den gelmez.
+  DateTime? _backendExpiry;
+
   SubscriptionController(this._revenueCat, this._api)
       : super(SubscriptionState(
           tier: SubscriptionTier.free,
@@ -113,11 +120,13 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
       if (entitlement?.expirationDate != null) {
         expiryDate = DateTime.parse(entitlement!.expirationDate!);
       }
+    } else {
+      // Web (iyzico) üyeliği: tarih backend'den (`expires_at`) gelir.
+      expiryDate = _backendExpiry;
     }
-    // Web kaynaklı üyelikte bitiş tarihi yok: /v1/user/subscription yalnızca
-    // is_pro/type/features döndürüyor, tarih taşımıyor.
 
-    debugPrint('Subscription: store=$storePro backend=$_backendPro -> isPro=$isPro');
+    debugPrint('Subscription: store=$storePro backend=$_backendPro '
+        'expiry=${expiryDate?.toIso8601String() ?? "-"} -> isPro=$isPro');
 
     state = SubscriptionState(
       tier: isPro ? SubscriptionTier.pro : SubscriptionTier.free,
@@ -144,6 +153,7 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
     if (_lastLoginId == null) return;
     _lastLoginId = null;
     _backendPro = false;
+    _backendExpiry = null;
     await _revenueCat.logout();
     state = SubscriptionState(
       tier: SubscriptionTier.free,
@@ -156,7 +166,7 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
   Future<void> checkSubscription() async {
     state = state.copyWith(isLoading: true, error: null);
 
-    _backendPro = await _fetchBackendPro();
+    await _fetchBackendSubscription();
 
     try {
       final customerInfo = await _revenueCat.getCustomerInfo();
@@ -172,26 +182,43 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
         );
       }
     } catch (e) {
-      debugPrint('Check subscription error: \$e');
+      debugPrint('Check subscription error: $e');
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
-  /// `GET /v1/user/subscription` → `data.is_pro`
+  /// `GET /v1/user/subscription` → `_backendPro` + `_backendExpiry`
   ///
   /// Giriş yapılmamışsa uç 401 döner; bu bir hata değil, "Pro değil" demektir.
   /// Ağ hatasında da false döner — mağaza tarafı yine kendi başına değerlendirilir.
-  Future<bool> _fetchBackendPro() async {
+  Future<void> _fetchBackendSubscription() async {
+    _backendPro = false;
+    _backendExpiry = null;
+
     try {
       final response = await _api.dio.get('/user/subscription');
       final body = response.data;
-      if (body is Map && body['data'] is Map) {
-        return (body['data'] as Map)['is_pro'] == true;
+
+      if (body is! Map || body['data'] is! Map) {
+        return;
       }
-      return false;
+
+      final data = body['data'] as Map;
+      _backendPro = data['is_pro'] == true;
+
+      // `expires_at` yalnızca web (iyzico) aboneliğinde dolu gelir; mağaza
+      // aboneliğinde ve üniversite grubundan gelen Pro'da null.
+      final raw = data['expires_at'];
+
+      if (_backendPro && raw is String && raw.isNotEmpty) {
+        final parsed = DateTime.tryParse(raw);
+
+        if (parsed != null && parsed.isAfter(DateTime.now())) {
+          _backendExpiry = parsed;
+        }
+      }
     } catch (e) {
-      debugPrint('Backend subscription check skipped: \$e');
-      return false;
+      debugPrint('Backend subscription check skipped: $e');
     }
   }
 
