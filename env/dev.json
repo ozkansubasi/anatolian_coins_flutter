@@ -8,5 +8,5 @@
   "OIDC_REDIRECT_URL": "com.anatoliancoins.app://callback",
   "OIDC_LOGOUT_REDIRECT_URL": "com.anatoliancoins.app://logout",
   "REVENUECAT_ANDROID_KEY": "goog_HqITgfhcdtQNphhibhFTMbQHjGg",
-  "REVENUECAT_IOS_KEY": ""
+  "REVENUECAT_IOS_KEY": "appl_vwSyRXaCPEoHzVKxJSCeqMNCyyJ"
 }
