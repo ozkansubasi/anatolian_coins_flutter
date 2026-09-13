@@ -17,7 +17,21 @@ class AuthTokens {
   /// RevenueCat appUserID olarak kullanılır (cihaz/yeniden kurulum bağımsız).
   final String? sub;
 
-  AuthTokens({required this.accessToken, this.refreshToken, this.expiresAt, this.email, this.sub});
+  /// OIDC `id_token`.
+  ///
+  /// Çıkışta gerekiyor: `EndSessionRequest`, `postLogoutRedirectUrl` verildiğinde
+  /// `idTokenHint`'i ZORUNLU kılıyor (paket içinde assert var). Hint olmadan
+  /// uygulamaya geri dönüş yapılamaz, dolayısıyla oturum kapatma akışı tamamlanmaz.
+  final String? idToken;
+
+  AuthTokens({
+    required this.accessToken,
+    this.refreshToken,
+    this.expiresAt,
+    this.email,
+    this.sub,
+    this.idToken,
+  });
 
   Map<String, dynamic> toJson() => {
     'accessToken': accessToken,
@@ -25,6 +39,7 @@ class AuthTokens {
     'expiresAt': expiresAt?.toIso8601String(),
     'email': email,
     'sub': sub,
+    'idToken': idToken,
   };
 
   static AuthTokens? fromJson(Map<String, dynamic>? j) {
@@ -35,6 +50,7 @@ class AuthTokens {
       expiresAt: j['expiresAt'] != null ? DateTime.tryParse(j['expiresAt']) : null,
       email: j['email'],
       sub: j['sub'],
+      idToken: j['idToken'],
     );
   }
 
@@ -145,6 +161,7 @@ class AuthRepository {
                 ? AuthTokens.extractSubFromJwt(token.idToken!)
                 : null) ??
             current.sub,
+        idToken: token.idToken ?? current.idToken,
       );
       await save(fresh);
       return fresh;
@@ -209,6 +226,7 @@ class AuthRepository {
         expiresAt: result.accessTokenExpirationDateTime,
         email: email,
         sub: sub,
+        idToken: result.idToken,
       );
 
       debugPrint('🔵 Saving tokens...');
@@ -292,6 +310,7 @@ class AuthRepository {
               : null,
           email: extractedEmail,
           sub: sub,
+          idToken: idToken,
         );
 
         await save(t);
@@ -411,6 +430,7 @@ class AuthRepository {
         expiresAt: result.accessTokenExpirationDateTime,
         email: email,
         sub: sub,
+        idToken: result.idToken,
       );
 
       await save(t);
@@ -422,27 +442,57 @@ class AuthRepository {
     }
   }
 
+  /// Oturumu kapat.
+  ///
+  /// OIDC `endSession` kullanılıyor: iOS'ta `ASWebAuthenticationSession` içinde
+  /// açılıp kendiliğinden kapanır. Eski yol (`/v2/logout` + harici Safari) boş bir
+  /// sayfa gösterip iOS'un "uygulamaya dönülsün mü?" onayını tetikliyordu.
+  ///
+  /// Bilinçli takas (kullanıcı kararı, 2026-09-13): `endSession` **federated**
+  /// çıkış yapmaz — Auth0 oturumu kapanır, Google oturumu cihazda kalır. Tekrar
+  /// girişte "Google ile devam et" şifre sormadan geçer. Tek kişilik cihazda
+  /// istenen davranış bu; kullanıcı uygulamadan çıkmak istiyor, Google
+  /// hesabından çıkmak istemiyor.
+  ///
+  /// Yedek yol korunuyor: `id_token` yoksa (bu sürümden ÖNCE giriş yapmış
+  /// kullanıcılarda saklanmıyordu) `EndSessionRequest` kurulamaz — paket
+  /// `postLogoutRedirectUrl` ile `idTokenHint`'i birlikte zorunlu kılıyor —
+  /// o durumda eski tarayıcı akışına düşülür.
   Future<void> signOut() async {
     debugPrint('🔵 AuthRepository.signOut() started');
 
-    // Clear Auth0 SSO session completely (federated logout)
-    final issuer = Uri.parse(_cfg.issuer);
-    final logoutUrl = Uri.https(issuer.host, '/v2/logout', {
-      'client_id': _cfg.clientId,
-      'returnTo': _cfg.logoutRedirectUrl,
-      'federated': '', // Force complete logout from all identity providers
-    });
+    final current = await load();
+    final idToken = current?.idToken;
 
-    debugPrint('🔵 Opening Auth0 logout URL: $logoutUrl');
-    try {
-      await launchUrl(
-        logoutUrl,
-        mode: LaunchMode.externalApplication,
-        webOnlyWindowName: '_self',
-      );
-      debugPrint('✅ Auth0 logout URL launched');
-    } catch (e) {
-      debugPrint('⚠️ Failed to launch logout URL: $e');
+    if (idToken != null && idToken.isNotEmpty) {
+      try {
+        await _appAuth.endSession(EndSessionRequest(
+          issuer: _cfg.issuer,
+          idTokenHint: idToken,
+          postLogoutRedirectUrl: _cfg.logoutRedirectUrl,
+        ));
+        debugPrint('✅ endSession completed');
+      } catch (e) {
+        // Kullanıcı sistem sayfasını kapatmış olabilir; yerel oturum yine kapanır.
+        debugPrint('⚠️ endSession failed/cancelled: $e');
+      }
+    } else {
+      debugPrint('🔵 No id_token stored — falling back to browser logout');
+      final issuer = Uri.parse(_cfg.issuer);
+      final logoutUrl = Uri.https(issuer.host, '/v2/logout', {
+        'client_id': _cfg.clientId,
+        'returnTo': _cfg.logoutRedirectUrl,
+      });
+
+      try {
+        await launchUrl(
+          logoutUrl,
+          mode: LaunchMode.externalApplication,
+          webOnlyWindowName: '_self',
+        );
+      } catch (e) {
+        debugPrint('⚠️ Failed to launch logout URL: $e');
+      }
     }
 
     // Clear local tokens

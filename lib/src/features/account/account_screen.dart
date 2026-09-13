@@ -126,10 +126,12 @@ class _AuthenticatedView extends ConsumerWidget {
               onPressed: () async {
                 final confirm = await _showSignOutDialog(context, l10n);
                 if (confirm == true && context.mounted) {
+                  // Çıkıştan sonra ana sayfaya GİTMİYORUZ: kullanıcı çıkışı bu
+                  // ekrandan yaptı, giriş de buradan yapılıyor. Ekran authState'i
+                  // izlediği için token temizlenince kendiliğinden
+                  // _UnauthenticatedView'e döner; bulunduğu yerde kalmak bağlamı
+                  // korur ve tekrar giriş tek dokunuş kalır.
                   await ref.read(authControllerProvider.notifier).signOut();
-                  if (context.mounted) {
-                    context.go('/');
-                  }
                 }
               },
               icon: const Icon(Icons.logout_rounded),
