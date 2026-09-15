@@ -273,6 +273,11 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                     // Comparison Table
                     _buildComparisonCard(context, l10n),
 
+                    16.height,
+
+                    // ADR-006: her iki kademede geçerli güven mesajı
+                    _buildTrustCard(l10n),
+
                     // University Student Banner
                     _buildUniversityBanner(context, l10n),
 
@@ -488,13 +493,16 @@ class ProkitSubscriptionPage extends ConsumerWidget {
   }
 
   Widget _buildFeaturesList(AppLocalizations l10n) {
+    // ADR-006: her madde gerçek bir Pro farkına karşılık gelir.
+    // "Reklamsız" kaldırıldı — uygulamada hiç reklam yok, ayrıcalık değil;
+    // ücretsiz taraftaki güven mesajına dönüştü (bkz. _buildTrustCard).
     final features = [
-      _Feature(Icons.all_inclusive, 'feature_unlimited_favorites', numError),
-      _Feature(Icons.offline_bolt, 'feature_offline_access', numInfo),
       _Feature(Icons.camera_enhance, 'feature_unlimited_recognition', numSecondary),
+      _Feature(Icons.all_inclusive, 'feature_unlimited_favorites', numError),
+      _Feature(Icons.collections_bookmark, 'feature_unlimited_collections', numPrimary),
+      _Feature(Icons.smart_toy, 'feature_ai_assistant', numWarning),
       _Feature(Icons.high_quality, 'feature_high_res', numSuccess),
-      _Feature(Icons.support_agent, 'feature_expert_support', numWarning),
-      _Feature(Icons.block, 'feature_no_ads', numTextSecondary),
+      _Feature(Icons.offline_bolt, 'feature_offline_access', numInfo),
     ];
 
     return Column(
@@ -599,6 +607,55 @@ class ProkitSubscriptionPage extends ConsumerWidget {
     );
   }
 
+  /// ADR-006: "Reklamsız deneyim" bir Pro ayrıcalığı olarak satılamaz — uygulamada
+  /// hiç reklam yok (pubspec'te reklam paketi, kodda tek çağrı yok). Üç madde de
+  /// doğrulanmış olgudur; fotoğrafların saklanmadığı 2026-08-30'da sunucuda ölçüldü.
+  Widget _buildTrustCard(AppLocalizations l10n) {
+    final items = [
+      ('trust_no_ads', Icons.block),
+      ('trust_no_data_sale', Icons.lock_outline),
+      ('trust_no_photo_storage', Icons.no_photography_outlined),
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: boxDecorationWithRoundedCorners(
+        backgroundColor: numCardLight,
+        borderRadius: radius(16),
+        border: Border.all(color: numBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.translate('trust_title'),
+            style: boldTextStyle(size: 14, color: numTextPrimary),
+          ),
+          12.height,
+          ...items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(item.$2, size: 18, color: numSuccess),
+                  10.width,
+                  Expanded(
+                    child: Text(
+                      l10n.translate(item.$1),
+                      style: secondaryTextStyle(size: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildComparisonCard(BuildContext context, AppLocalizations l10n) {
     return Container(
       decoration: boxDecorationWithRoundedCorners(
@@ -649,12 +706,15 @@ class ProkitSubscriptionPage extends ConsumerWidget {
           // Rows
           _buildComparisonRow(l10n.translate('coin_catalog'), true, true),
           _buildComparisonRow(l10n.translate('search_filter'), true, true),
+          // ADR-005: tarama satırı "Sınırsız" DEĞİL — adil kullanım tavanı var.
+          _buildComparisonRow(
+              l10n.translate('monthly_scans'), '10', l10n.translate('high_capacity')),
           _buildComparisonRow(l10n.translate('favorites'), '10', l10n.translate('unlimited')),
           _buildComparisonRow(l10n.translate('collections'), '1', l10n.translate('unlimited')),
-          _buildComparisonRow(l10n.translate('monthly_scans'), '10', l10n.translate('unlimited')),
+          _buildComparisonRow(l10n.translate('comparison_ai_assistant'),
+              l10n.translate('assistant_free_daily'), l10n.translate('assistant_pro_daily')),
           _buildComparisonRow(l10n.translate('offline'), false, true),
-          _buildComparisonRow(l10n.translate('comparison_high_res'), false, true),
-          _buildComparisonRow(l10n.translate('comparison_expert_support'), false, true, isLast: true),
+          _buildComparisonRow(l10n.translate('comparison_high_res'), false, true, isLast: true),
         ],
       ),
     );

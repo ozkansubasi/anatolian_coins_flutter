@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/subscription_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/collection.dart';
 import 'collections_service.dart';
@@ -108,7 +109,57 @@ class CollectionsPage extends ConsumerWidget {
     );
   }
 
+  void _showCollectionLimitDialog(BuildContext context, AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.lock_outline, size: 20),
+            const SizedBox(width: 12),
+            Expanded(child: Text(l10n.translate('pro_feature'))),
+          ],
+        ),
+        content: Text(
+          l10n.translate(
+            'feature_locked_message',
+            params: {'featureName': l10n.translate('feature_unlimited_collections')},
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.translate('close')),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              context.push('/subscription');
+            },
+            child: Text(l10n.translate('buy_pro')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ADR-006: ücretsiz kademe 1 koleksiyonla sınırlı, Pro sınırsız.
+  /// Geçiş kuralı bilinçli olarak korumacı: mevcut koleksiyonlar silinmez veya
+  /// gizlenmez, kapı yalnızca YENİ oluşturmayı engeller. Koleksiyonlar cihaz-yerel
+  /// olduğu için etkilenen kullanıcı sayısı sunucudan ölçülemiyor.
   void _showCreateDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final subscription = ref.read(subscriptionProvider);
+
+    if (!subscription.isPro) {
+      final existing = ref.read(collectionsControllerProvider).value ?? const [];
+      if (existing.length >= FeatureLimits.freeMaxCollections) {
+        _showCollectionLimitDialog(context, l10n);
+        return;
+      }
+    }
+
     final nameController = TextEditingController();
     final descController = TextEditingController();
 
