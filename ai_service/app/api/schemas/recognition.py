@@ -13,6 +13,10 @@ class CoinMatch(BaseModel):
     confidence: float = Field(..., ge=0.0, le=1.0, description="Overall confidence score")
     visual_score: float = Field(..., ge=0.0, le=1.0, description="Visual similarity score")
     ocr_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="OCR match score")
+    obverse_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Obverse-side visual score")
+    reverse_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Reverse-side visual score")
+    image_type: Optional[str] = Field(None, description="Matched image side/type")
+    tied_with: Optional[List[int]] = Field(None, description="Article IDs this match is indistinguishable from (identical photograph)")
     distance: Optional[float] = Field(None, description="FAISS L2 distance")
 
     # Coin metadata
@@ -50,6 +54,12 @@ class RecognitionResponse(BaseModel):
     method: str = Field(..., description="Recognition method used (primary/automl/hybrid)")
     processing_time_ms: int = Field(..., description="Processing time in milliseconds")
     ocr_extracted: Optional[Dict[str, Any]] = Field(None, description="Extracted OCR text")
+    ambiguous: bool = Field(False, description="Top candidates are indistinguishable (same photograph on several catalog records)")
+    tie_size: int = Field(0, description="Number of tied top candidates (0 when not ambiguous)")
+    tied_articles: List[int] = Field(default_factory=list, description="Article IDs in the tied top group")
+    no_match: bool = Field(False, description="True when no confident match was found")
+    no_match_reason: Optional[str] = Field(None, description="no_coin_detected | low_detail_surface | below_confidence | ambiguous_match | service_unavailable")
+    quality: Optional[Dict[str, Any]] = Field(None, description="Per-side input quality metrics")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Response timestamp")
 
     class Config:

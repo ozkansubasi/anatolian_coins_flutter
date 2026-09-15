@@ -43,6 +43,27 @@ MIN_CONF = 0.30                 # below this a match is dropped
 W_OBV, W_REV = 0.45, 0.55       # side weights when both sides matched an article
 AMBIG_MARGIN = 0.05             # top1-top2 confidence margin for ambiguity flag
 AMBIG_TOP = 0.50                # ambiguity only flagged when top1 below this
+
+# ---- Asama 1: duplicate catalog records -> exact top ties (2026-09-16) ----
+# The same photograph is attached to several catalog records (the same source
+# catalogue was imported into three region categories), so FAISS returns bit-identical
+# distances for all of them: ranking becomes arbitrary and up to five mutually
+# exclusive answers were served at confidence 1.0, with the true record pushed out
+# of TOP_N by its own copies.
+# Measured 2026-09-16: 3040 of 48284 index vectors (6.30%) are byte-identical copies;
+# 781 catalog records (11.0%) are affected. See
+# claudedocs/ai-mukerrerlik-temizligi-plani-2026-09-16.md
+# NOTE: ties are computed AFTER attribute re-ranking on purpose, so a tie that the
+# collector's metal/weight/diameter already resolved is not reported as ambiguous.
+# TIE_EPS is calibrated, not guessed: over 120 colliding + 120 clean records the top1-top2
+# gap separates cleanly. Colliding: 82.5% exactly 0.0, a further 5.8% within 1e-3 (re-compressed
+# near-duplicates that a byte hash cannot see), largest caught gap 0.000273. Clean: smallest gap
+# 0.002138, p1 0.005450. 0.001 sits in the empty band between the two -> 88.3% of collisions
+# caught, 0/120 false positives on clean records.
+TIE_EPS = 0.001                 # fused-distance gap below which candidates are indistinguishable
+TIE_CONF_CAP = 0.60             # confidence ceiling while tied (app: yellow band, above the 0.4 filter)
+TIE_MIN = 2                     # this many tied candidates before ambiguity is declared
+TIE_MAX_SHOW = 10               # a tied group is returned whole, up to this ceiling
 SHARP_MIN = 25.0                # Laplacian variance on 224px crop; below = low detail
 QUALITY_CONF = 0.50             # quality reasons only claimed when top conf below this
 
@@ -258,11 +279,28 @@ class RecognitionService:
 
             ranked = sorted(fused.items(), key=lambda kv: kv[1], reverse=True)
 
+            # ---- Asama 1: collapse an indistinguishable top group ----
+            # Candidates within TIE_EPS of the leader cannot be told apart by the image
+            # at all, so no ordering among them is meaningful.
+            # Only candidates that survive MIN_CONF can be tied: otherwise tie_size would
+            # count articles that never reach the response.
+            tied_ids = []
+            if ranked and _conf(ranked[0][1]) >= MIN_CONF:
+                d_top = ranked[0][1]
+                tied_ids = [a for a, d in ranked
+                            if (d_top - d) <= TIE_EPS and _conf(d) >= MIN_CONF]
+            is_tied = len(tied_ids) >= TIE_MIN
+            tied_set = set(tied_ids) if is_tied else set()
+
             def _int(v):
                 try:
                     return int(v)
                 except Exception:
                     return None
+
+            # A tied group must be shown whole: otherwise the record the photo actually
+            # belongs to can be pushed past TOP_N by its own duplicates (measured).
+            limit = min(max(TOP_N, len(tied_ids)), TIE_MAX_SHOW) if is_tied else TOP_N
 
             matches = []
             for a, d in ranked:
@@ -272,12 +310,16 @@ class RecognitionService:
                 m = self.by_art.get(a, {})
                 oc = _conf(obv_best[a]) if a in obv_best else None
                 rc = _conf(rev_best[a]) if a in rev_best else None
+                # While tied, confidence states how sure we are of the IDENTIFICATION,
+                # not of the visual match; visual_score keeps the unmodified value.
+                in_tie = a in tied_set
                 matches.append({
                     'rank': len(matches) + 1,
                     'article_id': int(a),
                     'title': m.get('title_tr') or m.get('title_en') or 'Unknown',
-                    'confidence': conf,
+                    'confidence': min(conf, TIE_CONF_CAP) if in_tie else conf,
                     'visual_score': conf,
+                    'tied_with': [int(x) for x in tied_ids if x != a] if in_tie else None,
                     'ocr_score': None,
                     'obverse_score': oc,
                     'reverse_score': rc,
@@ -290,7 +332,7 @@ class RecognitionService:
                     'date_from': _int(m.get('date_from')),
                     'date_to': _int(m.get('date_to')),
                 })
-                if len(matches) >= TOP_N:
+                if len(matches) >= limit:
                     break
 
             # ---- quality + fallback reasons ----
@@ -308,6 +350,11 @@ class RecognitionService:
                     reason = 'low_detail_surface'
                 else:
                     reason = 'below_confidence'
+            elif is_tied:
+                # An exact tie is the most ambiguous case there is, so it is reported
+                # regardless of how high the visual score climbed. The pre-existing
+                # AMBIG_TOP gate silently excluded exactly these (top1 was 1.0).
+                reason = 'ambiguous_match'
             elif top < QUALITY_CONF:
                 if not any_detected:
                     reason = 'no_coin_detected'
@@ -323,11 +370,15 @@ class RecognitionService:
                 quality['reverse'] = {'coin_detected': rev['detected'], 'sharpness': rev['sharpness']}
 
             end = datetime.utcnow()
-            logger.info("recognize(fazA): sides=%d top art=%s conf=%.3f reason=%s" %
-                        (len(sides), matches[0]['article_id'] if matches else None, top, reason))
+            logger.info("recognize(fazA): sides=%d top art=%s conf=%.3f reason=%s tie=%d" %
+                        (len(sides), matches[0]['article_id'] if matches else None, top, reason,
+                         len(tied_ids) if is_tied else 0))
             return {
                 'matches': matches,
                 'confidence': top,
+                'ambiguous': is_tied,
+                'tie_size': len(tied_ids) if is_tied else 0,
+                'tied_articles': [int(a) for a in tied_ids] if is_tied else [],
                 'method': 'dinov3_sam2_fazAB',
                 'processing_time_ms': int((end - start).total_seconds() * 1000),
                 'ocr_extracted': None,
