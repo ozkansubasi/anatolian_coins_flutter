@@ -100,14 +100,19 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer> {
         child: Hero(
           tag: 'image_${image.imageId}',
           child: CachedNetworkImage(
-            imageUrl: image.url,
+            // ADR-006 Faz 2: Pro'ya imzalı filigransız URL; sabit cacheKey imza
+            // yenilense de önbelleği korur. İmza süresi dolduysa filigranlıya düşülür.
+            imageUrl: image.urlHd ?? image.url,
+            cacheKey: image.urlHd != null ? 'hd_${image.imageId}' : null,
             fit: BoxFit.contain,
             placeholder: (context, url) => const Center(
               child: CircularProgressIndicator(
                 color: Colors.white,
               ),
             ),
-            errorWidget: (context, url, error) => const Center(
+            errorWidget: (context, url, error) => (image.urlHd != null && url != image.url)
+                ? CachedNetworkImage(imageUrl: image.url, fit: BoxFit.contain)
+                : const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

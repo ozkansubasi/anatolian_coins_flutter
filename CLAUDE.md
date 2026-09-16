@@ -171,5 +171,5 @@ Uses **Riverpod** throughout:
 - **Response Parsing:** API returns plain strings, not JSON. The `ApiClient` manually parses them with a custom interceptor.
 - **Field Name Variations:** Variant model handles multiple API field name formats. When adding new fields, check for variations.
 - **Auth Token Refresh:** Automatically handled by `AuthRepository.ensureFresh()` with 60-second expiry buffer.
-- **Offline Images:** Use `wm: false` parameter to download watermark-free versions for offline storage.
+- **Offline Images:** `wm: false` → `url_raw` = **480 px thumbnail** (filigransız ama küçük; yüksek çözünürlük DEĞİL). Pro filigransız/kaynak çözünürlüğü görsel `url_hd` (imzalı, 15 dk) ile gelir — ADR-006 Faz 2.
 - **Platform Support:** Only Android and iOS are supported (Linux/Windows platform directories have been removed).

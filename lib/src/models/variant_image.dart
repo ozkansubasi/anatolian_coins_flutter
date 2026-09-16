@@ -7,6 +7,8 @@ class VariantImage {
   final int? ordering;
   final String url;
   final String urlRaw;
+  /// ADR-006 Faz 2: Pro + Bearer ile gelen, süreli imzalı filigransız URL (yoksa null)
+  final String? urlHd;
   final String? remoteUrl;
 
   VariantImage({
@@ -18,12 +20,14 @@ class VariantImage {
     this.ordering,
     required this.url,
     required this.urlRaw,
+    this.urlHd,
     this.remoteUrl,
   });
 
   factory VariantImage.fromJson(Map<String, dynamic> j) {
     String url = j['url'] ?? '';
     String urlRaw = j['url_raw'] ?? '';
+    String? urlHd = j['url_hd'];
     String? remoteUrl = j['remote_url'];
 
     // Eğer relative URL ise absolute yap
@@ -32,6 +36,9 @@ class VariantImage {
     }
     if (urlRaw.startsWith('/')) {
       urlRaw = 'https://www.numistr.org$urlRaw';
+    }
+    if (urlHd != null && urlHd.startsWith('/')) {
+      urlHd = 'https://www.numistr.org$urlHd';
     }
 
     return VariantImage(
@@ -43,6 +50,7 @@ class VariantImage {
       ordering: j['ordering'],
       url: url,
       urlRaw: urlRaw,
+      urlHd: (urlHd == null || urlHd.isEmpty) ? null : urlHd,
       remoteUrl: remoteUrl,
     );
   }

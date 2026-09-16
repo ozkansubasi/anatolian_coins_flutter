@@ -90,11 +90,12 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
 
     // Load from API
     final api = ref.read(variantsApiProvider);
-    final subscription = ref.read(subscriptionProvider);
 
     try {
       final v = await api.getVariant(widget.articleId, includeImages: true);
-      final imgs = await api.images(widget.articleId, wm: !subscription.isPro, abs: false);
+      // ADR-006 Faz 2: herkes filigranlı 1600 px + Pro'ya sunucu url_hd verir (eski 'Pro=wm:0'
+      // 480 px filigransız thumb idi — yüksek çözünürlük değil, küçültmeydi).
+      final imgs = await api.images(widget.articleId, wm: true, abs: false);
       setState(() {
         _variant = v;
         _images = imgs;
