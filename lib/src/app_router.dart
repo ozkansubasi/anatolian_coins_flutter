@@ -23,6 +23,7 @@ import 'features/collections/collection_detail_page.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/legal/legal.dart';
+import 'features/assistant/assistant_screen.dart';
 
 /// Stream -> Listenable köprüsü: stream bir olay yayınlayınca router'ı yeniler.
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -117,6 +118,12 @@ GoRouter appRouter(WidgetRef ref) {
           GoRoute(
             path: 'settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: 'assistant',
+            builder: (context, state) => AssistantScreen(
+              initialQuestion: state.uri.queryParameters['q'],
+            ),
           ),
           // Legal pages
           GoRoute(

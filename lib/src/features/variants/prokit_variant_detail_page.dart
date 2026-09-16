@@ -288,6 +288,14 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                     ),
                     onPressed: _handleFavoriteToggle,
                   ),
+                  // ADR-006 Faz 3: asistana bu sikke hakkında sor (soru önceden doldurulur, gönderilmez)
+                  IconButton(
+                    icon: const Icon(Icons.smart_toy_outlined, color: Colors.white),
+                    tooltip: l10n.translate('ask_assistant'),
+                    onPressed: () => context.push(
+                      '/assistant?q=${Uri.encodeQueryComponent(l10n.translate('assistant_prefill', params: {'title': v.title}))}',
+                    ),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.share, color: Colors.white),
                     onPressed: _handleShare,

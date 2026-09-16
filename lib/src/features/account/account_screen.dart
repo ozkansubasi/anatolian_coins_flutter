@@ -88,6 +88,20 @@ class _AuthenticatedView extends ConsumerWidget {
 
             const SizedBox(height: 16),
 
+            // ADR-006 Faz 3: AI Numizmatik Asistanı girişi (ikinci ve son giriş noktası; A15)
+            Card(
+              elevation: 2,
+              child: ListTile(
+                leading: Icon(Icons.smart_toy_outlined, color: theme.colorScheme.primary),
+                title: Text(l10n.translate('assistant_title')),
+                subtitle: Text(l10n.translate('assistant_subtitle')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.push('/assistant'),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
             // Quota Card (only for free users)
             // Note: If quota fetch fails (e.g., 401), show a simplified info instead
             quotaAsync.when(
