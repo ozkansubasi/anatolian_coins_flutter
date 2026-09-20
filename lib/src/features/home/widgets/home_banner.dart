@@ -13,6 +13,9 @@ import '../../../prokit_ui/numistr_colors.dart';
 /// - Sikke fotograflari kare ve nesne ortada: [BoxFit.contain] + krem zemin
 ///   (cover kullanilsa 480x480 sikkeden yatay bir dilim gorunurdu).
 /// - Manzara fotograflari: [BoxFit.cover], cerceveyi doldurur.
+/// Arsiv fotograflarinin beyaz zemininin cevrildigi sicak plaka tonu.
+const Color _plakaZemin = Color(0xFFF3E8D6);
+
 class HomeBanner extends StatelessWidget {
   final String image;
   final String slogan;
@@ -38,7 +41,13 @@ class HomeBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        // CERCEVE: beyaz zeminli arsiv fotograflari cercevesiz birakilinca
+        // banner'in siniri kaybolup "bosluk" hissi veriyordu (2026-09-20).
+        // Altin kenarlik, gorsel alani ile slogan seridini tek parca yapar.
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: numPrimary.withAlpha(90)),
+        ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
@@ -55,14 +64,23 @@ class HomeBanner extends StatelessWidget {
                     Container(
                       // contain modunda zemin BEYAZ: arsiv fotograflarinin kendi
                       // zemini beyaz, krem zeminde ortada gorunur bir dikis birakiyordu.
-                      color: fit == BoxFit.contain ? Colors.white : numPrimaryDark,
-                      child: Image.asset(
-                        image,
-                        fit: fit,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: numPrimaryDark,
-                          child: const Icon(Icons.image_not_supported_outlined,
-                              color: Colors.white38, size: 32),
+                      color: fit == BoxFit.contain ? _plakaZemin : numPrimaryDark,
+                      child: ColorFiltered(
+                        // Arsiv fotograflarinin BEYAZ zeminini sicak bir plaka
+                        // tonuna cevirir (carpma karisimi): beyaz -> krem, sikke
+                        // tonu korunur. Manzara fotografinda filtre uygulanmaz.
+                        colorFilter: ColorFilter.mode(
+                          fit == BoxFit.contain ? _plakaZemin : Colors.transparent,
+                          fit == BoxFit.contain ? BlendMode.multiply : BlendMode.dst,
+                        ),
+                        child: Image.asset(
+                          image,
+                          fit: fit,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: numPrimaryDark,
+                            child: const Icon(Icons.image_not_supported_outlined,
+                                color: Colors.white38, size: 32),
+                          ),
                         ),
                       ),
                     ),

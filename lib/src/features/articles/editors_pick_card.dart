@@ -68,34 +68,10 @@ class _ArticleCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // "Editör'den" basligi BURADA YOK: bolum basligiyla birebir ayni
-              // metin oldugu icin ekranda iki kez tekrarlaniyordu (2026-09-20).
-              Row(
-                children: [
-                  // Category badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.secondary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      article.category,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.secondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Article Title
+              // SIRA: once KONU BASLIGI, sonra kategori etiketi (2026-09-20).
+              // Kategori rozeti basligin ustundeydi; kart once "Semboller" diye
+              // aciliyor, asil konu ikinci planda kaliyordu.
+              // ("Editör'den" basligi burada YOK: bolum basligiyla ayni metin.)
               Text(
                 article.title,
                 style: theme.textTheme.titleMedium?.copyWith(
@@ -106,6 +82,24 @@ class _ArticleCard extends StatelessWidget {
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+              ),
+
+              const SizedBox(height: 8),
+
+              // Kategori etiketi (tag) -- basliktan SONRA
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  article.category,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.secondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
 
               const SizedBox(height: 8),

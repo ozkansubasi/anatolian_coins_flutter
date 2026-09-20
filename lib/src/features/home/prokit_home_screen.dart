@@ -297,26 +297,21 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       ),
     ];
 
-    // HIZLI ERISIM: baslik ve kart YOK.
-    // Gerekce (2026-09-20): once yatay liste vardi (5 kart x 104 px = 520 px,
-    // ekran 412 px -> son kart hic gorunmuyordu). Grid tasmayi cozdu ama
-    // golgeli/cerceveli kartlar amator duruyordu: her kisayol, sayfadaki
-    // "Sikke Tani" gibi gercek bir kartla ayni gorsel agirliktaydi.
-    // Modern kisayol bloklari (bankacilik/e-ticaret deseni) cercevesizdir:
-    // yuvarlak ikon + altinda etiket, golge yok, ayirici yok. Bolum basligi da
-    // gereksiz -- ikonlar zaten kendini anlatiyor ve dikey yer kazanildi.
+    // HIZLI ERISIM: 2 sutun x 3 satir YATAY tile.
+    // Bugunun dorduncu revizyonu. Oncekiler: golgeli beyaz kare kartlar ->
+    // "amator"; cercevesiz ikon-only -> etiketsiz anlasilmiyordu; etiketli kare
+    // kartlar -> dikeyde cok yer kapliyor ve "tiklanabilir" hissi vermiyordu.
+    // Yatay tile kart yuksekligini ~64dp'ye indirir ve soldaki ikon + sagdaki
+    // ok ucuyla klasik "satira bas" afordansini kurar.
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: GridView.count(
-        // 3 sutun: 6 kisayol tam iki satir eder (4 sutunda ikinci satirda bosluk
-        // kaliyordu) ve hucre genisligi ~132 dp'ye cikinca "Koleksiyonlarim" gibi
-        // uzun etiketler kelime ortasindan bolunmuyor.
-        crossAxisCount: 3,
+        crossAxisCount: 2,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.88,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 2.6,
         children: [
           for (final feature in features) _QuickAction(feature: feature),
         ],
@@ -460,6 +455,7 @@ class _QuickFeature {
 /// bulundu, cercevesiz ikon-only yapildi -> etiketsiz ikonlar anlasilmiyordu.
 /// Son hal: Editor'den karti ile AYNI dil -- surfaceContainerLow yuzey, hafif
 /// yukselti, 16 yaricap -- yani sayfada iki farkli kart tipi yok.
+/// Kisayol tile'i: solda ikon, ortada etiket, sagda ok ucu.
 class _QuickAction extends StatelessWidget {
   final _QuickFeature feature;
 
@@ -474,33 +470,32 @@ class _QuickAction extends StatelessWidget {
       button: true,
       label: feature.title,
       child: Material(
-        elevation: 1,
-        // Her kartin kendi toprak tonu zemini (koyu temada tek yuzey rengi:
-        // acik tonlar koyu zeminde okunmaz).
         color: isDark ? theme.colorScheme.surfaceContainerLow : feature.tint,
-        shadowColor: theme.colorScheme.shadow,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
           onTap: feature.onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              // Ince altin cerceve: zemin tonlari birbirine yakin oldugu icin
+              // kartin siniri tek basina renkle okunmuyordu.
+              border: Border.all(color: numPrimary.withAlpha(70)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
               children: [
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      // Ikon %25 buyutuldu (48->60 daire, 24->30 ikon)
-                      width: 60,
-                      height: 60,
+                      width: 38,
+                      height: 38,
                       decoration: BoxDecoration(
-                        color: numPrimary.withAlpha(isDark ? 45 : 28),
+                        color: numPrimary.withAlpha(isDark ? 45 : 40),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(feature.icon, color: numPrimary, size: 30),
+                      child: Icon(feature.icon, color: numPrimary, size: 22),
                     ),
                     if (feature.badge != null)
                       Positioned(
@@ -524,21 +519,21 @@ class _QuickAction extends StatelessWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                // Etiket sabit puntoda: FittedBox ile kucultmek kartlar arasinda
-                // farkli punto uretiyordu (eski _QuickFeatureCard hatasi).
-                Text(
-                  feature.title,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    // Kalin DEGIL: basliklar kart icinde one cikmasin.
-                    fontWeight: FontWeight.w400,
-                    color: isDark ? Colors.white70 : numTextPrimary,
-                    height: 1.15,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    feature.title,
+                    // 12sp: 14sp'de hucre genisligi (~91dp) yetmiyor ve
+                    // "Favorilerim" / "Koleksiyonlar" kelime ortasindan boluniyordu.
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white70 : numTextPrimary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
+                Icon(Icons.chevron_right, size: 16, color: numPrimary.withAlpha(160)),
               ],
             ),
           ),
