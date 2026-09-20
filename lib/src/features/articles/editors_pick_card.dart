@@ -52,47 +52,26 @@ class _ArticleCard extends StatelessWidget {
     final dateFormat = DateFormat.yMMMd(l10n.locale.languageCode);
     final formattedDate = dateFormat.format(article.created);
 
+    // GERCEK KART: onceden hem dis Container hem bu Material vardi ve ikisi de
+    // seffafti; blok "kart" gibi degil, sayfaya yapisik bir metin blogu gibi
+    // duruyordu. Artik yuzey rengi + hafif yukselti tasiyor.
     return Material(
-      elevation: 0,
-      color: Colors.transparent,
+      elevation: 1,
+      color: theme.colorScheme.surfaceContainerLow,
+      shadowColor: theme.colorScheme.shadow,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: () => context.go('/article/${article.id}'),
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header - "Editör'den" with icon
+              // "Editör'den" basligi BURADA YOK: bolum basligiyla birebir ayni
+              // metin oldugu icin ekranda iki kez tekrarlaniyordu (2026-09-20).
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      Icons.person_rounded,
-                      size: 16,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    l10n.translate('editors_pick'),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const Spacer(),
                   // Category badge
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -121,7 +100,7 @@ class _ArticleCard extends StatelessWidget {
                 article.title,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onPrimaryContainer,
+                  color: theme.colorScheme.onSurface,
                   height: 1.2,
                   fontSize: 16,
                 ),
@@ -136,7 +115,7 @@ class _ArticleCard extends StatelessWidget {
                 Text(
                   article.intro!,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer.withOpacity(0.8),
+                    color: theme.colorScheme.onSurfaceVariant,
                     height: 1.3,
                     fontSize: 12,
                   ),
@@ -156,16 +135,14 @@ class _ArticleCard extends StatelessWidget {
                       Icon(
                         Icons.schedule_rounded,
                         size: 12,
-                        color: theme.colorScheme.onPrimaryContainer
-                            .withOpacity(0.6),
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         formattedDate,
                         style: TextStyle(
                           fontSize: 12,
-                          color: theme.colorScheme.onPrimaryContainer
-                              .withOpacity(0.6),
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],

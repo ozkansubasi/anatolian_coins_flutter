@@ -105,9 +105,6 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           // Region Categories (Horizontal)
           _buildRegionCategories(context, l10n),
 
-          // Coin Recognition Card (Hero Action)
-          _buildRecognitionCard(context, l10n, authState),
-
           // Quick Features Section
           _buildQuickFeatures(context, l10n),
 
@@ -245,86 +242,6 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
     );
   }
 
-  /// Coin Recognition Hero Card
-  Widget _buildRecognitionCard(BuildContext context, AppLocalizations l10n, authState) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Material(
-        elevation: 4,
-        borderRadius: BorderRadius.circular(16),
-        shadowColor: numPrimary.withAlpha(50),
-        child: InkWell(
-          onTap: () {
-            if (authState.authenticated) {
-              context.go('/recognition');
-            } else {
-              _showAuthDialog(context, l10n);
-            }
-          },
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: BoxDecoration(
-              gradient: numGradientPrimary,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                // Icon
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(50),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    // QR DEGIL: goruntu tanima yapiliyor, kod okunmuyor.
-                    Icons.photo_camera_outlined,
-                    size: 28,
-                    color: Colors.white,
-                  ),
-                ),
-                16.width,
-                // Text
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.translate('coin_recognition'),
-                        style: boldTextStyle(size: 18, color: Colors.white),
-                      ),
-                      4.height,
-                      Text(
-                        authState.authenticated
-                            ? l10n.translate('coin_recognition_subtitle')
-                            : l10n.translate('sign_in_to_scan'),
-                        style: secondaryTextStyle(size: 14, color: Colors.white70),
-                      ),
-                    ],
-                  ),
-                ),
-                // Arrow
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(30),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   /// Quick Features Grid
   Widget _buildQuickFeatures(BuildContext context, AppLocalizations l10n) {
     final favoritesCount = ref.watch(favoritesControllerProvider).length;
@@ -333,6 +250,15 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
     // mavi, turuncu, teal); altin-fildisi paletle cakisiyor ve amator
     // gorunuyordu. Ayrimi renk degil ikon + etiket tasir.
     final features = [
+      // Sikke Tani artik kisayollardan biri. Onceki full-width kart kaldirildi:
+      // ayni aksiyon alt cubuk + kart + kisayol olarak UC kez tekrarlaniyordu
+      // (Material: ekran basina tek birincil aksiyon).
+      _QuickFeature(
+        title: l10n.translate('coin_recognition'),
+        icon: Icons.photo_camera_outlined,
+        color: numPrimary,
+        onTap: () => context.go('/recognition'),
+      ),
       _QuickFeature(
         title: l10n.translate('browse_coins'),
         icon: Icons.search,
@@ -351,12 +277,6 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         icon: Icons.collections_bookmark_outlined,
         color: numPrimary,
         onTap: () => context.go('/collections'),
-      ),
-      _QuickFeature(
-        title: l10n.translate('scan_history'),
-        icon: Icons.history,
-        color: numPrimary,
-        onTap: () => context.go('/history'),
       ),
       _QuickFeature(
         title: l10n.translate('blog'),
@@ -391,7 +311,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         physics: const NeverScrollableScrollPhysics(),
         crossAxisSpacing: 8,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.15,
+        childAspectRatio: 1.35,
         children: [
           for (final feature in features) _QuickAction(feature: feature),
         ],
@@ -407,15 +327,12 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         numSectionHeader(
           title: l10n.translate('editors_pick'),
           actionText: l10n.translate('more'),
-          onAction: () => context.go('/browse'),
+          // Blog menusune gider; "sikke arama" (/browse) yanlis hedefti.
+          onAction: () => context.go('/blog'),
         ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark ? numSurfaceDark : numSurfaceLight,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const EditorsPickCard(),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: EditorsPickCard(),
         ),
       ],
     );
@@ -425,47 +342,6 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
     toast(l10n.translate('coming_soon_feature', params: {'feature': feature}));
   }
 
-  void _showAuthDialog(BuildContext context, AppLocalizations l10n) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: numPrimary.withAlpha(30),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.lock_outline, color: numPrimary, size: 32),
-        ),
-        title: Text(l10n.translate('sign_in'), style: boldTextStyle(size: 18)),
-        content: Text(
-          l10n.translate('auth_required_message'),
-          style: secondaryTextStyle(size: 14),
-          textAlign: TextAlign.center,
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.translate('cancel')),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: numPrimary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              context.go('/login');
-            },
-            child: Text(l10n.translate('sign_in')),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // =============================================================================
@@ -647,6 +523,11 @@ class _QuickFeature {
 /// bozuluyordu. Ayrica sabit 96x100 boyut yatay tasmanin kaynagiydi ve uzun
 /// etiketler FittedBox ile kuculdugu icin kartlar arasinda punto tutarsizdi.
 /// Burada etiket iki satira sarar, punto sabit kalir.
+/// Kisayol dugmesi: yalnizca yuvarlak ikon (etiket yok).
+///
+/// Etiketler 2026-09-20'de kaldirildi (kullanici karari: "ikon yeterli").
+/// ERISILEBILIRLIK: ikon tek basina ekran okuyucuya hicbir sey soylemez, bu yuzden
+/// her dugme Semantics(label:) ve Tooltip tasir -- uzun basinca etiket gorunur.
 class _QuickAction extends StatelessWidget {
   final _QuickFeature feature;
 
@@ -660,60 +541,48 @@ class _QuickAction extends StatelessWidget {
     return Semantics(
       button: true,
       label: feature.title,
-      child: InkWell(
-        onTap: feature.onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: numPrimary.withAlpha(isDark ? 45 : 28),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(feature.icon, color: numPrimary, size: 24),
+      child: Tooltip(
+        message: feature.title,
+        child: Center(
+          child: InkWell(
+            onTap: feature.onTap,
+            customBorder: const CircleBorder(),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  // 64 dp: etiket kalkinca ikon tek basina hiyerarsiyi tasidigi
+                  // icin buyutuldu; dokunma hedefi de rahat 48dp'nin uzerinde.
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: numPrimary.withAlpha(isDark ? 45 : 28),
+                    shape: BoxShape.circle,
                   ),
-                  if (feature.badge != null)
-                    Positioned(
-                      top: -2,
-                      right: -2,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.error,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          feature.badge!,
-                          style: TextStyle(
-                            color: theme.colorScheme.onError,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
+                  child: Icon(feature.icon, color: numPrimary, size: 28),
+                ),
+                if (feature.badge != null)
+                  Positioned(
+                    top: -2,
+                    right: -2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.error,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        feature.badge!,
+                        style: TextStyle(
+                          color: theme.colorScheme.onError,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                feature.title,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: isDark ? Colors.white70 : numTextPrimary,
-                  height: 1.15,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+                  ),
+              ],
+            ),
           ),
         ),
       ),
