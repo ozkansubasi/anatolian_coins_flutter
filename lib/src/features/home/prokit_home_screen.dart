@@ -256,18 +256,21 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         title: l10n.translate('coin_recognition'),
         icon: Icons.photo_camera_outlined,
         color: numPrimary,
+        tint: const Color(0xFFFDF3E0),
         onTap: () => context.go('/recognition'),
       ),
       _QuickFeature(
         title: l10n.translate('browse_coins'),
         icon: Icons.search,
         color: numPrimary,
+        tint: const Color(0xFFF6EEE2),
         onTap: () => context.go('/browse'),
       ),
       _QuickFeature(
         title: l10n.translate('my_favorites'),
         icon: Icons.favorite_border,
         color: numPrimary,
+        tint: const Color(0xFFF9E9E2),
         badge: favoritesCount > 0 ? favoritesCount.toString() : null,
         onTap: () => context.go('/favorites'),
       ),
@@ -275,18 +278,21 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         title: l10n.translate('collections_short'),
         icon: Icons.collections_bookmark_outlined,
         color: numPrimary,
+        tint: const Color(0xFFF1EFE2),
         onTap: () => context.go('/collections'),
       ),
       _QuickFeature(
         title: l10n.translate('blog'),
         icon: Icons.menu_book_outlined,
         color: numPrimary,
+        tint: const Color(0xFFF5EEE6),
         onTap: () => context.go('/blog'),
       ),
       _QuickFeature(
         title: l10n.translate('assistant_short'),
         icon: Icons.chat_bubble_outline,
         color: numPrimary,
+        tint: const Color(0xFFEFEDE6),
         onTap: () => context.push('/assistant'),
       ),
     ];
@@ -310,7 +316,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         physics: const NeverScrollableScrollPhysics(),
         crossAxisSpacing: 8,
         mainAxisSpacing: 12,
-        childAspectRatio: 0.95,
+        childAspectRatio: 0.88,
         children: [
           for (final feature in features) _QuickAction(feature: feature),
         ],
@@ -418,6 +424,11 @@ class _QuickFeature {
   final String title;
   final IconData icon;
   final Color color;
+
+  /// Kartin zemin rengi (acik tema). Hepsi TOPRAK TONU: kum, fildisi, bronz,
+  /// terrakota, adaçayı, tas. Pastel kirmizi/mavi/turuncu bilerek kullanilmiyor --
+  /// altin-fildisi paletle cakisiyor ve "amator" gorunuyordu (2026-09-20 olcumu).
+  final Color tint;
   final String? badge;
   final VoidCallback onTap;
 
@@ -425,6 +436,7 @@ class _QuickFeature {
     required this.title,
     required this.icon,
     required this.color,
+    required this.tint,
     this.badge,
     required this.onTap,
   });
@@ -463,7 +475,9 @@ class _QuickAction extends StatelessWidget {
       label: feature.title,
       child: Material(
         elevation: 1,
-        color: theme.colorScheme.surfaceContainerLow,
+        // Her kartin kendi toprak tonu zemini (koyu temada tek yuzey rengi:
+        // acik tonlar koyu zeminde okunmaz).
+        color: isDark ? theme.colorScheme.surfaceContainerLow : feature.tint,
         shadowColor: theme.colorScheme.shadow,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
@@ -479,13 +493,14 @@ class _QuickAction extends StatelessWidget {
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      width: 48,
-                      height: 48,
+                      // Ikon %25 buyutuldu (48->60 daire, 24->30 ikon)
+                      width: 60,
+                      height: 60,
                       decoration: BoxDecoration(
                         color: numPrimary.withAlpha(isDark ? 45 : 28),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(feature.icon, color: numPrimary, size: 24),
+                      child: Icon(feature.icon, color: numPrimary, size: 30),
                     ),
                     if (feature.badge != null)
                       Positioned(
@@ -515,6 +530,8 @@ class _QuickAction extends StatelessWidget {
                 Text(
                   feature.title,
                   style: theme.textTheme.labelMedium?.copyWith(
+                    // Kalin DEGIL: basliklar kart icinde one cikmasin.
+                    fontWeight: FontWeight.w400,
                     color: isDark ? Colors.white70 : numTextPrimary,
                     height: 1.15,
                   ),
