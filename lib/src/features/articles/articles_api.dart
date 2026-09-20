@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
 import '../../models/article.dart';
@@ -51,4 +50,17 @@ class ArticlesApi {
 final articlesApiProvider = Provider<ArticlesApi>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return ArticlesApi(apiClient);
+});
+
+/// Gunun one cikan yazisi.
+///
+/// AYRI PROVIDER OLMASININ SEBEBI (2026-09-20): EditorsPickCard bu Future'i
+/// `build()` govdesinde kuruyordu. Dashboard cok sik rebuild oluyor (auth durumu,
+/// favori sayisi, banner kaydirma, alt menu setState), her rebuild YENI bir Future
+/// uretiyor ve FutureBuilder hic `waiting` durumundan cikmiyordu: blok sonsuza kadar
+/// iskelet gosteriyor, kullaniciya BOS gorunuyordu -- ustelik her rebuild'de API'ye
+/// yeni istek gidiyordu. Provider sonucu onbellekliyor; yenileme
+/// `ref.invalidate(featuredArticleProvider)` ile acikca yapilir.
+final featuredArticleProvider = FutureProvider<Article>((ref) async {
+  return ref.watch(articlesApiProvider).getFeaturedArticle();
 });

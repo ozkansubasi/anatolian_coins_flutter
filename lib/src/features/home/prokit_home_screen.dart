@@ -20,9 +20,7 @@ class ProkitHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
-  int _selectedTab = 0;
   final PageController _bannerController = PageController();
-  int _currentBanner = 0;
 
   @override
   void dispose() {
@@ -41,7 +39,10 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       backgroundColor: isDark ? numScaffoldDark : numScaffoldLight,
       appBar: _buildAppBar(context, l10n, isDark),
       body: _buildBody(context, l10n, authState),
-      bottomNavigationBar: _buildBottomNav(context, l10n, isDark),
+      // 2026-09-20: dashboard kendi alt menu kopyasini tasiyordu (7 oge,
+      // paylasilan widget'ta 6 vardi ve _NavItem iki dosyada kopyalanmisti).
+      // Tek kaynak: NumBottomNav.
+      bottomNavigationBar: const NumBottomNav(currentTab: NavTab.home),
     );
   }
 
@@ -151,9 +152,6 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           PageView.builder(
             controller: _bannerController,
             itemCount: banners.length,
-            onPageChanged: (index) {
-              setState(() => _currentBanner = index);
-            },
             itemBuilder: (context, index) {
               final banner = banners[index];
               return _BannerCard(
@@ -280,7 +278,8 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.qr_code_scanner,
+                    // QR DEGIL: goruntu tanima yapiliyor, kod okunmuyor.
+                    Icons.photo_camera_outlined,
                     size: 28,
                     color: Colors.white,
                   ),
@@ -330,6 +329,9 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
   Widget _buildQuickFeatures(BuildContext context, AppLocalizations l10n) {
     final favoritesCount = ref.watch(favoritesControllerProvider).length;
 
+    // TEK VURGU RENGI. Onceki surumde her kart ayri pastel renkteydi (kirmizi,
+    // mavi, turuncu, teal); altin-fildisi paletle cakisiyor ve amator
+    // gorunuyordu. Ayrimi renk degil ikon + etiket tasir.
     final features = [
       _QuickFeature(
         title: l10n.translate('browse_coins'),
@@ -339,28 +341,34 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       ),
       _QuickFeature(
         title: l10n.translate('my_favorites'),
-        icon: Icons.favorite,
-        color: Colors.red,
+        icon: Icons.favorite_border,
+        color: numPrimary,
         badge: favoritesCount > 0 ? favoritesCount.toString() : null,
         onTap: () => context.go('/favorites'),
       ),
       _QuickFeature(
         title: l10n.translate('my_collections'),
-        icon: Icons.collections_bookmark,
-        color: Colors.blue,
+        icon: Icons.collections_bookmark_outlined,
+        color: numPrimary,
         onTap: () => context.go('/collections'),
       ),
       _QuickFeature(
         title: l10n.translate('scan_history'),
         icon: Icons.history,
-        color: Colors.orange,
+        color: numPrimary,
         onTap: () => context.go('/history'),
       ),
       _QuickFeature(
         title: l10n.translate('blog'),
-        icon: Icons.article,
-        color: Colors.teal,
+        icon: Icons.menu_book_outlined,
+        color: numPrimary,
         onTap: () => context.go('/blog'),
+      ),
+      _QuickFeature(
+        title: l10n.translate('assistant_short'),
+        icon: Icons.chat_bubble_outline,
+        color: numPrimary,
+        onTap: () => context.push('/assistant'),
       ),
     ];
 
@@ -368,16 +376,22 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         numSectionHeader(title: l10n.translate('quick_access')),
-        Container(
-          height: 120,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: features.length,
-            itemBuilder: (context, index) {
-              final feature = features[index];
-              return _QuickFeatureCard(feature: feature);
-            },
+        // YATAY LISTE DEGIL, GRID. Onceki surumde 5 kart x 104 px = 520 px
+        // genisligindeydi ama ekran 412 px: son kart (Blog) HIC gorunmuyordu ve
+        // kaydirilabildigine dair gorsel ipucu yoktu. Grid'de hepsi ayni anda
+        // gorunur ve kirpilma olmaz.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.95,
+            children: [
+              for (final feature in features) _QuickFeatureCard(feature: feature),
+            ],
           ),
         ),
       ],
@@ -403,135 +417,6 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           child: const EditorsPickCard(),
         ),
       ],
-    );
-  }
-
-  /// Stats Section
-  Widget _buildStatsSection(BuildContext context, AppLocalizations l10n) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark ? numCardDark : numCardLight,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: numShadow,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.info_outline, color: numPrimary, size: 20),
-              8.width,
-              Text(
-                l10n.translate('about_numistr'),
-                style: boldTextStyle(size: 16, color: numTextPrimary),
-              ),
-            ],
-          ),
-          12.height,
-          Text(
-            l10n.translate('about_numistr_text'),
-            style: secondaryTextStyle(size: 14, color: numTextSecondary),
-          ),
-          16.height,
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _StatItem(value: '17', label: l10n.translate('regions')),
-              _StatItem(value: '439', label: l10n.translate('mints')),
-              _StatItem(value: '5000+', label: l10n.translate('coins')),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Bottom Navigation Bar
-  Widget _buildBottomNav(BuildContext context, AppLocalizations l10n, bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? numCardDark : numCardLight,
-        boxShadow: [
-          BoxShadow(
-            color: numShadow,
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                // Menu popup button
-                _MenuPopupButton(l10n: l10n, isDark: isDark),
-                const SizedBox(width: 4),
-                _NavItem(
-                  icon: Icons.home,
-                  label: l10n.translate('home'),
-                  isSelected: _selectedTab == 0,
-                  onTap: () => setState(() => _selectedTab = 0),
-                ),
-                _NavItem(
-                  icon: Icons.search,
-                  label: l10n.translate('browse'),
-                  isSelected: _selectedTab == 1,
-                  onTap: () {
-                    setState(() => _selectedTab = 1);
-                    context.go('/browse');
-                  },
-                ),
-                _NavItem(
-                  icon: Icons.qr_code_scanner,
-                  label: l10n.translate('scan'),
-                  isSelected: _selectedTab == 2,
-                  isPrimary: true,
-                  onTap: () => context.go('/recognition'),
-                ),
-                _NavItem(
-                  icon: Icons.favorite,
-                  label: l10n.translate('favorites'),
-                  isSelected: _selectedTab == 3,
-                  onTap: () {
-                    setState(() => _selectedTab = 3);
-                    context.go('/favorites');
-                  },
-                ),
-                _NavItem(
-                  icon: Icons.person,
-                  label: l10n.translate('profile'),
-                  isSelected: _selectedTab == 4,
-                  onTap: () {
-                    setState(() => _selectedTab = 4);
-                    context.go('/account');
-                  },
-                ),
-                _NavItem(
-                  icon: Icons.settings,
-                  label: l10n.translate('settings'),
-                  isSelected: _selectedTab == 5,
-                  onTap: () {
-                    setState(() => _selectedTab = 5);
-                    context.go('/settings');
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -762,10 +647,9 @@ class _QuickFeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      width: 96,
-      height: 100,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+    // Sabit width/height YOK: kart artik GridView hucresini doldurur. Onceki
+    // sabit 96x100 + margin, yatay listede 520 px'lik tasmanin kaynagiydi.
+    return SizedBox.expand(
       child: Material(
         elevation: 2,
         borderRadius: BorderRadius.circular(12),
@@ -836,275 +720,3 @@ class _QuickFeatureCard extends StatelessWidget {
   }
 }
 
-class _StatItem extends StatelessWidget {
-  final String value;
-  final String label;
-
-  const _StatItem({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: boldTextStyle(size: 20, color: numPrimary),
-        ),
-        4.height,
-        Text(
-          label,
-          style: secondaryTextStyle(size: 12, color: numTextSecondary),
-        ),
-      ],
-    );
-  }
-}
-
-/// Menu popup button that shows a bottom sheet with navigation options
-class _MenuPopupButton extends StatelessWidget {
-  final AppLocalizations l10n;
-  final bool isDark;
-
-  const _MenuPopupButton({required this.l10n, required this.isDark});
-
-  void _showMenuBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _MenuBottomSheet(l10n: l10n, isDark: isDark),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showMenuBottomSheet(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.menu,
-              color: numTextSecondary,
-              size: 22,
-            ),
-            4.height,
-            Text(
-              l10n.translate('menu'),
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: numTextSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Bottom sheet content for the menu
-class _MenuBottomSheet extends StatelessWidget {
-  final AppLocalizations l10n;
-  final bool isDark;
-
-  const _MenuBottomSheet({required this.l10n, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? numCardDark : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle bar
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(top: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade400,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.translate('menu'),
-                  style: boldTextStyle(size: 18),
-                ),
-                16.height,
-                // Regions option
-                _MenuOption(
-                  icon: Icons.public,
-                  title: l10n.translate('regions'),
-                  subtitle: l10n.translate('explore_by_region'),
-                  color: numPrimary,
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.go('/regions');
-                  },
-                ),
-                8.height,
-                // Mints option
-                _MenuOption(
-                  icon: Icons.location_city,
-                  title: l10n.translate('mints'),
-                  subtitle: l10n.translate('explore_by_mint'),
-                  color: Colors.orange,
-                  onTap: () {
-                    Navigator.pop(context);
-                    context.go('/mints');
-                  },
-                ),
-                24.height,
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Menu option item widget
-class _MenuOption extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _MenuOption({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: isDark ? numScaffoldDark : Colors.grey.shade50,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              16.width,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: boldTextStyle(size: 16)),
-                    4.height,
-                    Text(subtitle, style: secondaryTextStyle(size: 12)),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: isDark ? Colors.white54 : Colors.grey.shade400,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final bool isPrimary;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    this.isPrimary = false,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (isPrimary) {
-      return GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: numPrimary,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: numPrimary.withAlpha(100),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: Colors.white, size: 24),
-        ),
-      );
-    }
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: isSelected
-            ? BoxDecoration(
-                color: numPrimary.withAlpha(20),
-                borderRadius: BorderRadius.circular(12),
-              )
-            : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? numPrimary : numTextSecondary,
-              size: 22,
-            ),
-            4.height,
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected ? numPrimary : numTextSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

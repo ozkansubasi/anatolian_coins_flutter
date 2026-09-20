@@ -233,6 +233,10 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
           Expanded(child: _buildContent(l10n)),
         ],
       ),
+      // 2026-09-20: /browse alt menunun HEDEFI oldugu halde alt menusu yoktu --
+      // kullanici "Kesfet"e basinca menu kayboluyor ve geri donemiyordu.
+      // (Kalici cozum StatefulShellRoute; bu ara adim gorunur kaybi kapatiyor.)
+      bottomNavigationBar: const NumBottomNav(currentTab: NavTab.browse),
     );
   }
   

@@ -23,6 +23,9 @@ class AppLocalizations {
     'tr': {
       // ADR-006 Faz 3 — AI Numizmatik Asistanı
       'assistant_title': 'AI Numizmatik Asistanı',
+      // Kisa bicim: dar kartlarda/etiketlerde kullanilir; uzun baslik FittedBox ile
+      // kuculup diger kartlarla farkli punto uretiyordu.
+      'assistant_short': 'AI Asistan',
       'assistant_subtitle': 'Sikkeler, darphaneler, yerleşimler ve terimler hakkında sorun.',
       'assistant_login_required': 'Asistanı kullanmak için giriş yapın. Üyeler günde 40, Pro üyeler günde 1000 mesaj gönderebilir.',
       'assistant_new_chat': 'Yeni sohbet',
@@ -112,7 +115,7 @@ class AppLocalizations {
       'search_mints': 'Darphane ara...',
       'menu': 'Menü',
       'explore_by_region': 'Bölgeye Göre Keşfet',
-      'explore_by_mint': 'Darpaneye Göre Keşfet',
+      'explore_by_mint': 'Darphaneye Göre Keşfet',
       'coins': 'Sikke',
       'blog_articles': 'Yazılar',
 
@@ -771,6 +774,7 @@ class AppLocalizations {
     'en': {
       // ADR-006 Faz 3 — AI Numismatic Assistant
       'assistant_title': 'AI Numismatic Assistant',
+      'assistant_short': 'AI Assistant',
       'assistant_subtitle': 'Ask about coins, mints, settlements and terminology.',
       'assistant_login_required': 'Sign in to use the assistant. Members can send 40 messages a day, Pro members 1000.',
       'assistant_new_chat': 'New chat',

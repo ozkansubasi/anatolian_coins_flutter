@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nb_utils/nb_utils.dart' hide ContextExtensions;
 import '../numistr_colors.dart';
 import '../../l10n/app_localizations.dart';
+import 'num_menu_sheet.dart';
 
 /// Navigation tab enumeration for consistent navigation across the app
 enum NavTab {
@@ -10,6 +10,10 @@ enum NavTab {
   browse,
   scan,
   favorites,
+  menu,
+  // profile ve settings ARTIK alt cubukta hedef degil (2026-09-20, 7 -> 5).
+  // Enum degerleri korunuyor cunku ekranlar bunlari geciriyor; ikisi de "Menu"
+  // hedefini secili gosterir.
   profile,
   settings,
 }
@@ -50,6 +54,12 @@ class NumBottomNav extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Profil ve Ayarlar artik Menu sayfasinda; o ekranlardayken "Menu" hedefi
+    // secili gosterilir ki kullanici nerede oldugunu kaybetmesin.
+    final menuSelected = currentTab == NavTab.menu ||
+        currentTab == NavTab.profile ||
+        currentTab == NavTab.settings;
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? numCardDark : numCardLight,
@@ -63,51 +73,65 @@ class NumBottomNav extends StatelessWidget {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  icon: Icons.home,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          // DIKKAT: burada SingleChildScrollView KULLANILMAZ.
+          // 2026-09-20 oncesinde Row yatay bir SingleChildScrollView icindeydi:
+          // (1) sinirsiz genislikte `spaceAround` hicbir sey yapmiyordu, ogeler
+          // bitisiyordu; (2) scroll gesture arena'da `onTap`'i yutuyordu, parmak
+          // 1-2 px kayinca dokunma dusuyordu ("bazen tepki vermiyor").
+          // Expanded ile her hedef esit pay alir ve 48dp'nin altina inmez.
+          child: Row(
+            children: [
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.home_outlined,
+                  selectedIcon: Icons.home,
                   label: l10n.translate('home'),
                   isSelected: currentTab == NavTab.home,
                   onTap: () => _navigateTo(context, '/'),
                 ),
-                _NavItem(
+              ),
+              Expanded(
+                child: _NavItem(
                   icon: Icons.search,
+                  selectedIcon: Icons.search,
                   label: l10n.translate('browse'),
                   isSelected: currentTab == NavTab.browse,
                   onTap: () => _navigateTo(context, '/browse'),
                 ),
-                _NavItem(
-                  icon: Icons.qr_code_scanner,
+              ),
+              Expanded(
+                child: _NavItem(
+                  // QR ikonu DEGIL: QR/barkod ikonu sektorde gercek kod okuma
+                  // icin ayrilmis (PCGS slab barkodu, muze levha QR'i). Burada
+                  // goruntu tanima yapiliyor -> kamera dogru metafor.
+                  icon: Icons.photo_camera_outlined,
+                  selectedIcon: Icons.photo_camera,
                   label: l10n.translate('scan'),
                   isSelected: currentTab == NavTab.scan,
                   isPrimary: true,
                   onTap: () => _navigateTo(context, '/recognition'),
                 ),
-                _NavItem(
-                  icon: Icons.favorite,
+              ),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.favorite_border,
+                  selectedIcon: Icons.favorite,
                   label: l10n.translate('favorites'),
                   isSelected: currentTab == NavTab.favorites,
                   onTap: () => _navigateTo(context, '/favorites'),
                 ),
-                _NavItem(
-                  icon: Icons.person,
-                  label: l10n.translate('profile'),
-                  isSelected: currentTab == NavTab.profile,
-                  onTap: () => _navigateTo(context, '/account'),
+              ),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.menu,
+                  selectedIcon: Icons.menu,
+                  label: l10n.translate('menu'),
+                  isSelected: menuSelected,
+                  onTap: () => showNumMenuSheet(context),
                 ),
-                _NavItem(
-                  icon: Icons.settings,
-                  label: l10n.translate('settings'),
-                  isSelected: currentTab == NavTab.settings,
-                  onTap: () => _navigateTo(context, '/settings'),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -122,9 +146,18 @@ class NumBottomNav extends StatelessWidget {
   }
 }
 
-/// Individual navigation item widget
+/// Tek navigasyon hedefi.
+///
+/// Dokunma hedefi kurallari (Material 48dp / Apple 44pt):
+/// - `Expanded` ile genislik esit paylasilir, en dar telefonda bile >=64dp olur
+/// - `minHeight: 56` ile yukseklik garanti
+/// - `InkWell` ripple verir; oncesinde `GestureDetector` kullanildigi icin
+///   dokunma hic geri bildirim uretmiyordu ("tepki vermedi" hissi)
+/// - Secili durum yalniz renkle degil, DOLU ikon + etiket agirligiyla da
+///   gosterilir (renk tek basina erisilebilir degil)
 class _NavItem extends StatelessWidget {
   final IconData icon;
+  final IconData selectedIcon;
   final String label;
   final bool isSelected;
   final bool isPrimary;
@@ -132,6 +165,7 @@ class _NavItem extends StatelessWidget {
 
   const _NavItem({
     required this.icon,
+    required this.selectedIcon,
     required this.label,
     required this.isSelected,
     this.isPrimary = false,
@@ -140,55 +174,61 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isPrimary) {
-      return GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: numPrimary,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: numPrimary.withAlpha(100),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: Colors.white, size: 24),
-        ),
-      );
-    }
+    final color = isSelected ? numPrimary : numTextSecondary;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: isSelected
-            ? BoxDecoration(
-                color: numPrimary.withAlpha(20),
-                borderRadius: BorderRadius.circular(12),
-              )
-            : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? numPrimary : numTextSecondary,
-              size: 22,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 56),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isPrimary)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: numPrimary,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: numPrimary.withAlpha(100),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      isSelected ? selectedIcon : icon,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  )
+                else
+                  Icon(isSelected ? selectedIcon : icon, color: color, size: 24),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isPrimary && !isSelected ? numTextSecondary : color,
+                  ),
+                ),
+              ],
             ),
-            4.height,
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? numPrimary : numTextSecondary,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

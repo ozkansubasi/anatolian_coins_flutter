@@ -15,36 +15,22 @@ class EditorsPickCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return FutureBuilder<Article>(
-      future: ref.read(articlesApiProvider).getFeaturedArticle(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _LoadingCard(l10n: l10n, theme: theme);
-        }
+    // Future ARTIK build() icinde kurulmuyor (bkz. featuredArticleProvider yorumu).
+    final featured = ref.watch(featuredArticleProvider);
 
-        if (snapshot.hasError) {
-          return _ErrorCard(
-            l10n: l10n,
-            theme: theme,
-            error: snapshot.error.toString(),
-          );
-        }
-
-        if (!snapshot.hasData) {
-          return _ErrorCard(
-            l10n: l10n,
-            theme: theme,
-            error: l10n.translate('no_articles'),
-          );
-        }
-
-        final article = snapshot.data!;
-        return _ArticleCard(
-          article: article,
-          l10n: l10n,
-          theme: theme,
-        );
-      },
+    return featured.when(
+      loading: () => _LoadingCard(l10n: l10n, theme: theme),
+      error: (error, _) => _ErrorCard(
+        l10n: l10n,
+        theme: theme,
+        error: error.toString(),
+        onRetry: () => ref.invalidate(featuredArticleProvider),
+      ),
+      data: (article) => _ArticleCard(
+        article: article,
+        l10n: l10n,
+        theme: theme,
+      ),
     );
   }
 }
@@ -244,7 +230,7 @@ class _LoadingCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.outline.withOpacity(0.1),
+                    color: theme.colorScheme.outlineVariant,
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -253,7 +239,7 @@ class _LoadingCard extends StatelessWidget {
                   width: 120,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.outline.withOpacity(0.1),
+                    color: theme.colorScheme.outlineVariant,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
@@ -264,7 +250,7 @@ class _LoadingCard extends StatelessWidget {
               width: double.infinity,
               height: 24,
               decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withOpacity(0.1),
+                color: theme.colorScheme.outlineVariant,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -273,7 +259,7 @@ class _LoadingCard extends StatelessWidget {
               width: double.infinity,
               height: 24,
               decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withOpacity(0.1),
+                color: theme.colorScheme.outlineVariant,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -282,7 +268,7 @@ class _LoadingCard extends StatelessWidget {
               width: double.infinity,
               height: 16,
               decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withOpacity(0.1),
+                color: theme.colorScheme.outlineVariant,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -291,7 +277,7 @@ class _LoadingCard extends StatelessWidget {
               width: double.infinity,
               height: 16,
               decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withOpacity(0.1),
+                color: theme.colorScheme.outlineVariant,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -300,7 +286,7 @@ class _LoadingCard extends StatelessWidget {
               width: MediaQuery.of(context).size.width * 0.6,
               height: 16,
               decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withOpacity(0.1),
+                color: theme.colorScheme.outlineVariant,
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -316,11 +302,13 @@ class _ErrorCard extends StatelessWidget {
   final AppLocalizations l10n;
   final ThemeData theme;
   final String error;
+  final VoidCallback onRetry;
 
   const _ErrorCard({
     required this.l10n,
     required this.theme,
     required this.error,
+    required this.onRetry,
   });
 
   @override
@@ -360,7 +348,27 @@ class _ErrorCard extends StatelessWidget {
                       color: theme.colorScheme.onErrorContainer.withOpacity(0.8),
                     ),
                   ),
+                  // Gercek hata metni: onceki surumde `error` alani aliniyor ama
+                  // HIC gosterilmiyordu -- hata sessizce yutuluyordu.
+                  const SizedBox(height: 4),
+                  Text(
+                    error,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onErrorContainer.withOpacity(0.6),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
+              ),
+            ),
+            // Dokunma hedefi: IconButton varsayilan olarak 48x48 saglar.
+            IconButton(
+              onPressed: onRetry,
+              tooltip: l10n.translate('retry'),
+              icon: Icon(
+                Icons.refresh_rounded,
+                color: theme.colorScheme.error,
               ),
             ),
           ],
