@@ -12,6 +12,13 @@ import '../favorites/favorites_service.dart';
 import '../articles/editors_pick_card.dart';
 import 'widgets/home_banner.dart';
 
+/// Profil ikonundaki bildirim noktasi.
+///
+/// Uygulamada bildirim altyapisi YOK; bu saglayici bilerek `false` donuyor ve
+/// nokta hic cizilmiyor. Bildirim kaynagi (ornegin okunmamis tarama sonucu veya
+/// sunucu bildirimi) eklendiginde yalniz burasi degisir, AppBar kodu aynen kalir.
+final bildirimVarProvider = Provider<bool>((ref) => false);
+
 /// ProKit Style Dashboard - ShopHop Inspired Design
 class ProkitHomeScreen extends ConsumerStatefulWidget {
   const ProkitHomeScreen({super.key});
@@ -87,9 +94,36 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           onPressed: () => context.go('/browse'),
           tooltip: l10n.translate('search'),
         ),
+        // Zil yerine PROFIL: bildirim ekrani yok, zil ikonu "yakinda" diyen bos
+        // bir aksiyona gidiyordu. Bildirim oldugunda ikonun uzerinde kahverengi
+        // nokta gorunur (2026-09-20 karari).
         IconButton(
-          icon: Icon(Icons.notifications_outlined, color: isDark ? Colors.white : numTextPrimary),
-          onPressed: () => _showComingSoon(context, l10n, 'Notifications'),
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(Icons.account_circle_outlined,
+                  color: isDark ? Colors.white : numTextPrimary),
+              if (ref.watch(bildirimVarProvider))
+                Positioned(
+                  right: -1,
+                  top: -1,
+                  child: Container(
+                    width: 9,
+                    height: 9,
+                    decoration: BoxDecoration(
+                      color: numSecondary,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDark ? numCardDark : numCardLight,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          onPressed: () => context.go('/account'),
+          tooltip: l10n.translate('profile'),
         ),
       ],
     );
@@ -336,10 +370,6 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         ),
       ],
     );
-  }
-
-  void _showComingSoon(BuildContext context, AppLocalizations l10n, String feature) {
-    toast(l10n.translate('coming_soon_feature', params: {'feature': feature}));
   }
 
 }
