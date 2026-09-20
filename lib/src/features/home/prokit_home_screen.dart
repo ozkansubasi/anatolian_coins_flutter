@@ -272,7 +272,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         onTap: () => context.go('/favorites'),
       ),
       _QuickFeature(
-        title: l10n.translate('my_collections'),
+        title: l10n.translate('collections_short'),
         icon: Icons.collections_bookmark_outlined,
         color: numPrimary,
         onTap: () => context.go('/collections'),
@@ -310,7 +310,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         physics: const NeverScrollableScrollPhysics(),
         crossAxisSpacing: 8,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.35,
+        childAspectRatio: 0.95,
         children: [
           for (final feature in features) _QuickAction(feature: feature),
         ],
@@ -442,6 +442,12 @@ class _QuickFeature {
 /// Etiketler 2026-09-20'de kaldirildi (kullanici karari: "ikon yeterli").
 /// ERISILEBILIRLIK: ikon tek basina ekran okuyucuya hicbir sey soylemez, bu yuzden
 /// her dugme Semantics(label:) ve Tooltip tasir -- uzun basinca etiket gorunur.
+/// Kisayol karti: ikon + etiket, Editor'den blogundaki kart tipiyle ayni yuzey.
+///
+/// Tarihce (aynı gun, iki revizyon): once golgeli beyaz kartlardi -> "amator"
+/// bulundu, cercevesiz ikon-only yapildi -> etiketsiz ikonlar anlasilmiyordu.
+/// Son hal: Editor'den karti ile AYNI dil -- surfaceContainerLow yuzey, hafif
+/// yukselti, 16 yaricap -- yani sayfada iki farkli kart tipi yok.
 class _QuickAction extends StatelessWidget {
   final _QuickFeature feature;
 
@@ -455,46 +461,67 @@ class _QuickAction extends StatelessWidget {
     return Semantics(
       button: true,
       label: feature.title,
-      child: Tooltip(
-        message: feature.title,
-        child: Center(
-          child: InkWell(
-            onTap: feature.onTap,
-            customBorder: const CircleBorder(),
-            child: Stack(
-              clipBehavior: Clip.none,
+      child: Material(
+        elevation: 1,
+        color: theme.colorScheme.surfaceContainerLow,
+        shadowColor: theme.colorScheme.shadow,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: feature.onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  // 64 dp: etiket kalkinca ikon tek basina hiyerarsiyi tasidigi
-                  // icin buyutuldu; dokunma hedefi de rahat 48dp'nin uzerinde.
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: numPrimary.withAlpha(isDark ? 45 : 28),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(feature.icon, color: numPrimary, size: 28),
-                ),
-                if (feature.badge != null)
-                  Positioned(
-                    top: -2,
-                    right: -2,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.error,
-                        borderRadius: BorderRadius.circular(10),
+                        color: numPrimary.withAlpha(isDark ? 45 : 28),
+                        shape: BoxShape.circle,
                       ),
-                      child: Text(
-                        feature.badge!,
-                        style: TextStyle(
-                          color: theme.colorScheme.onError,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                      child: Icon(feature.icon, color: numPrimary, size: 24),
+                    ),
+                    if (feature.badge != null)
+                      Positioned(
+                        top: -2,
+                        right: -2,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.error,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            feature.badge!,
+                            style: TextStyle(
+                              color: theme.colorScheme.onError,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Etiket sabit puntoda: FittedBox ile kucultmek kartlar arasinda
+                // farkli punto uretiyordu (eski _QuickFeatureCard hatasi).
+                Text(
+                  feature.title,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: isDark ? Colors.white70 : numTextPrimary,
+                    height: 1.15,
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),

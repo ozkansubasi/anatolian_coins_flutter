@@ -99,6 +99,8 @@ class AppLocalizations {
 
       // ProKit Home Screen - New keys
       // Ana sayfa banner sloganlari (2026-09-20)
+      // Dar kartlarda kullanilan kisa bicim ('Koleksiyonlarım' hucreye sigmiyor)
+      'collections_short': 'Koleksiyonlar',
       'banner_recognize': 'Antik sikkeleri tanıyın',
       'banner_knowledge': 'Numizmatik Bilgi Bankası',
       'banner_regions': 'Antik Bölgeleri Keşfedin',
@@ -854,6 +856,7 @@ class AppLocalizations {
       'feature_coming_soon': '{feature} feature coming soon!',
 
       // ProKit Home Screen - New keys
+      'collections_short': 'Collections',
       'banner_recognize': 'Identify ancient coins',
       'banner_knowledge': 'Numismatic Knowledge Base',
       'banner_regions': 'Explore ancient regions',
