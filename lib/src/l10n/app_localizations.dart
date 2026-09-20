@@ -98,6 +98,12 @@ class AppLocalizations {
       'feature_coming_soon': '{feature} özelliği yakında eklenecek!',
 
       // ProKit Home Screen - New keys
+      // Ana sayfa banner sloganlari (2026-09-20)
+      'banner_recognize': 'Antik sikkeleri tanıyın',
+      'banner_knowledge': 'Numizmatik Bilgi Bankası',
+      'banner_regions': 'Antik Bölgeleri Keşfedin',
+      'marker_portrait': 'Portre',
+      'marker_legend': 'Lejant',
       'banner_discover_title': 'Keşfedin',
       'banner_discover_subtitle': 'Anadolu\'nun zengin sikke koleksiyonunu inceleyin',
       'banner_ai_title': 'AI ile Tanı',
@@ -848,6 +854,11 @@ class AppLocalizations {
       'feature_coming_soon': '{feature} feature coming soon!',
 
       // ProKit Home Screen - New keys
+      'banner_recognize': 'Identify ancient coins',
+      'banner_knowledge': 'Numismatic Knowledge Base',
+      'banner_regions': 'Explore ancient regions',
+      'marker_portrait': 'Portrait',
+      'marker_legend': 'Legend',
       'banner_discover_title': 'Discover',
       'banner_discover_subtitle': 'Explore Anatolia\'s rich coin collection',
       'banner_ai_title': 'AI Recognition',

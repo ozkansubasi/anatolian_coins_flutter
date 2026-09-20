@@ -10,6 +10,7 @@ import '../../core/region_data.dart';
 import '../../prokit_ui/prokit_ui.dart';
 import '../favorites/favorites_service.dart';
 import '../articles/editors_pick_card.dart';
+import 'widgets/home_banner.dart';
 
 /// ProKit Style Dashboard - ShopHop Inspired Design
 class ProkitHomeScreen extends ConsumerStatefulWidget {
@@ -117,64 +118,62 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
     );
   }
 
-  /// Banner Carousel - ShopHop Style
+  /// Ana sayfa banner'lari: fotograf + slogan (2026-09-20).
+  ///
+  /// Onceki surum jenerik ikon + gradyan tasiyordu (Icons.explore, camera,
+  /// collections); uygulamanin icerigi -- gercek sikke fotograflari -- ana
+  /// sayfada hic gorunmuyordu. Gorseller: BnF kamu mali (ADR-008 lisans
+  /// haritasinda "serbest" kumesi), Sagalassos icin mevcut bolge banner'i.
   Widget _buildBannerCarousel(BuildContext context, AppLocalizations l10n) {
-    final banners = [
-      _BannerData(
-        title: l10n.translate('banner_discover_title'),
-        subtitle: l10n.translate('banner_discover_subtitle'),
-        gradient: numGradientPrimary,
-        icon: Icons.explore,
+    final banners = <Widget>[
+      HomeBanner(
+        image: 'assets/images/banners/coin_tanima.jpg',
+        slogan: l10n.translate('banner_recognize'),
+        fit: BoxFit.contain,
+        onTap: () => context.go('/recognition'),
       ),
-      _BannerData(
-        title: l10n.translate('banner_ai_title'),
-        subtitle: l10n.translate('banner_ai_subtitle'),
-        gradient: numGradientSecondary,
-        icon: Icons.camera_alt,
+      HomeBanner(
+        image: 'assets/images/banners/coin_bilgi.jpg',
+        slogan: l10n.translate('banner_knowledge'),
+        fit: BoxFit.contain,
+        onTap: () => context.go('/browse'),
+        // Isaretler: sikkenin okunan kisimlarina dikkat ceker. Konumlar bu
+        // fotografa gore ayarlandi; gorsel degisirse yeniden hizalanmali.
+        markers: [
+          BannerMarker(const Alignment(-0.10, -0.55), l10n.translate('marker_portrait')),
+          BannerMarker(const Alignment(0.22, 0.10), l10n.translate('marker_legend')),
+        ],
       ),
-      _BannerData(
-        title: l10n.translate('banner_collection_title'),
-        subtitle: l10n.translate('banner_collection_subtitle'),
-        gradient: numGradientAccent,
-        icon: Icons.collections,
+      HomeBanner(
+        image: 'assets/images/regions/pisidia_banner.jpg',
+        slogan: l10n.translate('banner_regions'),
+        onTap: () => context.go('/regions'),
       ),
     ];
 
     return Container(
-      height: 150,
+      height: 185,
       margin: const EdgeInsets.only(top: 16),
-      child: Stack(
-        alignment: Alignment.bottomCenter,
+      child: Column(
         children: [
-          PageView.builder(
-            controller: _bannerController,
-            itemCount: banners.length,
-            itemBuilder: (context, index) {
-              final banner = banners[index];
-              return _BannerCard(
-                title: banner.title,
-                subtitle: banner.subtitle,
-                gradient: banner.gradient,
-                icon: banner.icon,
-                onTap: () {
-                  if (index == 0) context.go('/browse');
-                  if (index == 1) context.go('/recognition');
-                  if (index == 2) context.go('/collections');
-                },
-              );
-            },
-          ),
-          Positioned(
-            bottom: 16,
-            child: SmoothPageIndicator(
+          Expanded(
+            child: PageView.builder(
               controller: _bannerController,
-              count: banners.length,
-              effect: WormEffect(
-                dotHeight: 8,
-                dotWidth: 8,
-                activeDotColor: numPrimary,
-                dotColor: numTextHint.withAlpha(100),
-              ),
+              itemCount: banners.length,
+              itemBuilder: (context, index) => banners[index],
+            ),
+          ),
+          // Gosterge ARTIK kartin icinde degil: onceki surumde Positioned ile
+          // kartin uzerine biniyor, gradyan metnin ustune geliyordu.
+          const SizedBox(height: 8),
+          SmoothPageIndicator(
+            controller: _bannerController,
+            count: banners.length,
+            effect: WormEffect(
+              dotHeight: 7,
+              dotWidth: 7,
+              activeDotColor: numPrimary,
+              dotColor: numTextHint.withAlpha(100),
             ),
           ),
         ],
@@ -347,91 +346,6 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
 // =============================================================================
 // HELPER WIDGETS
 // =============================================================================
-
-class _BannerData {
-  final String title;
-  final String subtitle;
-  final LinearGradient gradient;
-  final IconData icon;
-
-  const _BannerData({
-    required this.title,
-    required this.subtitle,
-    required this.gradient,
-    required this.icon,
-  });
-}
-
-class _BannerCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final LinearGradient gradient;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _BannerCard({
-    required this.title,
-    required this.subtitle,
-    required this.gradient,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      child: Material(
-        elevation: 4,
-        borderRadius: BorderRadius.circular(16),
-        shadowColor: numPrimary.withAlpha(50),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: BoxDecoration(
-              gradient: gradient,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        title,
-                        // Kart başlığı standardı: NumTypo.title (18)
-                        style: boldTextStyle(size: 18, color: Colors.white),
-                        maxLines: 2,
-                      ),
-                      4.height,
-                      Text(
-                        subtitle,
-                        style: secondaryTextStyle(size: 14, color: Colors.white70),
-                        maxLines: 2,
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(40),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, size: 28, color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _RegionChip extends StatelessWidget {
   final String regionCode;

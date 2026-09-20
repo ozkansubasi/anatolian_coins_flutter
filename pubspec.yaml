@@ -70,6 +70,11 @@ flutter:
   assets:
     - assets/images/
     - assets/images/regions/
+    # Ana sayfa banner gorselleri. Kaynak: Bibliotheque nationale de France,
+    # Domaine public (ticari kullanima acik; bkz. ADR-008 lisans haritasi).
+    # coin_tanima.jpg  = Milet elektron, aslan basi (image_id 10317)
+    # coin_bilgi.jpg   = Nikomedia gumus, portre (image_id 27580)
+    - assets/images/banners/
     - assets/icon/
     - assets/data/
 
