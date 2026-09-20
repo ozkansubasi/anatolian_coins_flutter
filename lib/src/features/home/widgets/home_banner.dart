@@ -42,58 +42,63 @@ class HomeBanner extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          child: Stack(
-            fit: StackFit.expand,
+          // Slogan seridi gorselin UZERINE BINMEZ, altinda ayri satirdir.
+          // Onceki surumde Stack ile bindiriliyordu; beyaz zeminli sikke
+          // fotograflarinda seridin altinda kalan kisim kesik gorunuyordu.
+          child: Column(
             children: [
-              // Gorsel: banner'in tamamini kaplar
-              Container(
-                // contain modunda zemin BEYAZ: arsiv fotograflarinin kendi zemini beyaz,
-                // krem bir zeminde ortada gorunur bir dikis birakiyordu.
-                color: fit == BoxFit.contain ? Colors.white : numPrimaryDark,
-                child: Image.asset(
-                  image,
-                  fit: fit,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: numPrimaryDark,
-                    child: const Icon(Icons.image_not_supported_outlined,
-                        color: Colors.white38, size: 32),
-                  ),
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Gorsel: kendi alanini kaplar
+                    Container(
+                      // contain modunda zemin BEYAZ: arsiv fotograflarinin kendi
+                      // zemini beyaz, krem zeminde ortada gorunur bir dikis birakiyordu.
+                      color: fit == BoxFit.contain ? Colors.white : numPrimaryDark,
+                      child: Image.asset(
+                        image,
+                        fit: fit,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: numPrimaryDark,
+                          child: const Icon(Icons.image_not_supported_outlined,
+                              color: Colors.white38, size: 32),
+                        ),
+                      ),
+                    ),
+
+                    // Isaretler yalniz gorsel alanina konur
+                    for (final m in markers)
+                      Align(
+                        alignment: m.at,
+                        child: _MarkerRing(label: m.label),
+                      ),
+                  ],
                 ),
               ),
 
-              // Isaretler gorsel alanina konur (alt seritten yukarida kalsin diye
-              // dikeyde biraz yukari kaydirilir)
-              for (final m in markers)
-                Align(
-                  alignment: Alignment(m.at.x, m.at.y - 0.25),
-                  child: _MarkerRing(label: m.label),
+              // Slogan seridi: gorselin ALTINDA, ayri zeminde
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [numPrimaryDark, numPrimary],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
                 ),
-
-              // Slogan seridi: FARKLI ZEMIN, gorselin altinda
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [numPrimaryDark, numPrimary],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
+                child: Text(
+                  slogan,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
                   ),
-                  child: Text(
-                    slogan,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
