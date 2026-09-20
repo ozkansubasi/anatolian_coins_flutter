@@ -372,29 +372,30 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       ),
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        numSectionHeader(title: l10n.translate('quick_access')),
-        // YATAY LISTE DEGIL, GRID. Onceki surumde 5 kart x 104 px = 520 px
-        // genisligindeydi ama ekran 412 px: son kart (Blog) HIC gorunmuyordu ve
-        // kaydirilabildigine dair gorsel ipucu yoktu. Grid'de hepsi ayni anda
-        // gorunur ve kirpilma olmaz.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.95,
-            children: [
-              for (final feature in features) _QuickFeatureCard(feature: feature),
-            ],
-          ),
-        ),
-      ],
+    // HIZLI ERISIM: baslik ve kart YOK.
+    // Gerekce (2026-09-20): once yatay liste vardi (5 kart x 104 px = 520 px,
+    // ekran 412 px -> son kart hic gorunmuyordu). Grid tasmayi cozdu ama
+    // golgeli/cerceveli kartlar amator duruyordu: her kisayol, sayfadaki
+    // "Sikke Tani" gibi gercek bir kartla ayni gorsel agirliktaydi.
+    // Modern kisayol bloklari (bankacilik/e-ticaret deseni) cercevesizdir:
+    // yuvarlak ikon + altinda etiket, golge yok, ayirici yok. Bolum basligi da
+    // gereksiz -- ikonlar zaten kendini anlatiyor ve dikey yer kazanildi.
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+      child: GridView.count(
+        // 3 sutun: 6 kisayol tam iki satir eder (4 sutunda ikinci satirda bosluk
+        // kaliyordu) ve hucre genisligi ~132 dp'ye cikinca "Koleksiyonlarim" gibi
+        // uzun etiketler kelime ortasindan bolunmuyor.
+        crossAxisCount: 3,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1.15,
+        children: [
+          for (final feature in features) _QuickAction(feature: feature),
+        ],
+      ),
     );
   }
 
@@ -639,80 +640,80 @@ class _QuickFeature {
   });
 }
 
-class _QuickFeatureCard extends StatelessWidget {
+/// Kisayol dugmesi: yuvarlak ikon + altinda etiket. Kart/golge/cerceve YOK.
+///
+/// Onceki `_QuickFeatureCard` her kisayolu golgeli bir karta koyuyordu; sayfadaki
+/// gercek kartlarla (Sikke Tani) ayni gorsel agirligi tasidigi icin hiyerarsi
+/// bozuluyordu. Ayrica sabit 96x100 boyut yatay tasmanin kaynagiydi ve uzun
+/// etiketler FittedBox ile kuculdugu icin kartlar arasinda punto tutarsizdi.
+/// Burada etiket iki satira sarar, punto sabit kalir.
+class _QuickAction extends StatelessWidget {
   final _QuickFeature feature;
 
-  const _QuickFeatureCard({required this.feature});
+  const _QuickAction({required this.feature});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Sabit width/height YOK: kart artik GridView hucresini doldurur. Onceki
-    // sabit 96x100 + margin, yatay listede 520 px'lik tasmanin kaynagiydi.
-    return SizedBox.expand(
-      child: Material(
-        elevation: 2,
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Semantics(
+      button: true,
+      label: feature.title,
+      child: InkWell(
+        onTap: feature.onTap,
         borderRadius: BorderRadius.circular(12),
-        color: isDark ? numCardDark : numCardLight,
-        shadowColor: numShadow,
-        child: InkWell(
-          onTap: feature.onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: feature.color.withAlpha(30),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(feature.icon, color: feature.color, size: 22),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: numPrimary.withAlpha(isDark ? 45 : 28),
+                      shape: BoxShape.circle,
                     ),
-                    if (feature.badge != null)
-                      Positioned(
-                        top: -4,
-                        right: -4,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            feature.badge!,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    child: Icon(feature.icon, color: numPrimary, size: 24),
+                  ),
+                  if (feature.badge != null)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.error,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          feature.badge!,
+                          style: TextStyle(
+                            color: theme.colorScheme.onError,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                  ],
-                ),
-                6.height,
-                // Tek satır + sığmazsa küçülterek sığdır ("Koleksiyonlarım"
-                // gibi uzun etiketlerin kelime ortasından kırılmasını önler)
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      feature.title,
-                      style: secondaryTextStyle(size: 12, color: isDark ? Colors.white70 : numTextPrimary),
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
                     ),
-                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                feature.title,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: isDark ? Colors.white70 : numTextPrimary,
+                  height: 1.15,
                 ),
-              ],
-            ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ),

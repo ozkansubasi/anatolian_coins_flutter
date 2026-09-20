@@ -221,6 +221,11 @@ class AppTheme {
         labelStyle: GoogleFonts.inter(
           fontSize: 13,
           fontWeight: FontWeight.w500,
+          // RENK ACIKCA VERILIR. Renksiz birakildiginda cip etiketi cozumlenmemis
+          // bir renge dusuyor ve acik zeminde BEYAZ ciziliyordu: asistan yanitindaki
+          // kaynak baglantilarinin yalniz ikonu goruluyor, metni gorunmuyordu
+          // (2026-09-20, cihazda dogrulandi).
+          color: colorScheme.onSurfaceVariant,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),

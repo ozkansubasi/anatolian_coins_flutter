@@ -260,8 +260,15 @@ class _MessageBubble extends StatelessWidget {
                         s.title.isEmpty ? s.url : s.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        // Baglanti gibi okunsun: numPrimary (#8B6914) fildisi
+                        // zeminde 5,04:1 -> WCAG AA gecer; alti cizili.
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: numPrimary,
+                          decoration: TextDecoration.underline,
+                          decorationColor: numPrimary,
+                        ),
                       ),
-                      avatar: const Icon(Icons.open_in_new, size: 14),
+                      avatar: const Icon(Icons.open_in_new, size: 14, color: numPrimary),
                       visualDensity: VisualDensity.compact,
                       onPressed: () async {
                         final uri = Uri.tryParse(s.url);
