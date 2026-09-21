@@ -710,8 +710,6 @@ class AppTheme {
 
   /// Build text theme with Google Fonts
   static TextTheme _buildTextTheme(ColorScheme colorScheme) {
-    final baseTextTheme = GoogleFonts.interTextTheme();
-
     return TextTheme(
       // Display styles - Playfair Display for elegance
       displayLarge: GoogleFonts.inter(

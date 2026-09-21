@@ -9,10 +9,6 @@
 // Colors
 export 'numistr_colors.dart';
 
-// Theme
-export 'numistr_theme.dart';
-
 // Widgets
 export 'widgets/num_widgets.dart';
-export 'widgets/num_shimmer.dart';
 export 'widgets/num_bottom_nav.dart';
