@@ -88,11 +88,8 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         ],
       ),
       actions: [
-        IconButton(
-          icon: Icon(Icons.search, color: isDark ? Colors.white : numTextPrimary),
-          onPressed: () => context.go('/browse'),
-          tooltip: l10n.translate('search'),
-        ),
+        // Arama ikonu 2026-09-21'de kaldırıldı: aynı hedef alt çubukta (Keşfet)
+        // ve hızlı erişimde (Sikke Ara) zaten var; üçüncü kopya gereksizdi.
         // Zil yerine PROFIL: bildirim ekrani yok, zil ikonu "yakinda" diyen bos
         // bir aksiyona gidiyordu. Bildirim oldugunda ikonun uzerinde kahverengi
         // nokta gorunur (2026-09-20 karari).
