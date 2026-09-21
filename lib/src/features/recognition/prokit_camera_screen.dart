@@ -485,7 +485,9 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                       ),
                       4.width,
                       Text(
-                        '${quota.remaining}/${quota.limit}',
+                        // limit < 0 = Pro (kotasız). Ham "-1/-1" basılıyordu;
+                        // "sınırsız" kelimesi K2 kararıyla kullanılmıyor.
+                        quota.limit < 0 ? 'Pro' : '${quota.remaining}/${quota.limit}',
                         style: boldTextStyle(
                           size: 12,
                           color: quota.hasScansAvailable ? numSuccess : numError,

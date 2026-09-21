@@ -355,6 +355,11 @@ class CoinMatch {
   final String? regionName; // Category name instead of alias
   final String? mintName; // Mint name
   final String? dateRange;
+
+  /// Ham yıl (MÖ negatif). Ekranda CoinFormat.dateRange ile gösterilir;
+  /// [dateRange] eski biçimsiz metin ("-133 - -50"), yalnız geriye uyumluluk.
+  final int? dateFrom;
+  final int? dateTo;
   final String? thumbnailUrl;
   final String? explanation;
 
@@ -370,6 +375,8 @@ class CoinMatch {
     this.regionName,
     this.mintName,
     this.dateRange,
+    this.dateFrom,
+    this.dateTo,
     this.thumbnailUrl,
     this.explanation,
     this.obverseScore,
@@ -397,12 +404,16 @@ class CoinMatch {
       regionName: RegionData.getRegionName(regionAlias), // Client-side mapping
       mintName: json['mint_name'] as String?,
       dateRange: dateRange ?? json['date_range'] as String?, // Fallback to direct field
+      dateFrom: _toInt(dateFrom),
+      dateTo: _toInt(dateTo),
       thumbnailUrl: json['thumbnail_url'] as String?, // Not provided by AI service yet
       explanation: json['explanation'] as String?,
       obverseScore: (json['obverse_score'] as num?)?.toDouble(),
       reverseScore: (json['reverse_score'] as num?)?.toDouble(),
     );
   }
+
+  static int? _toInt(Object? v) => v is num ? v.toInt() : int.tryParse('${v ?? ''}');
 
   /// Tarama geçmişine kaydetmek için; fromJson ile geri okunabilir.
   Map<String, dynamic> toJson() => {
@@ -412,6 +423,8 @@ class CoinMatch {
         'region': region,
         'mint_name': mintName,
         'date_range': dateRange,
+        'date_from': dateFrom,
+        'date_to': dateTo,
         'thumbnail_url': thumbnailUrl,
         'explanation': explanation,
         'obverse_score': obverseScore,

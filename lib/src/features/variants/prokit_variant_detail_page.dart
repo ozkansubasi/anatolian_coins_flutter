@@ -18,6 +18,7 @@ import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../core/num_colors.dart';
 import '../../core/num_text.dart';
+import '../../core/coin_format.dart';
 import '../../core/navigation.dart';
 import '../favorites/favorites_service.dart';
 import '../offline/offline_service.dart';
@@ -229,19 +230,6 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     } catch (e) {
       // Silent fail
     }
-  }
-
-  /// "133 BC - 50 BC" yerine dile uygun: TR "MÖ 133 – MÖ 50", EN "133 BC – 50 BC".
-  String? _formatDateRange(int? from, int? to, AppLocalizations l10n, bool isEnglish) {
-    if (from == null && to == null) return null;
-    String one(int y) {
-      final era = l10n.translate(y < 0 ? 'bc' : 'ad');
-      return isEnglish ? '${y.abs()} $era' : '$era ${y.abs()}';
-    }
-
-    if (from == null) return one(to!);
-    if (to == null || from == to) return one(from);
-    return '${one(from)} – ${one(to)}';
   }
 
   @override
@@ -469,8 +457,8 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     final t = context.numText;
     final c = context.numColors;
 
-    final period = _formatDateRange(v.dateFrom, v.dateTo, l10n, isEnglish);
-    final material = _materialLabel(v.material, l10n);
+    final period = CoinFormat.dateRange(v.dateFrom, v.dateTo, l10n);
+    final material = CoinFormat.material(v.material, l10n);
     final region = v.regionCode != null && v.regionCode!.isNotEmpty
         ? RegionData.getRegionName(v.regionCode)
         : null;
@@ -491,13 +479,13 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
               if (v.authorityName != null && v.authorityName!.isNotEmpty)
                 _buildInfoRow(l10n.translate('authority_label'), v.authorityName!),
               if (v.mintName != null && v.mintName!.isNotEmpty)
-                _buildInfoRow(l10n.translate('mint_label'), _titleCase(v.mintName!)),
+                _buildInfoRow(l10n.translate('mint_label'), CoinFormat.titleCase(v.mintName!)),
               if (region != null && region != '-')
                 _buildInfoRow(l10n.translate('region_label'), region),
               _buildInfoRow(
                 l10n.translate('material_label'),
                 material ?? '-',
-                dotColor: material == null ? null : _materialColor(v.material),
+                dotColor: material == null ? null : CoinFormat.materialColor(v.material),
               ),
               _buildInfoRow(l10n.translate('period'), period ?? '-', last: true),
             ],
@@ -560,39 +548,6 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
         ],
       ),
     );
-  }
-
-  /// Veri tabanında darphane adları küçük harf gelebiliyor ("aezanis").
-  String _titleCase(String s) => s
-      .split(' ')
-      .map((w) => w.isEmpty ? w : w[0].toUpperCase() + w.substring(1))
-      .join(' ');
-
-  /// "bronze" → "Bronz" (TR) / "Bronze" (EN); bilinmeyen değer baş harfi büyük.
-  String? _materialLabel(String? raw, AppLocalizations l10n) {
-    if (raw == null || raw.trim().isEmpty) return null;
-    final key = 'material_${raw.trim().toLowerCase()}';
-    final tr = l10n.translate(key);
-    return tr == key ? _titleCase(raw.trim()) : tr;
-  }
-
-  Color _materialColor(String? raw) {
-    switch (raw?.trim().toLowerCase()) {
-      case 'gold':
-      case 'au':
-        return numMaterialGold;
-      case 'silver':
-      case 'ar':
-        return numMaterialSilver;
-      case 'electrum':
-      case 'el':
-        return const Color(0xFFE5E4E2);
-      case 'lead':
-      case 'pb':
-        return const Color(0xFF3B3B3B);
-      default:
-        return numMaterialBronze;
-    }
   }
 
   Widget _buildAncientMapTab(Variant v, AppLocalizations l10n) {

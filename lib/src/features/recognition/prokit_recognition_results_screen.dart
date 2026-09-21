@@ -3,17 +3,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:nb_utils/nb_utils.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import '../../core/coin_format.dart';
+import '../../core/navigation.dart';
 import '../../core/num_colors.dart';
+import '../../core/num_text.dart';
 import 'recognition_service.dart';
 import '../history/scan_history_service.dart';
 import '../variants/variants_api.dart';
 import '../settings/settings_provider.dart';
 
-/// ProKit-styled recognition results screen
-/// Modern card design with gradient accents and improved UX
+/// Eşleşme küçük görseli. AYRI PROVIDER: eskiden FutureBuilder'ın future'ı
+/// build() içinde kuruluyordu → her yeniden çizimde görsel yeniden isteniyordu
+/// (20 Eylül'de "Editör'den" bloğunda düzeltilen hatanın aynısı).
+final _matchThumbProvider = FutureProvider.autoDispose.family<String?, int>(
+  (ref, articleId) => ref.read(variantsApiProvider).getFirstImageUrl(articleId, wm: true),
+);
+
+/// Tanıma sonuçları (2026-09-21 yeniden tasarım, sikke detayıyla aynı dil).
+///
+/// Düzen: taranan sikke (kullanıcının fotoğrafı) → en yakın eşleşme (tek büyük
+/// kart) → diğer olasılıklar (sade satırlar). Eski ekran "en iyi eşleşme"yi dört
+/// kez söylüyordu (bant, sayaç, şerit, altın "1" rozeti), kullanıcının kendi
+/// fotoğrafını hiç göstermiyordu, dönemi "-133 - -50" diye basıyordu ve geçerli
+/// bir %55 eşleşmeyi hata kırmızısıyla boyuyordu.
 class ProkitRecognitionResultsScreen extends ConsumerStatefulWidget {
   final dynamic imageData;
 
@@ -29,61 +43,53 @@ class ProkitRecognitionResultsScreen extends ConsumerStatefulWidget {
 
 class _ProkitRecognitionResultsScreenState
     extends ConsumerState<ProkitRecognitionResultsScreen> {
-  /// Temaya duyarlı anlamsal renkler (S26 P2).
-  NumColors get c => context.numColors;
+  late final File _obverseFile;
+  File? _reverseFile;
+  Map<String, String> _attrs = const {};
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() async {
-      try {
-        File obverseFile;
-        File? reverseFile;
-        var attrs = const <String, String>{};
-        if (widget.imageData is Map) {
-          final map = widget.imageData as Map<String, dynamic>;
-          obverseFile = File(map['obverse'] as String);
-          final reversePath = map['reverse'] as String?;
-          reverseFile = reversePath != null ? File(reversePath) : null;
-          // Faz B: istege bagli nitelikler (metal / agirlik / cap)
-          attrs = RecognitionService.attrFields(
-            metal: map['metal'] as String?,
-            weightG: map['weight_g'] as String?,
-            diameterMm: map['diameter_mm'] as String?,
-          );
-        } else {
-          obverseFile = File(widget.imageData as String);
-        }
-        if (reverseFile != null) {
-          debugPrint('Starting dual recognition');
-          await ref.read(recognitionControllerProvider.notifier).recognizeDual(
-                obverseFile,
-                reverseFile,
-                attrs: attrs,
-              );
-        } else {
-          debugPrint('Starting single recognition for: ${obverseFile.path}');
-          await ref
-              .read(recognitionControllerProvider.notifier)
-              .recognize(obverseFile, attrs: attrs);
-        }
-        debugPrint('Recognition completed successfully');
-        ref.invalidate(scanQuotaProvider);
+    if (widget.imageData is Map) {
+      final map = widget.imageData as Map<String, dynamic>;
+      _obverseFile = File(map['obverse'] as String);
+      final reversePath = map['reverse'] as String?;
+      _reverseFile = reversePath != null ? File(reversePath) : null;
+      // Faz B: istege bagli nitelikler (metal / agirlik / cap)
+      _attrs = RecognitionService.attrFields(
+        metal: map['metal'] as String?,
+        weightG: map['weight_g'] as String?,
+        diameterMm: map['diameter_mm'] as String?,
+      );
+    } else {
+      _obverseFile = File(widget.imageData as String);
+    }
+    Future.microtask(_recognize);
+  }
 
-        // Başarılı sonucu tarama geçmişine kaydet (hata olsa da akışı bozmaz)
-        final result = ref.read(recognitionControllerProvider).value;
-        if (result != null) {
-          await ref.read(scanHistoryServiceProvider).recordScan(
-                obverseImage: obverseFile,
-                reverseImage: reverseFile,
-                response: result,
-              );
-        }
-      } catch (e, stack) {
-        debugPrint('Recognition error: $e');
-        debugPrint('Stack trace: $stack');
+  Future<void> _recognize() async {
+    try {
+      final notifier = ref.read(recognitionControllerProvider.notifier);
+      if (_reverseFile != null) {
+        await notifier.recognizeDual(_obverseFile, _reverseFile!, attrs: _attrs);
+      } else {
+        await notifier.recognize(_obverseFile, attrs: _attrs);
       }
-    });
+      ref.invalidate(scanQuotaProvider);
+
+      // Başarılı sonucu tarama geçmişine kaydet (hata olsa da akışı bozmaz)
+      final result = ref.read(recognitionControllerProvider).value;
+      if (result != null) {
+        await ref.read(scanHistoryServiceProvider).recordScan(
+              obverseImage: _obverseFile,
+              reverseImage: _reverseFile,
+              response: result,
+            );
+      }
+    } catch (e, stack) {
+      debugPrint('Recognition error: $e');
+      debugPrint('Stack trace: $stack');
+    }
   }
 
   @override
@@ -92,273 +98,104 @@ class _ProkitRecognitionResultsScreenState
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: recognitionState.when(
-          data: (results) => _buildResults(results, l10n),
-          loading: () => _buildLoading(l10n),
-          error: (error, stack) => _buildError(error, l10n),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          onPressed: () => context.popOrGoHome(),
+        ),
+        title: Text(l10n.translate('recognition_results_title')),
+        actions: [
+          IconButton(
+            tooltip: l10n.translate('help'),
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => _showHelpDialog(l10n),
+          ),
+        ],
+      ),
+      body: recognitionState.when(
+        data: (results) => _buildResults(results, l10n),
+        loading: () => _buildLoading(l10n),
+        error: (error, _) => _buildError(error, l10n),
+      ),
+    );
+  }
+
+  // --- Durumlar --------------------------------------------------------------
+
+  Widget _buildLoading(AppLocalizations l10n) {
+    final t = context.numText;
+    final c = context.numColors;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Kullanıcının kendi fotoğrafı, etrafında ilerleme halkası
+            SizedBox(
+              width: 132,
+              height: 132,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 132,
+                    height: 132,
+                    child: CircularProgressIndicator(strokeWidth: 3, color: c.accent),
+                  ),
+                  ClipOval(
+                    child: Image.file(_obverseFile,
+                        width: 116, height: 116, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(Icons.monetization_on, size: 56, color: c.hint)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            Text(l10n.translate('analyzing_coin'), style: t.section, textAlign: TextAlign.center),
+            const SizedBox(height: 6),
+            Text(l10n.translate('analyzing_wait'), style: t.caption, textAlign: TextAlign.center),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildLoading(AppLocalizations l10n) {
-    return Column(
-      children: [
-        // Header
-        _buildHeader(l10n),
-
-        Expanded(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Animated coin icon
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    gradient: numGoldGradient,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: numPrimary.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.monetization_on,
-                    size: 60,
-                    color: white,
-                  ),
-                ),
-                32.height,
-                Text(
-                  l10n.translate('analyzing_coin'),
-                  style: boldTextStyle(size: 20, color: c.text),
-                ),
-                12.height,
-                Text(
-                  l10n.translate('analyzing_wait'),
-                  style: secondaryTextStyle(size: 14, color: c.textMuted),
-                ),
-                32.height,
-                SizedBox(
-                  width: 200,
-                  child: LinearProgressIndicator(
-                    backgroundColor: c.divider,
-                    valueColor: const AlwaysStoppedAnimation<Color>(numPrimary),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildError(Object error, AppLocalizations l10n) {
-    return Column(
-      children: [
-        // Header
-        _buildHeader(l10n),
-
-        Expanded(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: numError.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.error_outline, size: 50, color: numError),
-                  ),
-                  24.height,
-                  Text(
-                    l10n.translate('recognition_failed'),
-                    style: boldTextStyle(size: 20, color: c.text),
-                  ),
-                  12.height,
-                  Text(
-                    error.toString(),
-                    textAlign: TextAlign.center,
-                    style: secondaryTextStyle(size: 14, color: c.textMuted),
-                  ),
-                  32.height,
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: () => GoRouter.of(context).pop(),
-                        icon: const Icon(Icons.arrow_back),
-                        label: Text(l10n.translate('go_back')),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: c.textMuted,
-                          side: BorderSide(color: c.border),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        ),
-                      ),
-                      16.width,
-                      ElevatedButton.icon(
-                        onPressed: _retryRecognition,
-                        icon: const Icon(Icons.refresh),
-                        label: Text(l10n.translate('retry')),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: numPrimary,
-                          foregroundColor: white,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+    final t = context.numText;
+    final c = context.numColors;
+    // Ham istisna ("DioException [connection timeout]…") kullanıcıya gösterilmez.
+    final s = error.toString().toLowerCase();
+    final isNetwork = s.contains('socket') ||
+        s.contains('timeout') ||
+        s.contains('connection') ||
+        s.contains('network');
+    return _StateMessage(
+      icon: isNetwork ? Icons.wifi_off_rounded : Icons.error_outline,
+      iconColor: isNetwork ? c.hint : numError,
+      title: l10n.translate('recognition_failed'),
+      message: l10n.translate(isNetwork ? 'error_network' : 'recognition_error_generic'),
+      actions: [
+        OutlinedButton.icon(
+          onPressed: () => context.popOrGoHome(),
+          icon: const Icon(Icons.arrow_back),
+          label: Text(l10n.translate('go_back')),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: c.textMuted,
+            side: BorderSide(color: c.border),
           ),
+        ),
+        const SizedBox(width: 12),
+        FilledButton.icon(
+          // Eski: (map['reverse'] as String) — tek yüzlü taramada null → çöküş.
+          onPressed: _recognize,
+          icon: const Icon(Icons.refresh),
+          label: Text(l10n.translate('retry')),
+          style: FilledButton.styleFrom(backgroundColor: numPrimary),
         ),
       ],
-    );
-  }
-
-  void _retryRecognition() {
-    if (widget.imageData is Map) {
-      final map = widget.imageData as Map<String, dynamic>;
-      ref.read(recognitionControllerProvider.notifier).recognizeDual(
-            File(map['obverse'] as String),
-            File(map['reverse'] as String),
-          );
-    } else {
-      ref.read(recognitionControllerProvider.notifier).recognize(File(widget.imageData as String));
-    }
-  }
-
-  Widget _buildResults(RecognitionResponse results, AppLocalizations l10n) {
-    final confidenceThreshold = ref.watch(recognitionConfidenceThresholdProvider);
-    final topK = ref.watch(recognitionTopKProvider);
-    final filterRegion = ref.watch(recognitionFilterRegionProvider);
-    final filterMaterial = ref.watch(recognitionFilterMaterialProvider);
-
-    var filteredMatches = results.matches
-        .where((match) => match.confidence >= confidenceThreshold)
-        .toList();
-
-    if (filterRegion != null) {
-      filteredMatches = filteredMatches
-          .where((match) => match.region?.toLowerCase() == filterRegion.toLowerCase())
-          .toList();
-    }
-
-    if (filterMaterial != null) {
-      filteredMatches = filteredMatches
-          .where((match) {
-            final matchTitle = match.title.toLowerCase();
-            return matchTitle.contains(filterMaterial.toLowerCase());
-          })
-          .toList();
-    }
-
-    if (filteredMatches.length > topK) {
-      filteredMatches = filteredMatches.sublist(0, topK);
-    }
-
-    if (filteredMatches.isEmpty) {
-      return _buildNoResults(l10n, results.noMatchReason);
-    }
-
-    final isAmbiguous = results.noMatchReason == 'ambiguous_match';
-
-    return Column(
-      children: [
-        // Header
-        _buildHeader(l10n),
-
-        // Results info banner
-        Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          padding: const EdgeInsets.all(12),
-          decoration: boxDecorationWithRoundedCorners(
-            backgroundColor: numPrimary.withOpacity(0.1),
-            borderRadius: radius(12),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: numPrimary.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.auto_awesome, color: c.accent, size: 20),
-              ),
-              12.width,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.translate('showing_top_matches'),
-                      style: boldTextStyle(size: 14, color: c.accent),
-                    ),
-                    4.height,
-                    Text(
-                      '${filteredMatches.length} sonuç bulundu',
-                      style: secondaryTextStyle(size: 12, color: c.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Ambiguity warning (Faz A: dusuk marj)
-        if (isAmbiguous)
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            padding: const EdgeInsets.all(12),
-            decoration: boxDecorationWithRoundedCorners(
-              backgroundColor: numWarning.withOpacity(0.12),
-              borderRadius: radius(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, color: numWarning, size: 20),
-                12.width,
-                Expanded(
-                  child: Text(
-                    l10n.translate('reason_ambiguous_match'),
-                    style: secondaryTextStyle(size: 12, color: c.textMuted),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-        // Results list
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: filteredMatches.length,
-            itemBuilder: (context, index) {
-              final match = filteredMatches[index];
-              return _buildMatchCard(match, index + 1);
-            },
-          ),
-        ),
-
-        // Bottom action
-        _buildBottomAction(l10n),
-      ],
+      textStyle: t,
     );
   }
 
@@ -369,61 +206,137 @@ class _ProkitRecognitionResultsScreenState
       'below_confidence' => 'reason_below_confidence',
       _ => null,
     };
-    final title = reasonKey != null ? l10n.translate(reasonKey) : l10n.translate('no_matches');
-    final desc = reasonKey != null
-        ? l10n.translate('${reasonKey}_desc')
-        : l10n.translate('try_clearer_photo');
     final icon = switch (reason) {
       'no_coin_detected' => Icons.image_search,
       'low_detail_surface' => Icons.texture,
       _ => Icons.search_off,
     };
+    return _StateMessage(
+      icon: icon,
+      iconColor: context.numColors.hint,
+      title: l10n.translate(reasonKey ?? 'no_matches'),
+      message: l10n.translate(reasonKey != null ? '${reasonKey}_desc' : 'try_clearer_photo'),
+      actions: [
+        FilledButton.icon(
+          onPressed: _scanAnother,
+          icon: const Icon(Icons.photo_camera_outlined),
+          label: Text(l10n.translate('take_another_photo')),
+          style: FilledButton.styleFrom(backgroundColor: numPrimary),
+        ),
+      ],
+      textStyle: context.numText,
+    );
+  }
+
+  /// Kameraya dön: Tara dalının köküne git. Eski çift `pop()` yığına bağlıydı.
+  void _scanAnother() => context.go('/recognition');
+
+  // --- Sonuçlar --------------------------------------------------------------
+
+  Widget _buildResults(RecognitionResponse results, AppLocalizations l10n) {
+    final confidenceThreshold = ref.watch(recognitionConfidenceThresholdProvider);
+    final topK = ref.watch(recognitionTopKProvider);
+    final filterRegion = ref.watch(recognitionFilterRegionProvider);
+    final filterMaterial = ref.watch(recognitionFilterMaterialProvider);
+
+    var matches = results.matches.where((m) => m.confidence >= confidenceThreshold).toList();
+    if (filterRegion != null) {
+      matches = matches
+          .where((m) => m.region?.toLowerCase() == filterRegion.toLowerCase())
+          .toList();
+    }
+    if (filterMaterial != null) {
+      // Not: eşleşmede materyal alanı yok; süzgeç başlık metnine bakıyor (sınırlı).
+      matches = matches
+          .where((m) => m.title.toLowerCase().contains(filterMaterial.toLowerCase()))
+          .toList();
+    }
+    if (matches.length > topK) matches = matches.sublist(0, topK);
+    if (matches.isEmpty) return _buildNoResults(l10n, results.noMatchReason);
+
+    final t = context.numText;
+    final c = context.numColors;
+    final isAmbiguous = results.noMatchReason == 'ambiguous_match';
+    final others = matches.skip(1).toList();
+
     return Column(
       children: [
-        // Header
-        _buildHeader(l10n),
-
         Expanded(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: c.hint.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(icon, size: 50, color: c.hint),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              _ScannedCoinStrip(
+                obverse: _obverseFile,
+                reverse: _reverseFile,
+                label: l10n.translate('scanned_coin'),
+                summary: l10n.translate('possible_matches', params: {'n': '${matches.length}'}),
+              ),
+              const SizedBox(height: 16),
+
+              if (isAmbiguous) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: numWarning.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  24.height,
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: boldTextStyle(size: 20, color: c.text),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.info_outline, color: numWarning, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(l10n.translate('reason_ambiguous_match'),
+                            style: t.caption.copyWith(color: c.text)),
+                      ),
+                    ],
                   ),
-                  12.height,
-                  Text(
-                    desc,
-                    textAlign: TextAlign.center,
-                    style: secondaryTextStyle(size: 14, color: c.textMuted),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              Text(l10n.translate('closest_match'), style: t.tag),
+              const SizedBox(height: 8),
+              _TopMatchCard(match: matches.first, l10n: l10n),
+
+              if (others.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Text(l10n.translate('other_candidates'), style: t.section),
+                const SizedBox(height: 10),
+                Container(
+                  decoration: BoxDecoration(
+                    color: c.card,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: c.border),
                   ),
-                  32.height,
-                  ElevatedButton.icon(
-                    onPressed: () => GoRouter.of(context).pop(),
-                    icon: const Icon(Icons.camera_alt),
-                    label: Text(l10n.translate('take_another_photo')),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: numPrimary,
-                      foregroundColor: white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: radius(12)),
-                    ),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < others.length; i++)
+                        _CandidateRow(match: others[i], l10n: l10n, last: i == others.length - 1),
+                    ],
                   ),
-                ],
+                ),
+              ],
+            ],
+          ),
+        ),
+        // Alt eylem
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _scanAnother,
+                icon: const Icon(Icons.photo_camera_outlined),
+                label: Text(l10n.translate('scan_another')),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: c.accent,
+                  side: BorderSide(color: c.accent),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
           ),
@@ -432,198 +345,272 @@ class _ProkitRecognitionResultsScreenState
     );
   }
 
-  Widget _buildHeader(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => GoRouter.of(context).pop(),
-            icon: Icon(Icons.arrow_back_ios, color: c.text),
+  void _showHelpDialog(AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final t = context.numText;
+        final c = context.numColors;
+        Widget section(String title, String text) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: t.value),
+                const SizedBox(height: 6),
+                Text(text, style: t.body.copyWith(color: c.textMuted)),
+              ],
+            );
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.help_outline, color: c.accent),
+              const SizedBox(width: 12),
+              Text(l10n.translate('help'), style: t.section),
+            ],
           ),
-          Expanded(
-            child: Text(
-              l10n.translate('recognition_results_title'),
-              style: boldTextStyle(size: 18, color: c.text),
-              textAlign: TextAlign.center,
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                section(l10n.translate('help_recognition_title'), l10n.translate('help_recognition_text')),
+                const SizedBox(height: 16),
+                section(l10n.translate('help_results_title'), l10n.translate('help_results_text')),
+              ],
             ),
           ),
-          IconButton(
-            onPressed: () => _showHelpDialog(l10n),
-            icon: Icon(Icons.help_outline, color: c.textMuted),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(foregroundColor: c.accent),
+              child: Text(l10n.translate('close')),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// --- Parçalar ----------------------------------------------------------------
+
+/// Taranan sikke: kullanıcının ön/arka yüz fotoğrafları + özet.
+class _ScannedCoinStrip extends StatelessWidget {
+  final File obverse;
+  final File? reverse;
+  final String label;
+  final String summary;
+  const _ScannedCoinStrip({
+    required this.obverse,
+    required this.reverse,
+    required this.label,
+    required this.summary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.numColors;
+    final t = context.numText;
+    Widget face(File f) => Container(
+          width: 56,
+          height: 56,
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: c.border, width: 2),
+          ),
+          child: ClipOval(
+            child: Image.file(f, fit: BoxFit.cover, cacheWidth: 168,
+                errorBuilder: (_, __, ___) => Icon(Icons.monetization_on, color: c.hint)),
+          ),
+        );
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
+      ),
+      child: Row(
+        children: [
+          face(obverse),
+          if (reverse != null) face(reverse!),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: t.label),
+                const SizedBox(height: 2),
+                Text(summary, style: t.value),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  AppLocalizations get _l10n => AppLocalizations.of(context);
+/// Eşleşme görseli: beyaz fotoğraf plakası (müze fotoğrafları beyaz fonlu).
+class _MatchImage extends ConsumerWidget {
+  final int articleId;
+  final double size;
+  const _MatchImage({required this.articleId, required this.size});
 
-  Widget _buildMatchCard(CoinMatch match, int rank) {
-    final isTopMatch = rank == 1;
-
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.numColors;
+    final url = ref.watch(_matchThumbProvider(articleId)).valueOrNull;
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      padding: const EdgeInsets.all(4),
+      child: url == null
+          ? Icon(Icons.monetization_on_outlined, color: numTextHint, size: size * 0.4)
+          : CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.contain,
+              errorWidget: (_, __, ___) =>
+                  Icon(Icons.image_not_supported_outlined, color: numTextHint, size: size * 0.4),
+            ),
+    );
+  }
+}
+
+/// Konum satırı: "Pamfilya · Aspendos · MÖ 400 – MÖ 350".
+String _metaLine(CoinMatch m, AppLocalizations l10n) {
+  final parts = <String>[
+    if (m.regionName != null && m.regionName != '-') m.regionName!,
+    if (m.mintName != null && m.mintName!.isNotEmpty) CoinFormat.titleCase(m.mintName!),
+    if (CoinFormat.dateRange(m.dateFrom, m.dateTo, l10n) case final d?) d,
+  ];
+  return parts.join(' · ');
+}
+
+/// Benzerlik çubuğu: tek renk (altın). Eskiden %55'lik geçerli bir eşleşme
+/// hata kırmızısıyla boyanıyordu; belirsizlik zaten ayrı uyarıyla bildiriliyor.
+class _Similarity extends StatelessWidget {
+  final double value;
+  final String label;
+  final bool compact;
+  const _Similarity({required this.value, required this.label, this.compact = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.numColors;
+    final t = context.numText;
+    final pct = '%${(value * 100).round()}';
+    final bar = ClipRRect(
+      borderRadius: BorderRadius.circular(3),
+      child: LinearProgressIndicator(
+        value: value.clamp(0, 1),
+        minHeight: compact ? 4 : 6,
+        backgroundColor: c.divider,
+        color: c.accent,
+      ),
+    );
+    if (compact) {
+      return SizedBox(
+        width: 56,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(pct, style: t.value.copyWith(color: c.accent)),
+            const SizedBox(height: 4),
+            bar,
+          ],
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(label, style: t.label),
+            const Spacer(),
+            Text(pct, style: t.section.copyWith(color: c.accent)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        bar,
+      ],
+    );
+  }
+}
+
+class _TopMatchCard extends StatelessWidget {
+  final CoinMatch match;
+  final AppLocalizations l10n;
+  const _TopMatchCard({required this.match, required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.numColors;
+    final t = context.numText;
+    final meta = _metaLine(match, l10n);
+    final faces = [
+      if (match.obverseScore != null)
+        '${l10n.translate('obverse')} %${(match.obverseScore! * 100).round()}',
+      if (match.reverseScore != null)
+        '${l10n.translate('reverse')} %${(match.reverseScore! * 100).round()}',
+    ].join('  ·  ');
+
+    return Material(
+      color: c.card,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => context.push('/variant/${match.articleId}'),
-        borderRadius: radius(16),
         child: Container(
-          decoration: boxDecorationWithRoundedCorners(
-            backgroundColor: c.card,
-            borderRadius: radius(16),
-            border: isTopMatch ? Border.all(color: numPrimary, width: 2) : null,
-            boxShadow: [
-              BoxShadow(
-                color: c.shadow,
-                blurRadius: isTopMatch ? 12 : 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: c.accent.withValues(alpha: 0.6), width: 1.5),
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top match indicator
-              if (isTopMatch)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  decoration: boxDecorationWithRoundedCorners(
-                    backgroundColor: numPrimary,
-                    borderRadius: radiusOnly(topLeft: 14, topRight: 14),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _MatchImage(articleId: match.articleId, size: 104),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(match.title, style: t.section, maxLines: 3, overflow: TextOverflow.ellipsis),
+                        if (meta.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(meta, style: t.caption),
+                        ],
+                      ],
+                    ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.star, color: white, size: 16),
-                      8.width,
-                      Text(
-                        'En İyi Eşleşme',
-                        style: boldTextStyle(size: 12, color: white),
-                      ),
-                    ],
-                  ),
-                ),
-
-              Padding(
-                padding: const EdgeInsets.all(12),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _Similarity(value: match.confidence, label: l10n.translate('similarity')),
+              if (faces.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(faces, style: t.caption),
+              ],
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Rank badge
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: _getRankGradient(rank),
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: _getRankColor(rank).withOpacity(0.3),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          '$rank',
-                          style: boldTextStyle(size: 16, color: white),
-                        ),
-                      ),
-                    ),
-                    12.width,
-
-                    // Coin image
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: boxDecorationWithRoundedCorners(
-                        backgroundColor: c.surface,
-                        borderRadius: radius(12),
-                        border: Border.all(color: c.border),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: radius(11),
-                        child: Consumer(
-                          builder: (context, ref, _) {
-                            final imageUrlFuture = ref.watch(
-                              variantsApiProvider
-                            ).getFirstImageUrl(match.articleId, wm: true);
-
-                            return FutureBuilder<String?>(
-                              future: imageUrlFuture,
-                              builder: (context, snapshot) {
-                                if (snapshot.hasData && snapshot.data != null) {
-                                  return CachedNetworkImage(
-                                    imageUrl: snapshot.data!,
-                                    fit: BoxFit.cover,
-                                    width: 72,
-                                    height: 72,
-                                    placeholder: (_, __) => const Center(
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    ),
-                                    errorWidget: (_, __, ___) => Icon(
-                                      Icons.image_not_supported,
-                                      color: c.hint,
-                                    ),
-                                  );
-                                }
-                                return Icon(
-                                  Icons.monetization_on,
-                                  size: 32,
-                                  color: c.hint,
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    12.width,
-
-                    // Coin info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            match.title,
-                            style: boldTextStyle(size: 14, color: c.text),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          4.height,
-                          if (match.regionName != null)
-                            _buildInfoRow(Icons.place, match.regionName!),
-                          if (match.mintName != null)
-                            _buildInfoRow(Icons.location_city, match.mintName!),
-                          if (match.dateRange != null)
-                            _buildInfoRow(Icons.calendar_today, match.dateRange!),
-                          8.height,
-                          // Confidence bar
-                          _buildConfidenceBar(match.confidence),
-                          if (match.obverseScore != null || match.reverseScore != null) ...[
-                            4.height,
-                            Text(
-                              [
-                                if (match.obverseScore != null)
-                                  '${_l10n.translate('obverse')}: ${(match.obverseScore! * 100).toInt()}%',
-                                if (match.reverseScore != null)
-                                  '${_l10n.translate('reverse')}: ${(match.reverseScore! * 100).toInt()}%',
-                              ].join('  ·  '),
-                              style: secondaryTextStyle(size: 11, color: c.hint),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    // Arrow
-                    Icon(Icons.chevron_right, color: c.hint),
+                    Text(l10n.translate('view_details'), style: t.value.copyWith(color: c.accent)),
+                    Icon(Icons.chevron_right, color: c.accent, size: 20),
                   ],
                 ),
               ),
@@ -633,181 +620,95 @@ class _ProkitRecognitionResultsScreenState
       ),
     );
   }
+}
 
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Row(
-        children: [
-          Icon(icon, size: 12, color: c.hint),
-          4.width,
-          Expanded(
-            child: Text(
-              text,
-              style: secondaryTextStyle(size: 12, color: c.textMuted),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+class _CandidateRow extends StatelessWidget {
+  final CoinMatch match;
+  final AppLocalizations l10n;
+  final bool last;
+  const _CandidateRow({required this.match, required this.l10n, required this.last});
 
-  Widget _buildConfidenceBar(double confidence) {
-    final color = _getConfidenceColor(confidence);
-
-    return Row(
-      children: [
-        Expanded(
-          child: Stack(
-            children: [
-              Container(
-                height: 6,
-                decoration: boxDecorationWithRoundedCorners(
-                  backgroundColor: c.divider,
-                  borderRadius: radius(3),
-                ),
-              ),
-              FractionallySizedBox(
-                widthFactor: confidence,
-                child: Container(
-                  height: 6,
-                  decoration: boxDecorationWithRoundedCorners(
-                    backgroundColor: color,
-                    borderRadius: radius(3),
-                  ),
-                ),
-              ),
-            ],
-          ),
+  @override
+  Widget build(BuildContext context) {
+    final c = context.numColors;
+    final t = context.numText;
+    final meta = _metaLine(match, l10n);
+    return InkWell(
+      onTap: () => context.push('/variant/${match.articleId}'),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+        decoration: BoxDecoration(
+          border: last ? null : Border(bottom: BorderSide(color: c.divider)),
         ),
-        8.width,
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: boxDecorationWithRoundedCorners(
-            backgroundColor: color.withOpacity(0.1),
-            borderRadius: radius(8),
-          ),
-          child: Text(
-            '${(confidence * 100).toInt()}%',
-            style: boldTextStyle(size: 12, color: color),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomAction(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: boxDecorationWithShadow(
-        backgroundColor: c.card,
-        shadowColor: c.shadow,
-        blurRadius: 10,
-        offset: const Offset(0, -4),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () {
-              GoRouter.of(context).pop();
-              GoRouter.of(context).pop();
-            },
-            icon: const Icon(Icons.camera_alt),
-            label: Text(l10n.translate('scan_another')),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: c.accent,
-              side: BorderSide(color: c.accent),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: radius(12)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Color> _getRankGradient(int rank) {
-    switch (rank) {
-      case 1:
-        return [const Color(0xFFFFD700), const Color(0xFFFFA500)]; // Gold
-      case 2:
-        return [const Color(0xFFC0C0C0), const Color(0xFF909090)]; // Silver
-      case 3:
-        return [const Color(0xFFCD7F32), const Color(0xFF8B4513)]; // Bronze
-      default:
-        return [numTextSecondary, numTextHint];
-    }
-  }
-
-  Color _getRankColor(int rank) {
-    switch (rank) {
-      case 1:
-        return const Color(0xFFFFD700);
-      case 2:
-        return const Color(0xFFC0C0C0);
-      case 3:
-        return const Color(0xFFCD7F32);
-      default:
-        return numTextSecondary;
-    }
-  }
-
-  Color _getConfidenceColor(double confidence) {
-    if (confidence >= 0.8) return numSuccess;
-    if (confidence >= 0.6) return numWarning;
-    return numError;
-  }
-
-  void _showHelpDialog(AppLocalizations l10n) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: radius(16)),
-        title: Row(
+        child: Row(
           children: [
-            Icon(Icons.help_outline, color: c.accent),
-            12.width,
-            Text(l10n.translate('help'), style: boldTextStyle(size: 18, color: c.text)),
+            _MatchImage(articleId: match.articleId, size: 56),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(match.title, style: t.value, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  if (meta.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(meta, style: t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            _Similarity(value: match.confidence, label: '', compact: true),
           ],
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildHelpSection(
-                l10n.translate('help_recognition_title'),
-                l10n.translate('help_recognition_text'),
-              ),
-              16.height,
-              _buildHelpSection(
-                l10n.translate('help_results_title'),
-                l10n.translate('help_results_text'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.translate('close'), style: primaryTextStyle(color: c.accent)),
-          ),
-        ],
       ),
     );
   }
+}
 
-  Widget _buildHelpSection(String title, String text) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: boldTextStyle(size: 14, color: c.text)),
-        8.height,
-        Text(text, style: secondaryTextStyle(size: 14, color: c.textMuted)),
-      ],
+/// Boş / hata durumu: ikon, başlık, açıklama, eylemler.
+class _StateMessage extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String message;
+  final List<Widget> actions;
+  final NumText textStyle;
+  const _StateMessage({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.message,
+    required this.actions,
+    required this.textStyle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 44, color: iconColor),
+            ),
+            const SizedBox(height: 20),
+            Text(title, style: textStyle.section, textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Text(message, style: textStyle.body.copyWith(color: context.numColors.textMuted),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: actions),
+          ],
+        ),
+      ),
     );
   }
 }
