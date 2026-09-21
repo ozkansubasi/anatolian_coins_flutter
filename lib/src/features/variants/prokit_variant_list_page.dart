@@ -5,6 +5,7 @@ import 'package:nb_utils/nb_utils.dart';
 import '../../models/variant.dart';
 import '../../core/region_data.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import '../../core/num_colors.dart';
 import '../../widgets/fallback_image.dart';
 import '../../l10n/app_localizations.dart';
 import 'variants_api.dart';
@@ -355,19 +356,19 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
       ),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.numColors.card,
           borderRadius: BorderRadius.circular(12),
         ),
         child: TextField(
           controller: _searchCtrl,
-          style: primaryTextStyle(size: 14),
+          style: primaryTextStyle(size: 14, color: context.numColors.text),
           decoration: InputDecoration(
             hintText: l10n.translate('search_hint'),
-            hintStyle: secondaryTextStyle(size: 14),
-            prefixIcon: const Icon(Icons.search, color: numTextSecondary),
+            hintStyle: secondaryTextStyle(size: 14, color: context.numColors.textMuted),
+            prefixIcon: Icon(Icons.search, color: context.numColors.textMuted),
             suffixIcon: _searchCtrl.text.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.clear, color: numTextSecondary),
+                    icon: Icon(Icons.clear, color: context.numColors.textMuted),
                     onPressed: () {
                       _searchCtrl.clear();
                       _load(reset: true);
@@ -438,7 +439,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
             ),
             child: Text(
               '${chips.length} ${l10n.translate('filter')}',
-              style: secondaryTextStyle(size: 10, color: numPrimary),
+              style: secondaryTextStyle(size: 10, color: context.numColors.accent),
             ),
           ),
         ],
@@ -527,7 +528,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
             16.height,
             Text(
               l10n.translate('loading'),
-              style: secondaryTextStyle(size: 14),
+              style: secondaryTextStyle(size: 14, color: context.numColors.textMuted),
             ),
           ],
         ),
@@ -541,21 +542,21 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
           Icon(
             _initialLoad ? Icons.search_off : Icons.monetization_on_outlined,
             size: 64,
-            color: numTextSecondary,
+            color: context.numColors.textMuted,
           ),
           16.height,
           Text(
             _initialLoad
                 ? l10n.translate('no_results')
                 : l10n.translate('start_searching'),
-            style: boldTextStyle(size: 16, color: numTextPrimary),
+            style: boldTextStyle(size: 16, color: context.numColors.text),
           ),
           8.height,
           Text(
             _initialLoad
                 ? l10n.translate('try_different_filters')
                 : l10n.translate('select_region_or_mint'),
-            style: secondaryTextStyle(size: 14),
+            style: secondaryTextStyle(size: 14, color: context.numColors.textMuted),
           ),
         ],
       ),
@@ -627,11 +628,12 @@ class _CoinGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.numColors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: c.card,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -648,8 +650,11 @@ class _CoinGridCard extends StatelessWidget {
             Expanded(
               flex: 3,
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white, // Görsel arka planı beyaz (içerik alanıyla uyumlu)
+                decoration: BoxDecoration(
+                  // Fotoğraf plakası her temada beyaz: müze fotoğrafları beyaz
+                  // fonlu; koyu kartta farklı genişlikte beyaz bloklar oluşuyordu
+                  // (cihazda görüldü). Sikke detayındaki slider ile aynı karar.
+                  color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                 ),
                 child: Stack(
@@ -668,7 +673,7 @@ class _CoinGridCard extends StatelessWidget {
                               child: Icon(
                                 Icons.monetization_on_outlined,
                                 size: 48,
-                                color: numTextSecondary.withValues(alpha: 0.5),
+                                color: c.textMuted.withValues(alpha: 0.5),
                               ),
                             ),
                     ),
@@ -703,19 +708,19 @@ class _CoinGridCard extends StatelessWidget {
                   children: [
                     Text(
                       variant.title,
-                      style: boldTextStyle(size: 10),
+                      style: boldTextStyle(size: 10, color: c.text),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const Spacer(),
                     Row(
                       children: [
-                        Icon(Icons.location_on_outlined, size: 10, color: numTextSecondary),
+                        Icon(Icons.location_on_outlined, size: 10, color: c.textMuted),
                         2.width,
                         Expanded(
                           child: Text(
                             RegionData.getRegionName(variant.regionCode) ?? '-',
-                            style: secondaryTextStyle(size: 8),
+                            style: secondaryTextStyle(size: 8, color: c.textMuted),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -771,12 +776,13 @@ class _CoinListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.numColors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: c.card,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -793,9 +799,9 @@ class _CoinListCard extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: numBackgroundGrey,
+                color: Colors.white, // fotoğraf plakası (grid kartıyla aynı)
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: numBorder, width: 1),
+                border: Border.all(color: c.border, width: 1),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(9),
@@ -808,7 +814,7 @@ class _CoinListCard extends StatelessWidget {
                     : Icon(
                         Icons.monetization_on_outlined,
                         size: 32,
-                        color: numTextSecondary.withValues(alpha: 0.5),
+                        color: c.textMuted.withValues(alpha: 0.5),
                       ),
               ),
             ),
@@ -820,7 +826,7 @@ class _CoinListCard extends StatelessWidget {
                 children: [
                   Text(
                     variant.title,
-                    style: boldTextStyle(size: 14),
+                    style: boldTextStyle(size: 14, color: c.text),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -836,17 +842,17 @@ class _CoinListCard extends StatelessWidget {
                           ),
                           child: Text(
                             variant.material!,
-                            style: boldTextStyle(size: 10, color: numPrimary),
+                            style: boldTextStyle(size: 10, color: c.accent),
                           ),
                         ),
                         8.width,
                       ],
-                      Icon(Icons.location_on_outlined, size: 14, color: numTextSecondary),
+                      Icon(Icons.location_on_outlined, size: 14, color: c.textMuted),
                       4.width,
                       Expanded(
                         child: Text(
                           RegionData.getRegionName(variant.regionCode) ?? '-',
-                          style: secondaryTextStyle(size: 12),
+                          style: secondaryTextStyle(size: 12, color: c.textMuted),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -857,7 +863,7 @@ class _CoinListCard extends StatelessWidget {
               ),
             ),
             // Arrow
-            const Icon(Icons.chevron_right, color: numTextSecondary),
+            Icon(Icons.chevron_right, color: c.textMuted),
           ],
         ),
       ),
@@ -881,6 +887,7 @@ class _FilterChipIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.numColors;
     return Tooltip(
       message: tooltip,
       child: Container(
@@ -893,7 +900,7 @@ class _FilterChipIcon extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: color ?? numPrimary),
+            Icon(icon, size: 16, color: color ?? c.accent),
             4.width,
             GestureDetector(
               onTap: onRemove,
@@ -903,7 +910,7 @@ class _FilterChipIcon extends StatelessWidget {
                   color: numPrimary.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.close, size: 12, color: numPrimary),
+                child: Icon(Icons.close, size: 12, color: c.accent),
               ),
             ),
           ],
@@ -953,11 +960,12 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final c = context.numColors;
     final regions = RegionData.getRegionsByPopularity();
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: c.card,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -969,7 +977,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
             height: 4,
             margin: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-              color: numBorder,
+              color: c.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -981,7 +989,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
               children: [
                 Text(
                   l10n.translate('filter'),
-                  style: boldTextStyle(size: 18),
+                  style: boldTextStyle(size: 18, color: c.text),
                 ),
                 TextButton(
                   onPressed: () {
@@ -994,7 +1002,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   },
                   child: Text(
                     l10n.translate('reset_filters'),
-                    style: boldTextStyle(size: 14, color: numPrimary),
+                    style: boldTextStyle(size: 14, color: c.accent),
                   ),
                 ),
               ],
@@ -1011,7 +1019,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   // Regions
                   Text(
                     l10n.translate('select_region'),
-                    style: boldTextStyle(size: 14),
+                    style: boldTextStyle(size: 14, color: c.text),
                   ),
                   12.height,
                   Wrap(
@@ -1035,7 +1043,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   // Materials
                   Text(
                     l10n.translate('material'),
-                    style: boldTextStyle(size: 14),
+                    style: boldTextStyle(size: 14, color: c.text),
                   ),
                   12.height,
                   Wrap(
@@ -1059,7 +1067,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                   // Sort
                   Text(
                     l10n.translate('sorting'),
-                    style: boldTextStyle(size: 14),
+                    style: boldTextStyle(size: 14, color: c.text),
                   ),
                   12.height,
                   Wrap(
@@ -1095,12 +1103,12 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                           children: [
                             Text(
                               l10n.translate('with_images_only'),
-                              style: boldTextStyle(size: 14),
+                              style: boldTextStyle(size: 14, color: c.text),
                             ),
                             4.height,
                             Text(
                               l10n.translate('hide_no_images'),
-                              style: secondaryTextStyle(size: 12, color: numTextSecondary),
+                              style: secondaryTextStyle(size: 12, color: c.textMuted),
                             ),
                           ],
                         ),
@@ -1129,9 +1137,9 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: numTextSecondary,
+                        foregroundColor: c.textMuted,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: numBorder),
+                        side: BorderSide(color: c.border),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1143,7 +1151,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                           6.width,
                           Text(
                             l10n.translate('cancel'),
-                            style: boldTextStyle(size: 14, color: numTextSecondary),
+                            style: boldTextStyle(size: 14, color: c.textMuted),
                           ),
                         ],
                       ),
@@ -1215,17 +1223,17 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? numPrimary : Colors.white,
+          color: selected ? numPrimary : context.numColors.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: selected ? numPrimary : numBorder,
+            color: selected ? numPrimary : context.numColors.border,
           ),
         ),
         child: Text(
           label,
           style: boldTextStyle(
             size: 12,
-            color: selected ? Colors.white : numTextPrimary,
+            color: selected ? Colors.white : context.numColors.text,
           ),
         ),
       ),
@@ -1253,7 +1261,7 @@ class _ToggleWithIcon extends StatelessWidget {
         height: 32,
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
-          color: value ? numPrimary : numBorder,
+          color: value ? numPrimary : context.numColors.border,
           borderRadius: BorderRadius.circular(16),
         ),
         child: AnimatedAlign(

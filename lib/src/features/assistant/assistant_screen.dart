@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/locale_provider.dart';
+import '../../core/num_colors.dart';
 import '../../core/subscription_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
@@ -142,7 +143,7 @@ class _LoginCta extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.smart_toy_outlined, size: 56, color: numPrimary),
+            Icon(Icons.smart_toy_outlined, size: 56, color: context.numColors.accent),
             const SizedBox(height: 16),
             Text(
               l10n.translate('assistant_login_required'),
@@ -179,7 +180,7 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       children: [
         const SizedBox(height: 24),
-        const Icon(Icons.smart_toy_outlined, size: 56, color: numPrimary),
+        Icon(Icons.smart_toy_outlined, size: 56, color: context.numColors.accent),
         const SizedBox(height: 12),
         Text(
           l10n.translate('assistant_empty_title'),
@@ -199,7 +200,7 @@ class _EmptyState extends StatelessWidget {
             child: OutlinedButton(
               onPressed: () => onSuggestion(s),
               style: OutlinedButton.styleFrom(
-                foregroundColor: numPrimary,
+                foregroundColor: context.numColors.accent,
                 side: const BorderSide(color: numPrimary),
                 alignment: Alignment.centerLeft,
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -266,15 +267,15 @@ class _MessageBubble extends StatelessWidget {
                         s.title.isEmpty ? s.url : s.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        // Baglanti gibi okunsun: numPrimary (#8B6914) fildisi
-                        // zeminde 5,04:1 -> WCAG AA gecer; alti cizili.
+                        // Baglanti gibi okunsun: accent (acikta #8B6914, fildisi
+                        // zeminde 5,04:1; koyuda #E8C766) -> WCAG AA gecer; alti cizili.
                         style: theme.textTheme.labelLarge?.copyWith(
-                          color: numPrimary,
+                          color: context.numColors.accent,
                           decoration: TextDecoration.underline,
-                          decorationColor: numPrimary,
+                          decorationColor: context.numColors.accent,
                         ),
                       ),
-                      avatar: const Icon(Icons.open_in_new, size: 14, color: numPrimary),
+                      avatar: Icon(Icons.open_in_new, size: 14, color: context.numColors.accent),
                       visualDensity: VisualDensity.compact,
                       onPressed: () async {
                         final uri = Uri.tryParse(s.url);
@@ -320,11 +321,11 @@ class _AssistantMarkdown extends StatelessWidget {
         border: Border(left: BorderSide(color: numPrimary.withValues(alpha: 0.5), width: 3)),
       ),
       code: body?.copyWith(fontFamily: 'monospace', backgroundColor: color.withValues(alpha: 0.08)),
-      // Kaynak çipleriyle aynı bağlantı görünümü (#8B6914, fildişi zeminde 5,04:1).
-      a: const TextStyle(
-        color: numPrimary,
+      // Kaynak çipleriyle aynı bağlantı görünümü (accent: açıkta #8B6914, koyuda #E8C766).
+      a: TextStyle(
+        color: context.numColors.accent,
         decoration: TextDecoration.underline,
-        decorationColor: numPrimary,
+        decorationColor: context.numColors.accent,
       ),
       blockSpacing: 8,
     );
@@ -375,7 +376,9 @@ class _UpsellBanner extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.amber.shade50,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? context.numColors.surface
+            : Colors.amber.shade50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: numPrimary.withValues(alpha: 0.4)),
       ),

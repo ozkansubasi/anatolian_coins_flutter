@@ -255,7 +255,9 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n.translate('close'), style: secondaryTextStyle()),
+            // Diyalog her temada koyu (numCardDark); nb_utils varsayılan grisi
+            // (#757575) bu zeminde okunmuyordu.
+            child: Text(l10n.translate('close'), style: secondaryTextStyle(color: numTextHint)),
           ),
           ElevatedButton(
             onPressed: () {

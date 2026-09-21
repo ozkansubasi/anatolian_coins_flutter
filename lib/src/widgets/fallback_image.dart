@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../core/num_colors.dart';
 
 /// Görsel widget'ı - önce url'i dener, hata alırsa remoteUrl'e fallback yapar
 class FallbackImage extends StatefulWidget {
@@ -61,7 +62,7 @@ class _FallbackImageState extends State<FallbackImage> {
       placeholder: (context, url) =>
           widget.placeholder ??
           Container(
-            color: Colors.grey[200],
+            color: context.numColors.surface,
             child: const Center(
               child: SizedBox(
                 width: 18,
@@ -90,10 +91,10 @@ class _FallbackImageState extends State<FallbackImage> {
 
   Widget _buildDefaultError() {
     return Container(
-      color: Colors.grey[200],
-      child: const Icon(
+      color: context.numColors.surface,
+      child: Icon(
         Icons.broken_image,
-        color: Colors.grey,
+        color: context.numColors.textMuted,
         size: 24,
       ),
     );

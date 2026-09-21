@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/subscription_provider.dart';
+import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/collection.dart';
 import 'collections_service.dart';
@@ -15,6 +16,7 @@ class CollectionsPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final collectionsAsync = ref.watch(collectionsControllerProvider);
+    final c = context.numColors;
 
     return Scaffold(
       appBar: AppBar(
@@ -36,7 +38,7 @@ class CollectionsPage extends ConsumerWidget {
       body: collectionsAsync.when(
         data: (collections) {
           if (collections.isEmpty) {
-            return _buildEmptyState(l10n, theme);
+            return _buildEmptyState(context, l10n, theme);
           }
           return RefreshIndicator(
             onRefresh: () async {
@@ -57,7 +59,7 @@ class CollectionsPage extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 48, color: Colors.grey[400]),
+              Icon(Icons.error_outline, size: 48, color: c.hint),
               const SizedBox(height: 16),
               Text('Hata: $error'),
               const SizedBox(height: 16),
@@ -74,7 +76,8 @@ class CollectionsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(AppLocalizations l10n, ThemeData theme) {
+  Widget _buildEmptyState(BuildContext context, AppLocalizations l10n, ThemeData theme) {
+    final c = context.numColors;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -82,7 +85,7 @@ class CollectionsPage extends ConsumerWidget {
           Icon(
             Icons.collections_rounded,
             size: 64,
-            color: Colors.grey[400],
+            color: c.hint,
           ),
           const SizedBox(height: 16),
           Text(
@@ -90,7 +93,7 @@ class CollectionsPage extends ConsumerWidget {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
+              color: c.textMuted,
             ),
           ),
           const SizedBox(height: 8),
@@ -98,7 +101,7 @@ class CollectionsPage extends ConsumerWidget {
             'Sikkelerinizi organize etmek için koleksiyon oluşturun',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: c.hint,
             ),
             textAlign: TextAlign.center,
           ),
@@ -240,6 +243,7 @@ class _CollectionListItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final c = context.numColors;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -274,7 +278,7 @@ class _CollectionListItem extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[600],
+                color: c.textMuted,
               ),
             ),
           ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/network_utils.dart';
+import '../core/num_colors.dart';
 
 /// Utility class for showing user-friendly error dialogs
 class ErrorDialogs {
@@ -34,7 +35,7 @@ class ErrorDialogs {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey[600],
+                  color: context.numColors.textMuted,
                 ),
               ),
             ],
@@ -84,9 +85,9 @@ class ErrorDialogs {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        icon: const Icon(
+        icon: Icon(
           Icons.cloud_off,
-          color: Colors.grey,
+          color: context.numColors.textMuted,
           size: 48,
         ),
         title: const Text('Bağlantı Yok'),
@@ -327,7 +328,7 @@ class OfflineMessage extends StatelessWidget {
             Icon(
               Icons.cloud_off,
               size: 64,
-              color: Colors.grey[400],
+              color: context.numColors.hint,
             ),
             const SizedBox(height: 16),
             Text(
@@ -339,7 +340,7 @@ class OfflineMessage extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: context.numColors.textMuted),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 24),
@@ -380,7 +381,7 @@ class RecognitionLoadingDialog extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Bu birkaç saniye sürebilir',
-            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            style: TextStyle(color: context.numColors.textMuted, fontSize: 12),
           ),
           if (onCancel != null) ...[
             const SizedBox(height: 16),

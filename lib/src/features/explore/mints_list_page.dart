@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart';
 import '../../core/region_data.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Tüm darphaneleri bölgelere göre gruplandırarak listeleyen sayfa
@@ -58,11 +59,11 @@ class _MintsListPageState extends State<MintsListPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = context.numColors;
     final regions = _getFilteredRegions();
 
     return Scaffold(
-      backgroundColor: isDark ? numScaffoldDark : numScaffoldLight,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           l10n.translate('mints'),
@@ -76,7 +77,7 @@ class _MintsListPageState extends State<MintsListPage> {
           // Search bar
           Container(
             padding: const EdgeInsets.all(16),
-            color: isDark ? numCardDark : Colors.white,
+            color: c.card,
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -92,7 +93,7 @@ class _MintsListPageState extends State<MintsListPage> {
                       )
                     : null,
                 filled: true,
-                fillColor: isDark ? numScaffoldDark : Colors.grey.shade100,
+                fillColor: c.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -172,13 +173,13 @@ class _RegionExpansionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = context.numColors;
 
     return Column(
       children: [
         // Region header
         Material(
-          color: isDark ? numCardDark : Colors.white,
+          color: c.card,
           child: InkWell(
             onTap: onTap,
             child: Padding(
@@ -212,12 +213,12 @@ class _RegionExpansionTile extends StatelessWidget {
                       children: [
                         Text(
                           regionName,
-                          style: boldTextStyle(size: 16),
+                          style: boldTextStyle(size: 16, color: c.text),
                         ),
                         4.height,
                         Text(
                           '$mintCount darphane',
-                          style: secondaryTextStyle(size: 12),
+                          style: secondaryTextStyle(size: 12, color: c.textMuted),
                         ),
                       ],
                     ),
@@ -227,7 +228,7 @@ class _RegionExpansionTile extends StatelessWidget {
                     duration: const Duration(milliseconds: 200),
                     child: Icon(
                       Icons.keyboard_arrow_down,
-                      color: isDark ? Colors.white70 : Colors.grey.shade600,
+                      color: c.textMuted,
                     ),
                   ),
                 ],
@@ -239,7 +240,7 @@ class _RegionExpansionTile extends StatelessWidget {
         AnimatedCrossFade(
           firstChild: const SizedBox.shrink(),
           secondChild: Container(
-            color: isDark ? numScaffoldDark : Colors.grey.shade50,
+            color: c.surface,
             child: Column(
               children: mints.map((mint) => _MintListItem(
                 mintCode: mint,
@@ -252,7 +253,7 @@ class _RegionExpansionTile extends StatelessWidget {
           crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 200),
         ),
-        Divider(height: 1, color: isDark ? Colors.white12 : Colors.grey.shade200),
+        Divider(height: 1, color: c.divider),
       ],
     );
   }
@@ -273,7 +274,7 @@ class _MintListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = context.numColors;
 
     return Material(
       color: Colors.transparent,
@@ -296,13 +297,13 @@ class _MintListItem extends StatelessWidget {
               Expanded(
                 child: Text(
                   mintName,
-                  style: primaryTextStyle(size: 14),
+                  style: primaryTextStyle(size: 14, color: c.text),
                 ),
               ),
               Icon(
                 Icons.arrow_forward_ios,
                 size: 14,
-                color: isDark ? Colors.white38 : Colors.grey.shade400,
+                color: c.hint,
               ),
             ],
           ),

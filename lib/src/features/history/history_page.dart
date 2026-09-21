@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../../models/variant.dart';
 import '../../core/region_data.dart';
+import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../variants/variants_api.dart';
 import '../offline/offline_service.dart'; // offlineDatabaseProvider burada tanımlı
@@ -262,6 +263,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
     }
 
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
+    final c = context.numColors;
 
     return RefreshIndicator(
       onRefresh: _loadScans,
@@ -301,7 +303,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
                   dateFormat.format(scan.scannedAt),
                 ].join(' • '),
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: c.textMuted,
                   fontSize: 12,
                   fontWeight: FontWeight.w300,
                 ),
@@ -337,12 +339,13 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
   }
 
   Widget _thumbPlaceholder() {
+    final c = context.numColors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: c.surface,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Icon(Icons.image, color: Colors.grey, size: 24),
+      child: Icon(Icons.image, color: c.textMuted, size: 24),
     );
   }
 
@@ -362,6 +365,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
         onPressed: () => context.go('/browse'),
       );
     }
+    final c = context.numColors;
 
     return RefreshIndicator(
       onRefresh: _loadViewHistory,
@@ -388,7 +392,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
                         imageUrl: thumbnailUrl,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
-                          color: Colors.grey[200],
+                          color: c.surface,
                           child: const Center(
                             child: SizedBox(
                               width: 18,
@@ -400,10 +404,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
                           ),
                         ),
                         errorWidget: (context, url, error) => Container(
-                          color: Colors.grey[200],
-                          child: const Icon(
+                          color: c.surface,
+                          child: Icon(
                             Icons.broken_image,
-                            color: Colors.grey,
+                            color: c.textMuted,
                             size: 24,
                           ),
                         ),
@@ -424,7 +428,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
               child: Text(
                 '${RegionData.getRegionName(variant.regionCode)} • ${variant.material ?? '-'}',
                 style: TextStyle(
-                  color: Colors.grey[600],
+                  color: c.textMuted,
                   fontSize: 12,
                   fontWeight: FontWeight.w300,
                 ),
@@ -448,18 +452,19 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
     required IconData buttonIcon,
     required VoidCallback onPressed,
   }) {
+    final c = context.numColors;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 64, color: Colors.grey[400]),
+          Icon(icon, size: 64, color: c.hint),
           const SizedBox(height: 16),
           Text(
             title,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
+              color: c.textMuted,
             ),
           ),
           const SizedBox(height: 8),
@@ -467,7 +472,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
             subtitle,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: c.hint,
             ),
             textAlign: TextAlign.center,
           ),

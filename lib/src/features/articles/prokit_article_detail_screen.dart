@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/article.dart';
+import '../../core/num_colors.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import 'articles_api.dart';
 
@@ -24,7 +25,7 @@ class ProkitArticleDetailScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: numScaffoldLight,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: FutureBuilder<Article>(
         future: ref.read(articlesApiProvider).getArticle(articleId),
         builder: (context, snapshot) {
@@ -33,11 +34,11 @@ class ProkitArticleDetailScreen extends ConsumerWidget {
           }
 
           if (snapshot.hasError) {
-            return _buildErrorView(l10n, snapshot.error.toString());
+            return _buildErrorView(context, l10n, snapshot.error.toString());
           }
 
           if (!snapshot.hasData) {
-            return _buildErrorView(l10n, l10n.translate('error_loading_article'));
+            return _buildErrorView(context, l10n, l10n.translate('error_loading_article'));
           }
 
           return _ArticleContent(
@@ -55,7 +56,8 @@ class ProkitArticleDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorView(AppLocalizations l10n, String error) {
+  Widget _buildErrorView(BuildContext context, AppLocalizations l10n, String error) {
+    final c = context.numColors;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: numPrimary,
@@ -67,11 +69,11 @@ class ProkitArticleDetailScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+              Icon(Icons.error_outline, size: 64, color: c.hint),
               16.height,
-              Text(l10n.translate('error'), style: boldTextStyle(size: 18)),
+              Text(l10n.translate('error'), style: boldTextStyle(size: 18, color: c.text)),
               8.height,
-              Text(error, style: secondaryTextStyle(), textAlign: TextAlign.center),
+              Text(error, style: secondaryTextStyle(color: c.textMuted), textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -93,6 +95,7 @@ class _ArticleContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat.yMMMMd(l10n.locale.languageCode);
+    final c = context.numColors;
 
     return CustomScrollView(
       slivers: [
@@ -119,9 +122,9 @@ class _ArticleContent extends StatelessWidget {
           child: Transform.translate(
             offset: const Offset(0, -24),
             child: Container(
-              decoration: const BoxDecoration(
-                color: numScaffoldLight,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -138,11 +141,11 @@ class _ArticleContent extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.folder_outlined, size: 14, color: numPrimary),
+                          Icon(Icons.folder_outlined, size: 14, color: c.accent),
                           6.width,
                           Text(
                             article.category,
-                            style: boldTextStyle(size: 12, color: numPrimary),
+                            style: boldTextStyle(size: 12, color: c.accent),
                           ),
                         ],
                       ),
@@ -152,7 +155,7 @@ class _ArticleContent extends StatelessWidget {
                     // Title
                     Text(
                       article.title,
-                      style: boldTextStyle(size: 18),
+                      style: boldTextStyle(size: 18, color: c.text),
                     ),
                     16.height,
 
@@ -164,11 +167,11 @@ class _ArticleContent extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey.shade500),
+                            Icon(Icons.calendar_today_outlined, size: 16, color: c.hint),
                             8.width,
                             Text(
                               dateFormat.format(article.created),
-                              style: secondaryTextStyle(size: 14),
+                              style: secondaryTextStyle(size: 14, color: c.textMuted),
                             ),
                           ],
                         ),
@@ -207,7 +210,7 @@ class _ArticleContent extends StatelessWidget {
                               padding: HtmlPaddings.zero,
                               fontSize: FontSize(15),
                               fontStyle: FontStyle.italic,
-                              color: numTextSecondary,
+                              color: c.textMuted,
                               lineHeight: const LineHeight(1.6),
                               textAlign: TextAlign.justify,
                             ),
@@ -229,37 +232,37 @@ class _ArticleContent extends StatelessWidget {
                             margin: Margins.zero,
                             padding: HtmlPaddings.zero,
                             fontSize: FontSize(15),
-                            color: numTextPrimary,
+                            color: c.text,
                             lineHeight: const LineHeight(1.8),
                             textAlign: TextAlign.justify,
                           ),
                           'h1': Style(
                             fontSize: FontSize(24),
                             fontWeight: FontWeight.bold,
-                            color: numTextPrimary,
+                            color: c.text,
                             margin: Margins.only(top: 24, bottom: 12),
                           ),
                           'h2': Style(
                             fontSize: FontSize(20),
                             fontWeight: FontWeight.bold,
-                            color: numTextPrimary,
+                            color: c.text,
                             margin: Margins.only(top: 20, bottom: 10),
                           ),
                           'h3': Style(
                             fontSize: FontSize(18),
                             fontWeight: FontWeight.bold,
-                            color: numTextPrimary,
+                            color: c.text,
                             margin: Margins.only(top: 16, bottom: 8),
                           ),
                           'p': Style(
                             margin: Margins.only(bottom: 16),
                           ),
                           'a': Style(
-                            color: numPrimary,
+                            color: c.accent,
                             textDecoration: TextDecoration.underline,
                           ),
                           'blockquote': Style(
-                            backgroundColor: numBackgroundGrey,
+                            backgroundColor: c.surface,
                             padding: HtmlPaddings.all(16),
                             margin: Margins.symmetric(vertical: 16),
                             border: Border(
@@ -280,17 +283,17 @@ class _ArticleContent extends StatelessWidget {
                             margin: Margins.symmetric(vertical: 16),
                           ),
                           'table': Style(
-                            backgroundColor: Colors.white,
-                            border: Border.all(color: numDividerColor),
+                            backgroundColor: c.card,
+                            border: Border.all(color: c.divider),
                           ),
                           'th': Style(
-                            backgroundColor: numBackgroundGrey,
+                            backgroundColor: c.surface,
                             padding: HtmlPaddings.all(12),
                             fontWeight: FontWeight.bold,
                           ),
                           'td': Style(
                             padding: HtmlPaddings.all(12),
-                            border: Border.all(color: numDividerColor, width: 0.5),
+                            border: Border.all(color: c.divider, width: 0.5),
                           ),
                         },
                       ),
@@ -363,7 +366,7 @@ class _ArticleContent extends StatelessWidget {
             icon: const Icon(Icons.share_rounded),
             label: Text(l10n.translate('share')),
             style: OutlinedButton.styleFrom(
-              foregroundColor: numPrimary,
+              foregroundColor: context.numColors.accent,
               side: BorderSide(color: numPrimary),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: radius(12)),

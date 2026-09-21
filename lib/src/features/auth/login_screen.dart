@@ -6,6 +6,7 @@ import 'package:nb_utils/nb_utils.dart' hide ContextExtensions;
 import '../../auth/auth_controller.dart';
 import '../../core/env.dart';
 import '../../core/navigation.dart';
+import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 
@@ -103,6 +104,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authControllerProvider);
     final l10n = AppLocalizations.of(context);
     final size = MediaQuery.of(context).size;
+    final c = context.numColors;
 
     return Scaffold(
       body: Container(
@@ -114,7 +116,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             end: Alignment.bottomCenter,
             colors: [
               numPrimary.withValues(alpha: 0.1),
-              Colors.white,
+              Theme.of(context).scaffoldBackgroundColor,
             ],
           ),
         ),
@@ -131,7 +133,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: () => context.popOrGoHome(),
                     icon: const Icon(Icons.arrow_back_ios_new_rounded),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.white,
+                      backgroundColor: c.card,
                       elevation: 2,
                     ),
                   ),
@@ -176,6 +178,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildHeader(AppLocalizations l10n) {
+    final c = context.numColors;
     return Column(
       children: [
         // App icon logo - rectangular like header
@@ -205,12 +208,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         20.height,
         Text(
           l10n.translate('welcome'),
-          style: boldTextStyle(size: 22),
+          style: boldTextStyle(size: 22, color: c.text),
         ),
         6.height,
         Text(
           l10n.translate('login_subtitle'),
-          style: secondaryTextStyle(size: 14),
+          style: secondaryTextStyle(size: 14, color: c.textMuted),
           textAlign: TextAlign.center,
         ),
       ],
@@ -248,6 +251,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildLoginForm(AppLocalizations l10n, bool loading) {
+    final c = context.numColors;
     return Form(
       key: _formKey,
       child: Column(
@@ -264,14 +268,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               hintText: l10n.translate('enter_email'),
               prefixIcon: const Icon(Icons.email_outlined),
               filled: true,
-              fillColor: Colors.grey.shade50,
+              fillColor: c.surface,
               border: OutlineInputBorder(
                 borderRadius: radius(12),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: radius(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
+                borderSide: BorderSide(color: c.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: radius(12),
@@ -311,14 +315,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
               ),
               filled: true,
-              fillColor: Colors.grey.shade50,
+              fillColor: c.surface,
               border: OutlineInputBorder(
                 borderRadius: radius(12),
                 borderSide: BorderSide.none,
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: radius(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
+                borderSide: BorderSide(color: c.border),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: radius(12),
@@ -352,13 +356,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   context: context,
                   builder: (ctx) => AlertDialog(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    title: Text(l10n.translate('forgot_password'), style: boldTextStyle(size: 18)),
+                    title: Text(l10n.translate('forgot_password'), style: boldTextStyle(size: 18, color: c.text)),
                     content: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           l10n.translate('forgot_password_message'),
-                          style: secondaryTextStyle(size: 14),
+                          style: secondaryTextStyle(size: 14, color: c.textMuted),
                           textAlign: TextAlign.center,
                         ),
                         16.height,
@@ -407,7 +411,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               },
               child: Text(
                 l10n.translate('forgot_password'),
-                style: primaryTextStyle(color: numPrimary),
+                style: primaryTextStyle(color: c.accent),
               ),
             ),
           ),
@@ -449,22 +453,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildDivider(AppLocalizations l10n) {
+    final c = context.numColors;
     return Row(
       children: [
-        Expanded(child: Divider(color: Colors.grey.shade300)),
+        Expanded(child: Divider(color: c.divider)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             l10n.translate('or_continue_with'),
-            style: secondaryTextStyle(),
+            style: secondaryTextStyle(color: c.textMuted),
           ),
         ),
-        Expanded(child: Divider(color: Colors.grey.shade300)),
+        Expanded(child: Divider(color: c.divider)),
       ],
     );
   }
 
   Widget _buildSocialButtons(AppLocalizations l10n, bool loading) {
+    final c = context.numColors;
     return Column(
       children: [
         // Google button
@@ -489,9 +495,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
           label: l10n.translate('continue_with_google'),
-          backgroundColor: Colors.white,
-          textColor: Colors.black87,
-          borderColor: Colors.grey.shade300,
+          backgroundColor: c.card,
+          textColor: c.text,
+          borderColor: c.border,
           onPressed: loading ? null : () => _handleSocialLogin('google-oauth2'),
         ),
 
@@ -527,7 +533,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           label: Text(l10n.translate('other_login_options')),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            side: BorderSide(color: Colors.grey.shade300),
+            side: BorderSide(color: c.border),
             shape: RoundedRectangleBorder(borderRadius: radius(12)),
           ),
         ),
@@ -536,18 +542,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildRegisterLink(AppLocalizations l10n) {
+    final c = context.numColors;
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
           l10n.translate('dont_have_account'),
-          style: secondaryTextStyle(),
+          style: secondaryTextStyle(color: c.textMuted),
         ),
         TextButton(
           onPressed: () => context.push('/register'),
           child: Text(
             l10n.translate('sign_up'),
-            style: boldTextStyle(color: numPrimary),
+            style: boldTextStyle(color: c.accent),
           ),
         ),
       ],

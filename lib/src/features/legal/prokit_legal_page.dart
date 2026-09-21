@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart';
 import '../../l10n/app_localizations.dart';
+import '../../core/num_colors.dart';
 import '../../prokit_ui/numistr_colors.dart';
 
 /// ProKit-styled legal document page template
@@ -26,9 +27,10 @@ class ProkitLegalPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
+    final c = context.numColors;
 
     return Scaffold(
-      backgroundColor: numScaffoldLight,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
           // Header
@@ -115,27 +117,27 @@ class ProkitLegalPage extends ConsumerWidget {
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(20),
               decoration: boxDecorationWithRoundedCorners(
-                backgroundColor: numSurfaceLight,
+                backgroundColor: c.surface,
                 borderRadius: radius(12),
               ),
               child: Column(
                 children: [
-                  Icon(Icons.contact_mail, color: numTextHint, size: 32),
+                  Icon(Icons.contact_mail, color: c.hint, size: 32),
                   12.height,
                   Text(
                     l10n.translate('legal_contact_title'),
-                    style: boldTextStyle(size: 14, color: numTextPrimary),
+                    style: boldTextStyle(size: 14, color: c.text),
                   ),
                   8.height,
                   Text(
                     l10n.translate('legal_contact_desc'),
-                    style: secondaryTextStyle(size: 12),
+                    style: secondaryTextStyle(size: 12, color: c.textMuted),
                     textAlign: TextAlign.center,
                   ),
                   12.height,
                   Text(
                     'destek@numistr.org',
-                    style: primaryTextStyle(size: 14, color: numPrimary),
+                    style: primaryTextStyle(size: 14, color: c.accent),
                   ),
                 ],
               ),
@@ -155,12 +157,15 @@ class ProkitLegalPage extends ConsumerWidget {
     LegalSection section,
     int index,
   ) {
+    final c = context.numColors;
+    // Varsayılan marka altını ikon/nokta rengi olarak koyu zeminde okunmuyor → accent.
+    final iconColor = section.iconColor == numPrimary ? c.accent : section.iconColor;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: boxDecorationWithRoundedCorners(
-        backgroundColor: numCardLight,
+        backgroundColor: c.card,
         borderRadius: radius(16),
-        border: Border.all(color: numBorder),
+        border: Border.all(color: c.border),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -172,21 +177,21 @@ class ProkitLegalPage extends ConsumerWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: section.iconColor.withAlpha(26),
+              color: iconColor.withAlpha(26),
               borderRadius: radius(10),
             ),
-            child: Icon(section.icon, color: section.iconColor, size: 20),
+            child: Icon(section.icon, color: iconColor, size: 20),
           ),
           title: Text(
             l10n.translate(section.titleKey),
-            style: boldTextStyle(size: 16, color: numTextPrimary),
+            style: boldTextStyle(size: 16, color: c.text),
           ),
           children: [
             // Section content
             if (section.contentKey != null)
               Text(
                 l10n.translate(section.contentKey!),
-                style: secondaryTextStyle(size: 14, height: 1.6),
+                style: secondaryTextStyle(size: 14, height: 1.6, color: c.textMuted),
               ),
 
             // Bullet points
@@ -204,7 +209,7 @@ class ProkitLegalPage extends ConsumerWidget {
                           width: 6,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: section.iconColor,
+                            color: iconColor,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -212,7 +217,7 @@ class ProkitLegalPage extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             l10n.translate(key),
-                            style: secondaryTextStyle(size: 14, height: 1.5),
+                            style: secondaryTextStyle(size: 14, height: 1.5, color: c.textMuted),
                           ),
                         ),
                       ],
@@ -230,7 +235,7 @@ class ProkitLegalPage extends ConsumerWidget {
                     margin: const EdgeInsets.only(top: 12),
                     padding: const EdgeInsets.all(12),
                     decoration: boxDecorationWithRoundedCorners(
-                      backgroundColor: numSurfaceLight,
+                      backgroundColor: c.surface,
                       borderRadius: radius(8),
                     ),
                     child: Column(
@@ -238,12 +243,12 @@ class ProkitLegalPage extends ConsumerWidget {
                       children: [
                         Text(
                           l10n.translate(sub.titleKey),
-                          style: boldTextStyle(size: 14, color: numTextPrimary),
+                          style: boldTextStyle(size: 14, color: c.text),
                         ),
                         8.height,
                         Text(
                           l10n.translate(sub.contentKey),
-                          style: secondaryTextStyle(size: 12, height: 1.5),
+                          style: secondaryTextStyle(size: 12, height: 1.5, color: c.textMuted),
                         ),
                       ],
                     ),

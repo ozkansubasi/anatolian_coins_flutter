@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart' hide ContextExtensions;
 import '../../auth/auth_controller.dart';
 import '../../core/navigation.dart';
+import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 
@@ -63,6 +64,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final authState = ref.watch(authControllerProvider);
     final l10n = AppLocalizations.of(context);
     final size = MediaQuery.of(context).size;
+    final c = context.numColors;
 
     return Scaffold(
       body: Container(
@@ -74,7 +76,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             end: Alignment.bottomCenter,
             colors: [
               numPrimary.withValues(alpha: 0.1),
-              Colors.white,
+              Theme.of(context).scaffoldBackgroundColor,
             ],
           ),
         ),
@@ -91,7 +93,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     onPressed: () => context.popOrGoHome(),
                     icon: const Icon(Icons.arrow_back_ios_new_rounded),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.white,
+                      backgroundColor: c.card,
                       elevation: 2,
                     ),
                   ),
@@ -115,7 +117,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 // Terms notice
                 Text(
                   l10n.translate('signup_terms_notice'),
-                  style: secondaryTextStyle(size: 12),
+                  style: secondaryTextStyle(size: 12, color: c.textMuted),
                   textAlign: TextAlign.center,
                 ),
 
@@ -127,13 +129,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   children: [
                     Text(
                       l10n.translate('already_have_account'),
-                      style: secondaryTextStyle(),
+                      style: secondaryTextStyle(color: c.textMuted),
                     ),
                     TextButton(
                       onPressed: () => context.canPop() ? context.pop() : context.go('/login'),
                       child: Text(
                         l10n.translate('sign_in'),
-                        style: boldTextStyle(color: numPrimary),
+                        style: boldTextStyle(color: c.accent),
                       ),
                     ),
                   ],
@@ -147,6 +149,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Widget _buildHeader(AppLocalizations l10n) {
+    final c = context.numColors;
     return Column(
       children: [
         Container(
@@ -175,12 +178,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         20.height,
         Text(
           l10n.translate('register_title'),
-          style: boldTextStyle(size: 22),
+          style: boldTextStyle(size: 22, color: c.text),
         ),
         6.height,
         Text(
           l10n.translate('register_subtitle'),
-          style: secondaryTextStyle(size: 14),
+          style: secondaryTextStyle(size: 14, color: c.textMuted),
           textAlign: TextAlign.center,
         ),
       ],
@@ -223,20 +226,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     required IconData icon,
     Widget? suffixIcon,
   }) {
+    final c = context.numColors;
     return InputDecoration(
       labelText: label,
       hintText: hint,
       prefixIcon: Icon(icon),
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: Colors.grey.shade50,
+      fillColor: c.surface,
       border: OutlineInputBorder(
         borderRadius: radius(12),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: radius(12),
-        borderSide: BorderSide(color: Colors.grey.shade200),
+        borderSide: BorderSide(color: c.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: radius(12),

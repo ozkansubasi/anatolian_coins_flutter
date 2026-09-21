@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart' hide ContextExtensions;
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
+import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 
@@ -54,6 +55,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
 
   Future<void> _pickIdCard() async {
     final picker = ImagePicker();
+    final c = context.numColors;
 
     // Show selection dialog
     final source = await showDialog<ImageSource>(
@@ -62,7 +64,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
         shape: RoundedRectangleBorder(borderRadius: radius(16)),
         title: Text(
           AppLocalizations.of(context).translate('select_image_source'),
-          style: boldTextStyle(size: 18),
+          style: boldTextStyle(size: 18, color: c.text),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -74,7 +76,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                   color: numPrimary.withValues(alpha: 0.1),
                   borderRadius: radius(10),
                 ),
-                child: const Icon(Icons.camera_alt, color: numPrimary),
+                child: Icon(Icons.camera_alt, color: c.accent),
               ),
               title: Text(AppLocalizations.of(context).translate('camera')),
               onTap: () => Navigator.pop(context, ImageSource.camera),
@@ -86,7 +88,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                   color: numPrimary.withValues(alpha: 0.1),
                   borderRadius: radius(10),
                 ),
-                child: const Icon(Icons.photo_library, color: numPrimary),
+                child: Icon(Icons.photo_library, color: c.accent),
               ),
               title: Text(AppLocalizations.of(context).translate('gallery')),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
@@ -130,6 +132,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
 
     try {
       final l10n = AppLocalizations.of(context);
+      final c = context.numColors;
 
       // Prepare form data
       final formData = FormData.fromMap({
@@ -178,13 +181,13 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                 24.height,
                 Text(
                   l10n.translate('application_submitted'),
-                  style: boldTextStyle(size: 20),
+                  style: boldTextStyle(size: 20, color: c.text),
                   textAlign: TextAlign.center,
                 ),
                 12.height,
                 Text(
                   l10n.translate('application_review_info'),
-                  style: secondaryTextStyle(size: 14),
+                  style: secondaryTextStyle(size: 14, color: c.textMuted),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -226,9 +229,11 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final c = context.numColors;
+    final scaffoldBg = Theme.of(context).scaffoldBackgroundColor;
 
     return Scaffold(
-      backgroundColor: numScaffoldLight,
+      backgroundColor: scaffoldBg,
       body: CustomScrollView(
         slivers: [
           // Hero Header
@@ -276,9 +281,9 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
             child: Transform.translate(
               offset: const Offset(0, -20),
               child: Container(
-                decoration: const BoxDecoration(
-                  color: numScaffoldLight,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                decoration: BoxDecoration(
+                  color: scaffoldBg,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
@@ -379,7 +384,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                         8.height,
                         Text(
                           l10n.translate('id_card_info'),
-                          style: secondaryTextStyle(size: 14),
+                          style: secondaryTextStyle(size: 14, color: c.textMuted),
                         ),
                         16.height,
 
@@ -456,7 +461,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                         // Privacy Note
                         Text(
                           l10n.translate('privacy_note'),
-                          style: secondaryTextStyle(size: 12),
+                          style: secondaryTextStyle(size: 12, color: c.textMuted),
                           textAlign: TextAlign.center,
                         ),
                         32.height,
@@ -503,7 +508,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                 8.height,
                 Text(
                   l10n.translate('university_pro_info_desc'),
-                  style: primaryTextStyle(size: 14),
+                  style: primaryTextStyle(size: 14, color: context.numColors.text),
                 ),
               ],
             ),
@@ -514,6 +519,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
   }
 
   Widget _buildSectionTitle(String title, IconData icon, {String? subtitle}) {
+    final c = context.numColors;
     return Row(
       children: [
         Container(
@@ -522,19 +528,19 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
             color: numPrimary.withValues(alpha: 0.1),
             borderRadius: radius(8),
           ),
-          child: Icon(icon, color: numPrimary, size: 20),
+          child: Icon(icon, color: c.accent, size: 20),
         ),
         12.width,
-        Text(title, style: boldTextStyle(size: 16)),
+        Text(title, style: boldTextStyle(size: 16, color: c.text)),
         if (subtitle != null) ...[
           8.width,
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: boxDecorationWithRoundedCorners(
-              backgroundColor: numTextHint.withValues(alpha: 0.2),
+              backgroundColor: c.hint.withValues(alpha: 0.2),
               borderRadius: radius(8),
             ),
-            child: Text(subtitle, style: secondaryTextStyle(size: 12)),
+            child: Text(subtitle, style: secondaryTextStyle(size: 12, color: c.textMuted)),
           ),
         ],
       ],
@@ -549,6 +555,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
+    final c = context.numColors;
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
@@ -556,16 +563,16 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(icon, color: numPrimary),
+        prefixIcon: Icon(icon, color: c.accent),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: c.card,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: numBorder),
+          borderSide: BorderSide(color: c.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: numBorder),
+          borderSide: BorderSide(color: c.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -584,16 +591,17 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
   }
 
   Widget _buildIdCardPicker(AppLocalizations l10n) {
+    final c = context.numColors;
     return GestureDetector(
       onTap: _pickIdCard,
       child: Container(
         height: 180,
         width: double.infinity,
         decoration: boxDecorationWithRoundedCorners(
-          backgroundColor: Colors.white,
+          backgroundColor: c.card,
           borderRadius: radius(12),
           border: Border.all(
-            color: _idCardImage != null ? numSuccess : numBorder,
+            color: _idCardImage != null ? numSuccess : c.border,
             width: _idCardImage != null ? 2 : 1,
           ),
         ),
@@ -658,17 +666,17 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                       color: numPrimary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.add_photo_alternate_outlined, size: 40, color: numPrimary),
+                    child: Icon(Icons.add_photo_alternate_outlined, size: 40, color: c.accent),
                   ),
                   16.height,
                   Text(
                     l10n.translate('tap_to_upload_id'),
-                    style: boldTextStyle(size: 14, color: numTextPrimary),
+                    style: boldTextStyle(size: 14, color: c.text),
                   ),
                   8.height,
                   Text(
                     l10n.translate('accepted_formats'),
-                    style: secondaryTextStyle(size: 12),
+                    style: secondaryTextStyle(size: 12, color: c.textMuted),
                   ),
                 ],
               ),
@@ -677,6 +685,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
   }
 
   Widget _buildInterestChips(AppLocalizations l10n) {
+    final c = context.numColors;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -696,10 +705,10 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
             duration: const Duration(milliseconds: 200),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: boxDecorationWithRoundedCorners(
-              backgroundColor: isSelected ? numPrimary : Colors.white,
+              backgroundColor: isSelected ? numPrimary : c.card,
               borderRadius: radius(20),
               border: Border.all(
-                color: isSelected ? numPrimary : numBorder,
+                color: isSelected ? numPrimary : c.border,
               ),
               boxShadow: isSelected
                   ? [BoxShadow(color: numPrimary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
@@ -716,7 +725,7 @@ class _ProkitUniversityFormScreenState extends ConsumerState<ProkitUniversityFor
                   l10n.translate('interest_$interest'),
                   style: boldTextStyle(
                     size: 14,
-                    color: isSelected ? Colors.white : numTextSecondary,
+                    color: isSelected ? Colors.white : c.textMuted,
                   ),
                 ),
               ],

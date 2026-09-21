@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/auth_controller.dart';
+import '../../core/num_colors.dart';
 import '../../core/subscription_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../recognition/recognition_service.dart';
@@ -328,6 +329,8 @@ class _SubscriptionCard extends StatelessWidget {
     // scan-quota endpoint.
     final isPro =
         subscription.tier == SubscriptionTier.pro || joomlaIsPro;
+    final isDarkTint = Theme.of(context).brightness == Brightness.dark;
+    final c = context.numColors;
 
     return Card(
       elevation: 2,
@@ -337,7 +340,9 @@ class _SubscriptionCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: isPro
+            // Pastel vurgu: koyu temada c.surface (S26 P2 istisnası).
+            color: isPro && isDarkTint ? c.surface : null,
+            gradient: isPro && !isDarkTint
                 ? LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -442,6 +447,7 @@ class _QuotaCard extends StatelessWidget {
     // Protect against division by zero for Pro users (limit = -1)
     final progress = (quota.limit > 0) ? (quota.used / quota.limit) : 0.0;
     final remaining = quota.remaining;
+    final c = context.numColors;
     final Color progressColor = remaining > 5
         ? Colors.green
         : remaining > 2
@@ -524,7 +530,9 @@ class _QuotaCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? c.surface
+                      : Colors.amber.shade50,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: Colors.amber.shade200,

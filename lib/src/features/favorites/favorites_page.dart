@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/variant.dart';
 import '../../core/region_data.dart';
+import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../variants/variants_api.dart';
 import 'favorites_service.dart';
@@ -81,6 +82,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final favoritesController = ref.watch(favoritesControllerProvider);
+    final c = context.numColors;
 
     return Scaffold(
       appBar: AppBar(
@@ -125,12 +127,12 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                           child: thumbnailUrl == null
                               ? Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.grey[200],
+                                    color: c.surface,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.image,
-                                    color: Colors.grey,
+                                    color: c.textMuted,
                                     size: 24,
                                   ),
                                 )
@@ -140,7 +142,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                                     imageUrl: thumbnailUrl,
                                     fit: BoxFit.cover,
                                     placeholder: (context, url) => Container(
-                                      color: Colors.grey[200],
+                                      color: c.surface,
                                       child: const Center(
                                         child: SizedBox(
                                           width: 18,
@@ -153,10 +155,10 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                                     ),
                                     errorWidget: (context, url, error) =>
                                         Container(
-                                      color: Colors.grey[200],
-                                      child: const Icon(
+                                      color: c.surface,
+                                      child: Icon(
                                         Icons.broken_image,
-                                        color: Colors.grey,
+                                        color: c.textMuted,
                                         size: 24,
                                       ),
                                     ),
@@ -177,7 +179,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                           child: Text(
                             '${RegionData.getRegionName(variant.regionCode)} • ${variant.material ?? '-'}',
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: c.textMuted,
                               fontSize: 12,
                               fontWeight: FontWeight.w300,
                             ),
@@ -188,7 +190,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                             isFavorite
                                 ? Icons.favorite
                                 : Icons.favorite_border,
-                            color: isFavorite ? Colors.red : Colors.grey,
+                            color: isFavorite ? Colors.red : c.textMuted,
                             size: 24,
                           ),
                           onPressed: () async {
@@ -218,6 +220,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
   }
 
   Widget _buildEmptyState(AppLocalizations l10n, ThemeData theme) {
+    final c = context.numColors;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -225,7 +228,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
           Icon(
             Icons.favorite_border,
             size: 64,
-            color: Colors.grey[400],
+            color: c.hint,
           ),
           const SizedBox(height: 16),
           Text(
@@ -233,7 +236,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
+              color: c.textMuted,
             ),
           ),
           const SizedBox(height: 8),
@@ -241,7 +244,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
             'Sikke detay sayfasından favorilere ekleyebilirsiniz',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: c.hint,
             ),
             textAlign: TextAlign.center,
           ),

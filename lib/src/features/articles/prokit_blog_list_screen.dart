@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/article.dart';
 import '../../models/article_category.dart';
+import '../../core/num_colors.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import 'articles_api.dart';
 
@@ -82,7 +83,7 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: numScaffoldLight,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           _buildAppBar(l10n),
@@ -108,23 +109,32 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
           l10n.translate('blog'),
           style: boldTextStyle(size: 20, color: Colors.white),
         ),
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: numGradientPrimary,
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                right: -30,
-                bottom: -20,
-                child: Icon(
-                  Icons.article_outlined,
-                  size: 150,
-                  color: Colors.white.withValues(alpha: 0.1),
+        // Zemin: Sagalassos (Pisidya) — Keşfet'teki bölge başlıklarıyla aynı
+        // görsel dili (2026-09-21 kullanıcı isteği). Alttan koyulaşan gradyan
+        // beyaz başlığın fotoğraf üstünde okunmasını sağlar.
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/regions/pisidia_banner.jpg',
+              fit: BoxFit.cover,
+              alignment: const Alignment(0.3, 0),
+              errorBuilder: (_, __, ___) =>
+                  const DecoratedBox(decoration: BoxDecoration(gradient: numGradientPrimary)),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.15),
+                    Colors.black.withValues(alpha: 0.55),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -137,22 +147,23 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
   }
 
   Widget _buildErrorView(AppLocalizations l10n) {
+    final c = context.numColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+            Icon(Icons.error_outline, size: 64, color: c.hint),
             16.height,
             Text(
               l10n.translate('error'),
-              style: boldTextStyle(size: 18),
+              style: boldTextStyle(size: 18, color: c.text),
             ),
             8.height,
             Text(
               _error ?? '',
-              style: secondaryTextStyle(),
+              style: secondaryTextStyle(color: c.textMuted),
               textAlign: TextAlign.center,
             ),
             24.height,
@@ -172,6 +183,7 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
   }
 
   Widget _buildContent(AppLocalizations l10n) {
+    final c = context.numColors;
     return RefreshIndicator(
       onRefresh: _loadData,
       color: numPrimary,
@@ -201,11 +213,11 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
                   _selectedCategoryId != null
                       ? _categories.firstWhere((c) => c.id == _selectedCategoryId).name
                       : l10n.translate('latest_articles'),
-                  style: boldTextStyle(size: 18),
+                  style: boldTextStyle(size: 18, color: c.text),
                 ),
                 Text(
                   '${_articles.length} ${l10n.translate('articles')}',
-                  style: secondaryTextStyle(),
+                  style: secondaryTextStyle(color: c.textMuted),
                 ),
               ],
             ),
@@ -369,16 +381,17 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
   }
 
   Widget _buildEmptyView(AppLocalizations l10n) {
+    final c = context.numColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           children: [
-            Icon(Icons.article_outlined, size: 64, color: Colors.grey.shade300),
+            Icon(Icons.article_outlined, size: 64, color: c.hint),
             16.height,
             Text(
               l10n.translate('no_articles'),
-              style: secondaryTextStyle(size: 16),
+              style: secondaryTextStyle(size: 16, color: c.textMuted),
             ),
           ],
         ),
@@ -405,16 +418,17 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.numColors;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: boxDecorationWithRoundedCorners(
-          backgroundColor: isSelected ? numPrimary : Colors.white,
+          backgroundColor: isSelected ? numPrimary : c.card,
           borderRadius: radius(20),
           border: Border.all(
-            color: isSelected ? numPrimary : Colors.grey.shade300,
+            color: isSelected ? numPrimary : c.border,
           ),
           boxShadow: isSelected
               ? [BoxShadow(color: numPrimary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
@@ -424,7 +438,7 @@ class _CategoryChip extends StatelessWidget {
           label,
           style: boldTextStyle(
             size: 14,
-            color: isSelected ? Colors.white : numTextSecondary,
+            color: isSelected ? Colors.white : c.textMuted,
           ),
         ),
       ),
@@ -447,12 +461,13 @@ class _ArticleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat.yMMMd(l10n.locale.languageCode);
+    final c = context.numColors;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: boxDecorationWithRoundedCorners(
-          backgroundColor: Colors.white,
+          backgroundColor: c.card,
           borderRadius: radius(12),
           boxShadow: [
             BoxShadow(
@@ -478,15 +493,15 @@ class _ArticleCard extends StatelessWidget {
                     ),
                     child: Text(
                       article.category,
-                      style: boldTextStyle(size: 12, color: numPrimary),
+                      style: boldTextStyle(size: 12, color: c.accent),
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.access_time, size: 14, color: Colors.grey.shade400),
+                  Icon(Icons.access_time, size: 14, color: c.hint),
                   4.width,
                   Text(
                     dateFormat.format(article.created),
-                    style: secondaryTextStyle(size: 12),
+                    style: secondaryTextStyle(size: 12, color: c.textMuted),
                   ),
                 ],
               ),
@@ -494,7 +509,7 @@ class _ArticleCard extends StatelessWidget {
               // Title
               Text(
                 article.title,
-                style: boldTextStyle(size: 16),
+                style: boldTextStyle(size: 16, color: c.text),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -503,7 +518,7 @@ class _ArticleCard extends StatelessWidget {
                 8.height,
                 Text(
                   _stripHtml(article.intro!),
-                  style: secondaryTextStyle(size: 14),
+                  style: secondaryTextStyle(size: 14, color: c.textMuted),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -514,10 +529,10 @@ class _ArticleCard extends StatelessWidget {
                 children: [
                   Text(
                     l10n.translate('read_more'),
-                    style: boldTextStyle(size: 14, color: numPrimary),
+                    style: boldTextStyle(size: 14, color: c.accent),
                   ),
                   4.width,
-                  Icon(Icons.arrow_forward_ios, size: 12, color: numPrimary),
+                  Icon(Icons.arrow_forward_ios, size: 12, color: c.accent),
                 ],
               ),
             ],

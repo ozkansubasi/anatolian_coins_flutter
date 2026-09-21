@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/variant.dart';
 import '../../core/region_data.dart';
+import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../variants/variants_api.dart';
 import 'collections_service.dart';
@@ -155,6 +156,7 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final c = context.numColors;
 
     return Scaffold(
       appBar: AppBar(
@@ -254,12 +256,12 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
                             child: thumbnailUrl == null
                                 ? Container(
                                     decoration: BoxDecoration(
-                                      color: Colors.grey[200],
+                                      color: c.surface,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.image,
-                                      color: Colors.grey,
+                                      color: c.textMuted,
                                       size: 24,
                                     ),
                                   )
@@ -269,7 +271,7 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
                                       imageUrl: thumbnailUrl,
                                       fit: BoxFit.cover,
                                       placeholder: (context, url) => Container(
-                                        color: Colors.grey[200],
+                                        color: c.surface,
                                         child: const Center(
                                           child: SizedBox(
                                             width: 18,
@@ -282,10 +284,10 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
                                       ),
                                       errorWidget: (context, url, error) =>
                                           Container(
-                                        color: Colors.grey[200],
-                                        child: const Icon(
+                                        color: c.surface,
+                                        child: Icon(
                                           Icons.broken_image,
-                                          color: Colors.grey,
+                                          color: c.textMuted,
                                           size: 24,
                                         ),
                                       ),
@@ -306,7 +308,7 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
                             child: Text(
                               '${RegionData.getRegionName(variant.regionCode)} • ${variant.material ?? '-'}',
                               style: TextStyle(
-                                color: Colors.grey[600],
+                                color: c.textMuted,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w300,
                               ),
@@ -326,6 +328,7 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
   }
 
   Widget _buildEmptyState(AppLocalizations l10n, ThemeData theme) {
+    final c = context.numColors;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -333,7 +336,7 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
           Icon(
             Icons.folder_open_rounded,
             size: 64,
-            color: Colors.grey[400],
+            color: c.hint,
           ),
           const SizedBox(height: 16),
           Text(
@@ -341,7 +344,7 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
+              color: c.textMuted,
             ),
           ),
           const SizedBox(height: 8),
@@ -349,7 +352,7 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
             'Sikke detay sayfasından koleksiyona ekleyebilirsiniz',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: c.hint,
             ),
             textAlign: TextAlign.center,
           ),

@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:nb_utils/nb_utils.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import '../../core/num_colors.dart';
 import 'recognition_service.dart';
 import '../history/scan_history_service.dart';
 import '../variants/variants_api.dart';
@@ -28,6 +29,9 @@ class ProkitRecognitionResultsScreen extends ConsumerStatefulWidget {
 
 class _ProkitRecognitionResultsScreenState
     extends ConsumerState<ProkitRecognitionResultsScreen> {
+  /// Temaya duyarlı anlamsal renkler (S26 P2).
+  NumColors get c => context.numColors;
+
   @override
   void initState() {
     super.initState();
@@ -88,7 +92,7 @@ class _ProkitRecognitionResultsScreenState
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      backgroundColor: numScaffoldLight,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: recognitionState.when(
           data: (results) => _buildResults(results, l10n),
@@ -134,18 +138,18 @@ class _ProkitRecognitionResultsScreenState
                 32.height,
                 Text(
                   l10n.translate('analyzing_coin'),
-                  style: boldTextStyle(size: 20, color: numTextPrimary),
+                  style: boldTextStyle(size: 20, color: c.text),
                 ),
                 12.height,
                 Text(
                   l10n.translate('analyzing_wait'),
-                  style: secondaryTextStyle(size: 14, color: numTextSecondary),
+                  style: secondaryTextStyle(size: 14, color: c.textMuted),
                 ),
                 32.height,
                 SizedBox(
                   width: 200,
                   child: LinearProgressIndicator(
-                    backgroundColor: numDividerColor,
+                    backgroundColor: c.divider,
                     valueColor: const AlwaysStoppedAnimation<Color>(numPrimary),
                   ),
                 ),
@@ -182,13 +186,13 @@ class _ProkitRecognitionResultsScreenState
                   24.height,
                   Text(
                     l10n.translate('recognition_failed'),
-                    style: boldTextStyle(size: 20, color: numTextPrimary),
+                    style: boldTextStyle(size: 20, color: c.text),
                   ),
                   12.height,
                   Text(
                     error.toString(),
                     textAlign: TextAlign.center,
-                    style: secondaryTextStyle(size: 14, color: numTextSecondary),
+                    style: secondaryTextStyle(size: 14, color: c.textMuted),
                   ),
                   32.height,
                   Row(
@@ -199,8 +203,8 @@ class _ProkitRecognitionResultsScreenState
                         icon: const Icon(Icons.arrow_back),
                         label: Text(l10n.translate('go_back')),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: numTextSecondary,
-                          side: const BorderSide(color: numBorder),
+                          foregroundColor: c.textMuted,
+                          side: BorderSide(color: c.border),
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         ),
                       ),
@@ -294,7 +298,7 @@ class _ProkitRecognitionResultsScreenState
                   color: numPrimary.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.auto_awesome, color: numPrimary, size: 20),
+                child: Icon(Icons.auto_awesome, color: c.accent, size: 20),
               ),
               12.width,
               Expanded(
@@ -303,12 +307,12 @@ class _ProkitRecognitionResultsScreenState
                   children: [
                     Text(
                       l10n.translate('showing_top_matches'),
-                      style: boldTextStyle(size: 14, color: numPrimary),
+                      style: boldTextStyle(size: 14, color: c.accent),
                     ),
                     4.height,
                     Text(
                       '${filteredMatches.length} sonuç bulundu',
-                      style: secondaryTextStyle(size: 12, color: numTextSecondary),
+                      style: secondaryTextStyle(size: 12, color: c.textMuted),
                     ),
                   ],
                 ),
@@ -333,7 +337,7 @@ class _ProkitRecognitionResultsScreenState
                 Expanded(
                   child: Text(
                     l10n.translate('reason_ambiguous_match'),
-                    style: secondaryTextStyle(size: 12, color: numTextSecondary),
+                    style: secondaryTextStyle(size: 12, color: c.textMuted),
                   ),
                 ),
               ],
@@ -390,22 +394,22 @@ class _ProkitRecognitionResultsScreenState
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: numTextHint.withOpacity(0.1),
+                      color: c.hint.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(icon, size: 50, color: numTextHint),
+                    child: Icon(icon, size: 50, color: c.hint),
                   ),
                   24.height,
                   Text(
                     title,
                     textAlign: TextAlign.center,
-                    style: boldTextStyle(size: 20, color: numTextPrimary),
+                    style: boldTextStyle(size: 20, color: c.text),
                   ),
                   12.height,
                   Text(
                     desc,
                     textAlign: TextAlign.center,
-                    style: secondaryTextStyle(size: 14, color: numTextSecondary),
+                    style: secondaryTextStyle(size: 14, color: c.textMuted),
                   ),
                   32.height,
                   ElevatedButton.icon(
@@ -435,18 +439,18 @@ class _ProkitRecognitionResultsScreenState
         children: [
           IconButton(
             onPressed: () => GoRouter.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_ios, color: numTextPrimary),
+            icon: Icon(Icons.arrow_back_ios, color: c.text),
           ),
           Expanded(
             child: Text(
               l10n.translate('recognition_results_title'),
-              style: boldTextStyle(size: 18, color: numTextPrimary),
+              style: boldTextStyle(size: 18, color: c.text),
               textAlign: TextAlign.center,
             ),
           ),
           IconButton(
             onPressed: () => _showHelpDialog(l10n),
-            icon: const Icon(Icons.help_outline, color: numTextSecondary),
+            icon: Icon(Icons.help_outline, color: c.textMuted),
           ),
         ],
       ),
@@ -465,12 +469,12 @@ class _ProkitRecognitionResultsScreenState
         borderRadius: radius(16),
         child: Container(
           decoration: boxDecorationWithRoundedCorners(
-            backgroundColor: numCardLight,
+            backgroundColor: c.card,
             borderRadius: radius(16),
             border: isTopMatch ? Border.all(color: numPrimary, width: 2) : null,
             boxShadow: [
               BoxShadow(
-                color: numShadow,
+                color: c.shadow,
                 blurRadius: isTopMatch ? 12 : 8,
                 offset: const Offset(0, 4),
               ),
@@ -538,9 +542,9 @@ class _ProkitRecognitionResultsScreenState
                       width: 72,
                       height: 72,
                       decoration: boxDecorationWithRoundedCorners(
-                        backgroundColor: numSurfaceLight,
+                        backgroundColor: c.surface,
                         borderRadius: radius(12),
-                        border: Border.all(color: numBorder),
+                        border: Border.all(color: c.border),
                       ),
                       child: ClipRRect(
                         borderRadius: radius(11),
@@ -562,16 +566,16 @@ class _ProkitRecognitionResultsScreenState
                                     placeholder: (_, __) => const Center(
                                       child: CircularProgressIndicator(strokeWidth: 2),
                                     ),
-                                    errorWidget: (_, __, ___) => const Icon(
+                                    errorWidget: (_, __, ___) => Icon(
                                       Icons.image_not_supported,
-                                      color: numTextHint,
+                                      color: c.hint,
                                     ),
                                   );
                                 }
-                                return const Icon(
+                                return Icon(
                                   Icons.monetization_on,
                                   size: 32,
-                                  color: numTextHint,
+                                  color: c.hint,
                                 );
                               },
                             );
@@ -588,7 +592,7 @@ class _ProkitRecognitionResultsScreenState
                         children: [
                           Text(
                             match.title,
-                            style: boldTextStyle(size: 14, color: numTextPrimary),
+                            style: boldTextStyle(size: 14, color: c.text),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -611,7 +615,7 @@ class _ProkitRecognitionResultsScreenState
                                 if (match.reverseScore != null)
                                   '${_l10n.translate('reverse')}: ${(match.reverseScore! * 100).toInt()}%',
                               ].join('  ·  '),
-                              style: secondaryTextStyle(size: 11, color: numTextHint),
+                              style: secondaryTextStyle(size: 11, color: c.hint),
                             ),
                           ],
                         ],
@@ -619,7 +623,7 @@ class _ProkitRecognitionResultsScreenState
                     ),
 
                     // Arrow
-                    const Icon(Icons.chevron_right, color: numTextHint),
+                    Icon(Icons.chevron_right, color: c.hint),
                   ],
                 ),
               ),
@@ -635,12 +639,12 @@ class _ProkitRecognitionResultsScreenState
       padding: const EdgeInsets.only(bottom: 2),
       child: Row(
         children: [
-          Icon(icon, size: 12, color: numTextHint),
+          Icon(icon, size: 12, color: c.hint),
           4.width,
           Expanded(
             child: Text(
               text,
-              style: secondaryTextStyle(size: 12, color: numTextSecondary),
+              style: secondaryTextStyle(size: 12, color: c.textMuted),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -660,7 +664,7 @@ class _ProkitRecognitionResultsScreenState
               Container(
                 height: 6,
                 decoration: boxDecorationWithRoundedCorners(
-                  backgroundColor: numDividerColor,
+                  backgroundColor: c.divider,
                   borderRadius: radius(3),
                 ),
               ),
@@ -697,8 +701,8 @@ class _ProkitRecognitionResultsScreenState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: boxDecorationWithShadow(
-        backgroundColor: numCardLight,
-        shadowColor: numShadow,
+        backgroundColor: c.card,
+        shadowColor: c.shadow,
         blurRadius: 10,
         offset: const Offset(0, -4),
       ),
@@ -714,8 +718,8 @@ class _ProkitRecognitionResultsScreenState
             icon: const Icon(Icons.camera_alt),
             label: Text(l10n.translate('scan_another')),
             style: OutlinedButton.styleFrom(
-              foregroundColor: numPrimary,
-              side: const BorderSide(color: numPrimary),
+              foregroundColor: c.accent,
+              side: BorderSide(color: c.accent),
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: radius(12)),
             ),
@@ -764,9 +768,9 @@ class _ProkitRecognitionResultsScreenState
         shape: RoundedRectangleBorder(borderRadius: radius(16)),
         title: Row(
           children: [
-            const Icon(Icons.help_outline, color: numPrimary),
+            Icon(Icons.help_outline, color: c.accent),
             12.width,
-            Text(l10n.translate('help'), style: boldTextStyle(size: 18)),
+            Text(l10n.translate('help'), style: boldTextStyle(size: 18, color: c.text)),
           ],
         ),
         content: SingleChildScrollView(
@@ -789,7 +793,7 @@ class _ProkitRecognitionResultsScreenState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(l10n.translate('close'), style: primaryTextStyle(color: numPrimary)),
+            child: Text(l10n.translate('close'), style: primaryTextStyle(color: c.accent)),
           ),
         ],
       ),
@@ -800,9 +804,9 @@ class _ProkitRecognitionResultsScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: boldTextStyle(size: 14, color: numTextPrimary)),
+        Text(title, style: boldTextStyle(size: 14, color: c.text)),
         8.height,
-        Text(text, style: secondaryTextStyle(size: 14, color: numTextSecondary)),
+        Text(text, style: secondaryTextStyle(size: 14, color: c.textMuted)),
       ],
     );
   }

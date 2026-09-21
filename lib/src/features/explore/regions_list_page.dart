@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart';
 import '../../core/region_data.dart';
+import '../../core/num_colors.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../ticker/ticker_widget.dart';
@@ -27,10 +28,9 @@ class RegionsListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final regions = RegionData.getRegionsByPopularity();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? numScaffoldDark : numScaffoldLight,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           l10n.translate('regions'),
@@ -82,10 +82,10 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = context.numColors;
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? numCardDark : Colors.white,
+        color: c.card,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -96,7 +96,7 @@ class _SearchField extends StatelessWidget {
         ],
       ),
       child: TextField(
-        style: primaryTextStyle(size: 14),
+        style: primaryTextStyle(size: 14, color: c.text),
         textInputAction: TextInputAction.search,
         onSubmitted: (q) {
           final query = q.trim();
@@ -106,8 +106,8 @@ class _SearchField extends StatelessWidget {
         },
         decoration: InputDecoration(
           hintText: l10n.translate('search_hint'),
-          hintStyle: secondaryTextStyle(size: 14),
-          prefixIcon: const Icon(Icons.search, color: numTextSecondary),
+          hintStyle: secondaryTextStyle(size: 14, color: c.textMuted),
+          prefixIcon: Icon(Icons.search, color: c.textMuted),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),

@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:nb_utils/nb_utils.dart';
 import '../../core/region_data.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Antik Anadolu haritası için veri modelleri
@@ -368,10 +369,11 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
 
   /// Kontrol paneli
   Widget _buildControlPanel(AppLocalizations l10n) {
+    final c = context.numColors;
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
+        color: c.card.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -458,6 +460,7 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
     required VoidCallback onPressed,
     String? tooltip,
   }) {
+    final c = context.numColors;
     return Tooltip(
       message: tooltip ?? '',
       child: Material(
@@ -469,10 +472,10 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: isActive ? numPrimary : Colors.grey.shade200,
+              color: isActive ? numPrimary : c.surface,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, size: 20, color: isActive ? Colors.white : Colors.grey.shade600),
+            child: Icon(icon, size: 20, color: isActive ? Colors.white : c.textMuted),
           ),
         ),
       ),
@@ -485,11 +488,12 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
 
     final mint = _selectedMint!;
     final color = getRegionColor(mint.region.replaceAll('-coins', ''));
+    final c = context.numColors;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.card,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -521,23 +525,23 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
               children: [
                 Text(
                   mint.nameTr,
-                  style: boldTextStyle(size: 16),
+                  style: boldTextStyle(size: 16, color: c.text),
                 ),
                 4.height,
                 Text(
                   mint.desc ?? l10n.translate('ancient_mint'),
-                  style: secondaryTextStyle(size: 12),
+                  style: secondaryTextStyle(size: 12, color: c.textMuted),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 4.height,
                 Row(
                   children: [
-                    Icon(Icons.location_on, size: 12, color: Colors.grey.shade500),
+                    Icon(Icons.location_on, size: 12, color: c.hint),
                     4.width,
                     Text(
                       '${mint.lat.toStringAsFixed(3)}, ${mint.lng.toStringAsFixed(3)}',
-                      style: secondaryTextStyle(size: 10),
+                      style: secondaryTextStyle(size: 10, color: c.textMuted),
                     ),
                   ],
                 ),
@@ -549,7 +553,7 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
             icon: const Icon(Icons.close),
             onPressed: () => setState(() => _selectedMint = null),
             iconSize: 20,
-            color: Colors.grey.shade600,
+            color: c.textMuted,
           ),
         ],
       ),
@@ -558,10 +562,11 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
 
   /// Lejant
   Widget _buildLegend(AppLocalizations l10n) {
+    final c = context.numColors;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
+        color: c.card.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -576,7 +581,7 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
         children: [
           Text(
             l10n.translate('legend'),
-            style: boldTextStyle(size: 12),
+            style: boldTextStyle(size: 12, color: c.text),
           ),
           8.height,
           _buildLegendItem(Icons.location_on, numPrimary, l10n.translate('highlighted_mint')),
@@ -595,7 +600,7 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
       children: [
         Icon(icon, size: 14, color: color),
         6.width,
-        Text(label, style: secondaryTextStyle(size: 10)),
+        Text(label, style: secondaryTextStyle(size: 10, color: context.numColors.textMuted)),
       ],
     );
   }

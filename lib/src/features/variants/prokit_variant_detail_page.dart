@@ -16,6 +16,7 @@ import '../../core/locale_provider.dart';
 import '../../core/region_data.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import '../../core/num_colors.dart';
 import '../favorites/favorites_service.dart';
 import '../offline/offline_service.dart';
 import '../../widgets/fallback_image.dart';
@@ -165,7 +166,9 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) {
+        final c = context.numColors;
+        return AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
@@ -175,20 +178,20 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                 color: numPrimary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.lock, color: numPrimary, size: 20),
+              child: Icon(Icons.lock, color: c.accent, size: 20),
             ),
             12.width,
-            Text(l10n.translate('pro_feature'), style: boldTextStyle(size: 18)),
+            Text(l10n.translate('pro_feature'), style: boldTextStyle(size: 18, color: c.text)),
           ],
         ),
         content: Text(
           l10n.translate('feature_locked_message', params: {'featureName': featureName}),
-          style: secondaryTextStyle(size: 14),
+          style: secondaryTextStyle(size: 14, color: c.textMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(l10n.translate('close'), style: primaryTextStyle(color: numTextSecondary)),
+            child: Text(l10n.translate('close'), style: primaryTextStyle(color: c.textMuted)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -203,7 +206,8 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
             child: Text(l10n.translate('buy_pro')),
           ),
         ],
-      ),
+      );
+      },
     );
   }
 
@@ -237,6 +241,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     final l10n = AppLocalizations.of(context);
     final favorites = ref.watch(favoritesControllerProvider);
     final isFavorite = favorites.contains(widget.articleId);
+    final c = context.numColors;
 
     if (_loading) {
       return Scaffold(
@@ -311,10 +316,10 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                 delegate: _SliverTabBarDelegate(
                   TabBar(
                     controller: _tabController,
-                    labelColor: numPrimary,
-                    unselectedLabelColor: numTextSecondary,
-                    indicatorColor: numPrimary,
-                    labelStyle: boldTextStyle(size: 14),
+                    labelColor: c.accent,
+                    unselectedLabelColor: c.textMuted,
+                    indicatorColor: c.accent,
+                    labelStyle: boldTextStyle(size: 14, color: c.text),
                     tabs: [
                       Tab(text: l10n.translate('coin_info')),
                       Tab(text: l10n.translate('images')),
@@ -341,14 +346,15 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
   }
 
   Widget _buildImageSlider() {
+    final c = context.numColors;
     if (_images.isEmpty) {
       return Container(
-        color: numBackgroundGrey,
+        color: c.surface,
         child: Center(
           child: Icon(
             Icons.monetization_on_outlined,
             size: 64,
-            color: numTextSecondary.withValues(alpha: 0.5),
+            color: c.textMuted.withValues(alpha: 0.5),
           ),
         ),
       );
@@ -403,6 +409,11 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     final isEnglish = currentLocale.languageCode == 'en';
     final obverseText = isEnglish ? (v.obverseDesc ?? v.obverseDescTr) : (v.obverseDescTr ?? v.obverseDesc);
     final reverseText = isEnglish ? (v.reverseDesc ?? v.reverseDescTr) : (v.reverseDescTr ?? v.reverseDesc);
+    final c = context.numColors;
+    // Ön/arka yüz etiketleri durum rengi değil: koyu temada açık tonlar (okunurluk).
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final obverseColor = isDark ? Colors.blue.shade200 : Colors.blue;
+    final reverseColor = isDark ? Colors.red.shade200 : Colors.red;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -412,7 +423,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
           // Title
           Text(
             v.title,
-            style: boldTextStyle(size: 20),
+            style: boldTextStyle(size: 20, color: c.text),
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
           ),
@@ -442,7 +453,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
             _buildInfoCard(
               title: l10n.translate('obverse_reverse'),
               icon: Icons.monetization_on,
-              iconColor: numPrimary,
+              iconColor: c.accent,
               children: [
                 if (obverseText != null && obverseText.isNotEmpty) ...[
                   Row(
@@ -452,8 +463,8 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                         width: 8,
                         height: 8,
                         margin: const EdgeInsets.only(top: 6, right: 8),
-                        decoration: const BoxDecoration(
-                          color: Colors.blue,
+                        decoration: BoxDecoration(
+                          color: obverseColor,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -463,12 +474,12 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                           children: [
                             Text(
                               l10n.translate('obverse'),
-                              style: boldTextStyle(size: 14, color: Colors.blue),
+                              style: boldTextStyle(size: 14, color: obverseColor),
                             ),
                             4.height,
                             Text(
                               obverseText,
-                              style: secondaryTextStyle(size: 14, height: 1.5),
+                              style: secondaryTextStyle(size: 14, height: 1.5, color: c.textMuted),
                             ),
                           ],
                         ),
@@ -479,7 +490,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                 if ((obverseText != null && obverseText.isNotEmpty) &&
                     (reverseText != null && reverseText.isNotEmpty)) ...[
                   16.height,
-                  Divider(color: numBorder, height: 1),
+                  Divider(color: c.divider, height: 1),
                   16.height,
                 ],
                 if (reverseText != null && reverseText.isNotEmpty) ...[
@@ -490,8 +501,8 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                         width: 8,
                         height: 8,
                         margin: const EdgeInsets.only(top: 6, right: 8),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
+                        decoration: BoxDecoration(
+                          color: reverseColor,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -501,12 +512,12 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                           children: [
                             Text(
                               l10n.translate('reverse'),
-                              style: boldTextStyle(size: 14, color: Colors.red),
+                              style: boldTextStyle(size: 14, color: reverseColor),
                             ),
                             4.height,
                             Text(
                               reverseText,
-                              style: secondaryTextStyle(size: 14, height: 1.5),
+                              style: secondaryTextStyle(size: 14, height: 1.5, color: c.textMuted),
                             ),
                           ],
                         ),
@@ -525,16 +536,17 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
   }
 
   Widget _buildAncientMapTab(Variant v, AppLocalizations l10n) {
+    final c = context.numColors;
     if (v.coordinates == null || v.coordinates!.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.map_outlined, size: 64, color: numTextSecondary.withValues(alpha: 0.5)),
+            Icon(Icons.map_outlined, size: 64, color: c.textMuted.withValues(alpha: 0.5)),
             16.height,
-            Text(l10n.translate('coordinates'), style: secondaryTextStyle(size: 14)),
+            Text(l10n.translate('coordinates'), style: secondaryTextStyle(size: 14, color: c.textMuted)),
             8.height,
-            Text('-', style: boldTextStyle(size: 16)),
+            Text('-', style: boldTextStyle(size: 16, color: c.text)),
           ],
         ),
       );
@@ -548,12 +560,12 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
           color: numPrimary.withValues(alpha: 0.1),
           child: Row(
             children: [
-              const Icon(Icons.screen_rotation, size: 20, color: numPrimary),
+              Icon(Icons.screen_rotation, size: 20, color: c.accent),
               12.width,
               Expanded(
                 child: Text(
                   'Haritayı tam ekran görmek için telefonunuzu yatay çevirin',
-                  style: secondaryTextStyle(size: 12, color: numPrimary),
+                  style: secondaryTextStyle(size: 12, color: c.accent),
                 ),
               ),
             ],
@@ -673,7 +685,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                     icon: const Icon(Icons.public),
                     label: Text(l10n.translate('show_on_modern_map')),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: numPrimary,
+                      foregroundColor: c.accent,
                       side: const BorderSide(color: numPrimary),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
@@ -714,14 +726,15 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
   }
 
   Widget _buildImagesTab(AppLocalizations l10n) {
+    final c = context.numColors;
     if (_images.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.image_not_supported, size: 64, color: numTextSecondary.withValues(alpha: 0.5)),
+            Icon(Icons.image_not_supported, size: 64, color: c.textMuted.withValues(alpha: 0.5)),
             16.height,
-            Text(l10n.translate('no_images_found'), style: secondaryTextStyle(size: 14)),
+            Text(l10n.translate('no_images_found'), style: secondaryTextStyle(size: 14, color: c.textMuted)),
           ],
         ),
       );
@@ -741,7 +754,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
           onTap: () => _openGallery(index),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: c.card,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
@@ -816,6 +829,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     }
     // Fallback olarak articleId kullan
     coinNo ??= v.articleId?.toString();
+    final c = context.numColors;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -832,7 +846,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                   Expanded(
                     child: Text(
                       coinNo ?? '-',
-                      style: boldTextStyle(size: 18, color: numPrimary),
+                      style: boldTextStyle(size: 18, color: c.accent),
                     ),
                   ),
                 ],
@@ -845,7 +859,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                   icon: const Icon(Icons.open_in_new, size: 18),
                   label: Text(l10n.translate('view_on_website')),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: numPrimary,
+                    foregroundColor: c.accent,
                     side: const BorderSide(color: numPrimary),
                   ),
                 ),
@@ -860,7 +874,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
               children: [
                 Text(
                   v.sourceCitation!,
-                  style: secondaryTextStyle(size: 14, height: 1.5),
+                  style: secondaryTextStyle(size: 14, height: 1.5, color: c.textMuted),
                 ),
               ],
             ),
@@ -873,7 +887,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
               children: [
                 Text(
                   v.findspotName!,
-                  style: secondaryTextStyle(size: 14),
+                  style: secondaryTextStyle(size: 14, color: c.textMuted),
                 ),
               ],
             ),
@@ -901,10 +915,11 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     Color? iconColor,
     required List<Widget> children,
   }) {
+    final c = context.numColors;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: c.card,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -919,13 +934,13 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
         children: [
           Row(
             children: [
-              Icon(icon, size: 20, color: iconColor ?? numPrimary),
+              Icon(icon, size: 20, color: iconColor ?? c.accent),
               8.width,
-              Text(title, style: boldTextStyle(size: 16)),
+              Text(title, style: boldTextStyle(size: 16, color: c.text)),
             ],
           ),
           12.height,
-          Divider(color: numBorder, height: 1),
+          Divider(color: c.divider, height: 1),
           12.height,
           ...children,
         ],
@@ -934,6 +949,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
   }
 
   Widget _buildInfoRow(String label, String value) {
+    final c = context.numColors;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -941,10 +957,10 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
         children: [
           SizedBox(
             width: 100,
-            child: Text(label, style: secondaryTextStyle(size: 14)),
+            child: Text(label, style: secondaryTextStyle(size: 14, color: c.textMuted)),
           ),
           Expanded(
-            child: Text(value, style: primaryTextStyle(size: 14)),
+            child: Text(value, style: primaryTextStyle(size: 14, color: c.text)),
           ),
         ],
       ),
@@ -989,7 +1005,7 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: Colors.white,
+      color: context.numColors.card,
       child: tabBar,
     );
   }
