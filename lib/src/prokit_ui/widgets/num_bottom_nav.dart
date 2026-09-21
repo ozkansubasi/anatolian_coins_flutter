@@ -7,29 +7,42 @@ import 'num_menu_sheet.dart';
 /// Alt çubuktaki hedefler. İlk dördü `ShellBranch` dallarıyla aynı sırada.
 enum NavTab { home, browse, scan, favorites, menu }
 
-/// Yalnız Menü sayfasından ulaşılan ekranlar. Bunlardan biri açıkken hangi
-/// sekmenin üstüne açılmış olursa olsun "Menü" hedefi seçili görünür; kullanıcı
-/// nerede olduğunu kaybetmesin (Profil ve Ayarlar 2026-09-20'de Menü'ye taşındı).
-const _menuOnlyPaths = <String>[
-  '/account',
-  '/settings',
-  '/assistant',
-  '/login',
-  '/register',
-  '/subscription',
-  '/university-application',
-  '/terms-of-service',
-  '/privacy-policy',
-  '/kvkk',
-  '/subscription-agreement',
-];
+/// Her ekranın "evi": o ekran açıkken alt çubukta seçili görünen sekme.
+/// app_router.dart'taki dal yerleşimiyle aynıdır. Ekranlar çoğu zaman `push`
+/// ile bulunulan sekmenin ÜSTÜNE açılır; seçimi bulunulan dal belirleseydi
+/// Menü'den açılan Bölgeler'de "Favoriler" seçili görünürdü (cihazda görüldü).
+const _homeOf = <String, NavTab>{
+  '/browse': NavTab.browse,
+  '/recognition': NavTab.scan,
+  '/favorites': NavTab.favorites,
+  '/collections': NavTab.favorites,
+  '/collection': NavTab.favorites,
+  '/history': NavTab.favorites,
+  '/account': NavTab.menu,
+  '/settings': NavTab.menu,
+  '/assistant': NavTab.menu,
+  '/regions': NavTab.menu,
+  '/mints': NavTab.menu,
+  '/blog': NavTab.menu,
+  '/article': NavTab.menu,
+  '/login': NavTab.menu,
+  '/register': NavTab.menu,
+  '/subscription': NavTab.menu,
+  '/university-application': NavTab.menu,
+  '/terms-of-service': NavTab.menu,
+  '/privacy-policy': NavTab.menu,
+  '/kvkk': NavTab.menu,
+  '/subscription-agreement': NavTab.menu,
+};
 
-/// Seçili sekme: Menü sayfasına ait bir ekran açıksa Menü, değilse içinde
-/// bulunulan dal. `/variant/1` gibi paylaşılan detaylar hangi sekmeden
-/// açıldıysa o sekme seçili kalır (push sayfayı o sekmenin üstüne koyar).
+/// Seçili sekme: ekranın evi. Tek istisna sikke detayı (`/variant/…`): her
+/// sekmeden açılabildiği için açıldığı sekmede kalır.
 NavTab navTabFor(String path, int branchIndex) {
-  final menuOnly = _menuOnlyPaths.any((p) => path == p || path.startsWith('$p/'));
-  if (menuOnly || branchIndex >= NavTab.menu.index) return NavTab.menu;
+  final first = path.split('/').where((s) => s.isNotEmpty).firstOrNull;
+  if (first == null) return NavTab.home;
+  final home = _homeOf['/$first'];
+  if (home != null) return home;
+  if (branchIndex >= NavTab.menu.index) return NavTab.menu;
   return NavTab.values[branchIndex];
 }
 

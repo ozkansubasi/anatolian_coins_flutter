@@ -75,16 +75,21 @@ void main() {
       expect(navTabFor('/collection/3', 3), NavTab.favorites);
     });
 
-    test('paylaşılan detay açıldığı sekmede kalır', () {
+    test('sikke detayı açıldığı sekmede kalır', () {
       expect(navTabFor('/variant/12', 3), NavTab.favorites);
-      expect(navTabFor('/article/5', 0), NavTab.home);
+      expect(navTabFor('/variant/12', 0), NavTab.home);
+      expect(navTabFor('/variant/12', 1), NavTab.browse);
     });
 
-    test('Menü sayfaları hangi sekmenin üstünde olursa olsun Menü', () {
+    test('diğer ekranlar hangi sekmenin üstünde açılırsa açılsın evini gösterir', () {
       expect(navTabFor('/account', 0), NavTab.menu);
       expect(navTabFor('/settings', 3), NavTab.menu);
       expect(navTabFor('/assistant', 1), NavTab.menu);
-      // önek eşleşmesi yol sınırına bakar
+      expect(navTabFor('/regions', 3), NavTab.menu, reason: 'cihazda Favoriler görünüyordu');
+      expect(navTabFor('/article/5', 0), NavTab.menu);
+      expect(navTabFor('/collections', 0), NavTab.favorites);
+      expect(navTabFor('/history', 4), NavTab.favorites);
+      // eşleşme yol parçasına bakar, önek değil
       expect(navTabFor('/accounting', 0), NavTab.home);
     });
   });
