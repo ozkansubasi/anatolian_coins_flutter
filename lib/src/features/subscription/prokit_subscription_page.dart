@@ -557,14 +557,16 @@ class ProkitSubscriptionPage extends ConsumerWidget {
   }
 
   Widget _buildProFeaturesGrid(BuildContext context, AppLocalizations l10n) {
+    // 'expert_support' ve 'no_ads' kaldırıldı (2026-09-21, BACKLOG A15 kararı):
+    // uzman desteğinin arkasında akış yok; uygulamada hiç reklam yok, yani
+    // "reklamsız" Pro ayrıcalığı değil. Ayrıca çevirileri olmadığı için ekranda
+    // ham anahtar olarak görünüyorlardı (cihazda görüldü).
     final c = context.numColors;
     final features = [
       _Feature(Icons.all_inclusive, 'unlimited_favorites', numError),
       _Feature(Icons.offline_bolt, 'offline_access', numInfo),
       _Feature(Icons.camera_enhance, 'unlimited_scans', numSecondary),
       _Feature(Icons.high_quality, 'high_res_images', numSuccess),
-      _Feature(Icons.support_agent, 'expert_support', numWarning),
-      _Feature(Icons.block, 'no_ads', c.textMuted),
     ];
 
     return GridView.builder(
