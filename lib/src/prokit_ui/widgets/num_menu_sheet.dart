@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../numistr_colors.dart';
 import '../../l10n/app_localizations.dart';
+import 'num_bottom_nav.dart';
 
 /// Uygulamanin "Menu" sayfasi (alt sayfa olarak acilir).
 ///
@@ -186,7 +187,7 @@ class _MenuTile extends StatelessWidget {
       ),
       onTap: () {
         Navigator.pop(context);
-        context.push(route);
+        context.openRoute(route);
       },
     );
   }

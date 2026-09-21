@@ -46,6 +46,29 @@ NavTab navTabFor(String path, int branchIndex) {
   return NavTab.values[branchIndex];
 }
 
+extension NumOpenRoute on BuildContext {
+  /// Bir ekranı açmanın tek doğru yolu (sekme dışı ekranlar için).
+  ///
+  /// Ekranın evi (bkz. [navTabFor]) bulunulan sekmeyse `push` — üstüne biner,
+  /// geri tuşu buraya döner. Başka bir sekmeyse `go` — kendi dalında açılır.
+  /// NEDEN (cihazda görüldü): Menü'den açılan Blog/makale Ana Sayfa dalının
+  /// üstüne yerleşiyordu; sekmeler durum koruduğu için sonradan "Ana Sayfa"ya
+  /// basınca makaleye düşülüyordu. Sikke detayı her sekmeye aittir → hep push.
+  ///
+  /// Etkin dal kabuktan okunur ([NumShellScaffold.activeBranch]); Menü alt
+  /// sayfası kök navigatörde açıldığı için `StatefulNavigationShell.maybeOf`
+  /// oradan kabuğu göremez.
+  void openRoute(String location) {
+    final active = NumShellScaffold.activeBranch;
+    final home = navTabFor(Uri.parse(location).path, active);
+    if (home.index == active) {
+      push(location);
+    } else {
+      go(location);
+    }
+  }
+}
+
 /// Kabuk: tüm sekme ekranlarının ortak iskeleti; alt çubuk yalnız burada çizilir.
 ///
 /// Klavye açıkken alt çubuk gizlenir ve dış Scaffold klavyeye göre küçülmez
@@ -57,8 +80,12 @@ class NumShellScaffold extends StatelessWidget {
 
   const NumShellScaffold({super.key, required this.navigationShell});
 
+  /// Şu an gösterilen dal. Kabuk her dal değişiminde yeniden kurulur.
+  static int activeBranch = 0;
+
   @override
   Widget build(BuildContext context) {
+    activeBranch = navigationShell.currentIndex;
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     // Sistem geri tuşu: sekmenin içinde geri gidilecek sayfa varsa go_router
     // önce onu kapatır (bu PopScope'a hiç gelmez). Ana Sayfa dışındaki bir
@@ -187,7 +214,8 @@ class NumBottomNav extends StatelessWidget {
   void _goTab(NavTab tab, NavTab current) {
     navigationShell.goBranch(
       tab.index,
-      initialLocation: tab == current || tab == NavTab.scan,
+      // Bulunulan dala tekrar basmak her zaman o dalın köküne döner.
+      initialLocation: tab.index == navigationShell.currentIndex || tab == NavTab.scan,
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/article.dart';
 import '../../core/num_colors.dart';
+import '../../core/num_text.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import 'articles_api.dart';
 
@@ -71,9 +72,9 @@ class ProkitArticleDetailScreen extends ConsumerWidget {
             children: [
               Icon(Icons.error_outline, size: 64, color: c.hint),
               16.height,
-              Text(l10n.translate('error'), style: boldTextStyle(size: 18, color: c.text)),
+              Text(l10n.translate('error'), style: context.numText.section),
               8.height,
-              Text(error, style: secondaryTextStyle(color: c.textMuted), textAlign: TextAlign.center),
+              Text(error, style: context.numText.caption, textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -97,109 +98,91 @@ class _ArticleContent extends StatelessWidget {
     final dateFormat = DateFormat.yMMMMd(l10n.locale.languageCode);
     final c = context.numColors;
 
+    final t = context.numText;
     return CustomScrollView(
       slivers: [
-        // Hero App Bar
+        // Kompakt üst çubuk: eski 220 px "hero" alanında yalnız dekoratif ikonlar
+        // ve aşağıda zaten yazan başlığın kopyası vardı (gereksiz ekran kullanımı).
         SliverAppBar(
-          expandedHeight: 220,
-          floating: false,
           pinned: true,
           backgroundColor: numPrimary,
           foregroundColor: Colors.white,
           actions: [
             IconButton(
               icon: const Icon(Icons.share_rounded),
+              tooltip: l10n.translate('share'),
               onPressed: () => _shareArticle(context),
             ),
           ],
-          flexibleSpace: FlexibleSpaceBar(
-            background: _buildHeroBackground(),
-          ),
         ),
 
         // Content
         SliverToBoxAdapter(
-          child: Transform.translate(
-            offset: const Offset(0, -24),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Category Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: boxDecorationWithRoundedCorners(
-                        backgroundColor: numPrimary.withValues(alpha: 0.1),
-                        borderRadius: radius(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.folder_outlined, size: 14, color: c.accent),
-                          6.width,
-                          Text(
-                            article.category,
-                            style: boldTextStyle(size: 12, color: c.accent),
-                          ),
-                        ],
-                      ),
-                    ),
-                    16.height,
-
-                    // Title
-                    Text(
-                      article.title,
-                      style: boldTextStyle(size: 18, color: c.text),
-                    ),
-                    16.height,
-
-                    // Meta info
-                    Wrap(
-                      spacing: 16,
-                      runSpacing: 8,
+                    // Meta: solda tarih, sağa yaslı kategori (tek satır —
+                    // kategori eskiden kendi satırını kaplıyordu).
+                    Row(
                       children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.calendar_today_outlined, size: 16, color: c.hint),
-                            8.width,
-                            Text(
-                              dateFormat.format(article.created),
-                              style: secondaryTextStyle(size: 14, color: c.textMuted),
+                        Icon(Icons.calendar_today_outlined, size: 14, color: c.hint),
+                        6.width,
+                        Text(dateFormat.format(article.created), style: t.caption),
+                        const Spacer(),
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: c.accent.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                          ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.folder_outlined, size: 13, color: c.accent),
+                                5.width,
+                                Flexible(
+                                  child: Text(
+                                    article.category,
+                                    style: t.tag.copyWith(letterSpacing: 0.2),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        // Removed update date as per user request
                       ],
                     ),
-                    24.height,
+                    14.height,
+
+                    // Title
+                    Text(article.title, style: t.display),
+                    16.height,
 
                     // Divider
                     Container(
                       height: 3,
-                      width: 60,
+                      width: 48,
                       decoration: BoxDecoration(
                         gradient: numGoldGradient,
                         borderRadius: radius(2),
                       ),
                     ),
-                    24.height,
+                    20.height,
 
                     // Intro (if available)
                     if (article.intro != null && article.intro!.isNotEmpty) ...[
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: boxDecorationWithRoundedCorners(
-                          backgroundColor: numPrimary.withValues(alpha: 0.05),
+                          backgroundColor: c.accent.withValues(alpha: 0.06),
                           borderRadius: radius(12),
                           border: Border(
-                            left: BorderSide(color: numPrimary, width: 4),
+                            left: BorderSide(color: c.accent, width: 3),
                           ),
                         ),
                         child: Html(
@@ -212,7 +195,7 @@ class _ArticleContent extends StatelessWidget {
                               fontStyle: FontStyle.italic,
                               color: c.textMuted,
                               lineHeight: const LineHeight(1.6),
-                              textAlign: TextAlign.justify,
+                              textAlign: TextAlign.start,
                             ),
                             'p': Style(
                               margin: Margins.zero,
@@ -231,10 +214,10 @@ class _ArticleContent extends StatelessWidget {
                           'body': Style(
                             margin: Margins.zero,
                             padding: HtmlPaddings.zero,
-                            fontSize: FontSize(15),
+                            fontSize: FontSize(16),
                             color: c.text,
-                            lineHeight: const LineHeight(1.8),
-                            textAlign: TextAlign.justify,
+                            lineHeight: const LineHeight(1.7),
+                            textAlign: TextAlign.start,
                           ),
                           'h1': Style(
                             fontSize: FontSize(24),
@@ -249,7 +232,7 @@ class _ArticleContent extends StatelessWidget {
                             margin: Margins.only(top: 20, bottom: 10),
                           ),
                           'h3': Style(
-                            fontSize: FontSize(18),
+                            fontSize: FontSize(16),
                             fontWeight: FontWeight.bold,
                             color: c.text,
                             margin: Margins.only(top: 16, bottom: 8),
@@ -266,7 +249,7 @@ class _ArticleContent extends StatelessWidget {
                             padding: HtmlPaddings.all(16),
                             margin: Margins.symmetric(vertical: 16),
                             border: Border(
-                              left: BorderSide(color: numPrimary, width: 4),
+                              left: BorderSide(color: c.accent, width: 3),
                             ),
                             fontStyle: FontStyle.italic,
                           ),
@@ -307,87 +290,27 @@ class _ArticleContent extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-          ),
         ),
       ],
     );
   }
 
-  Widget _buildHeroBackground() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: numGradientPrimary,
-      ),
-      child: Stack(
-        children: [
-          // Pattern
-          Positioned(
-            right: -40,
-            top: -40,
-            child: Icon(
-              Icons.auto_stories,
-              size: 200,
-              color: Colors.white.withValues(alpha: 0.1),
-            ),
-          ),
-          Positioned(
-            left: -30,
-            bottom: 40,
-            child: Icon(
-              Icons.article_outlined,
-              size: 100,
-              color: Colors.white.withValues(alpha: 0.08),
-            ),
-          ),
-          // Content area indicator
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 40,
-            child: Text(
-              article.title,
-              style: boldTextStyle(size: 18, color: Colors.white),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
+  /// Tek eylem: paylaş. Eski "Geri" düğmesi üst çubuktaki geri okunu tekrar ediyordu.
   Widget _buildBottomActions(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () => _shareArticle(context),
-            icon: const Icon(Icons.share_rounded),
-            label: Text(l10n.translate('share')),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: context.numColors.accent,
-              side: BorderSide(color: numPrimary),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: radius(12)),
-            ),
-          ),
+    final c = context.numColors;
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _shareArticle(context),
+        icon: const Icon(Icons.share_rounded),
+        label: Text(l10n.translate('share')),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: c.accent,
+          side: BorderSide(color: c.accent),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: radius(12)),
         ),
-        16.width,
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back_rounded),
-            label: Text(l10n.translate('back')),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: numPrimary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: radius(12)),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 

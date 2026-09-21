@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../prokit_ui/widgets/num_bottom_nav.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/article.dart';
@@ -61,7 +62,7 @@ class _ArticleCard extends StatelessWidget {
       shadowColor: theme.colorScheme.shadow,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        onTap: () => context.push('/article/${article.id}'),
+        onTap: () => context.openRoute('/article/${article.id}'),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),

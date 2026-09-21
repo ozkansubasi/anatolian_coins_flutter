@@ -148,14 +148,15 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
         _loading = false;
       });
 
-      // Vurgulu mint varsa onu bul ve seç
+      // Vurgulu mint varsa onu bul ve seç. Bulunamazsa HİÇBİR ŞEY seçilmez:
+      // eskiden `orElse: mints.first` listedeki ilk darphaneyi (Kyzikos) seçiyor,
+      // Aezanis sikkesinde Kyzikos kartı gösteriyordu (cihazda görüldü).
       if (widget.highlightMint != null && _mapData != null) {
-        final mint = _mapData!.mints.firstWhere(
-          (m) => m.name.toLowerCase() == widget.highlightMint!.toLowerCase() ||
-                 m.nameTr.toLowerCase() == widget.highlightMint!.toLowerCase(),
-          orElse: () => _mapData!.mints.first,
+        final wanted = widget.highlightMint!.toLowerCase();
+        final matches = _mapData!.mints.where(
+          (m) => m.name.toLowerCase() == wanted || m.nameTr.toLowerCase() == wanted,
         );
-        setState(() => _selectedMint = mint);
+        if (matches.isNotEmpty) setState(() => _selectedMint = matches.first);
       }
     } catch (e) {
       setState(() {
@@ -240,7 +241,8 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
           ),
 
         // Seçili darphane bilgi kartı
-        if (_selectedMint != null)
+        // Bilgi kartı yalnız tam ekranda: önizlemede 'Haritada göster' katmanıyla çakışıyordu.
+        if (widget.isFullScreen && _selectedMint != null)
           Positioned(
             bottom: 16,
             left: 16,

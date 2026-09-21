@@ -118,7 +118,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
                 ),
             ],
           ),
-          onPressed: () => context.push('/account'),
+          onPressed: () => context.openRoute('/account'),
           tooltip: l10n.translate('profile'),
         ),
       ],
@@ -177,7 +177,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       HomeBanner(
         image: 'assets/images/regions/pisidia_banner.jpg',
         slogan: l10n.translate('banner_regions'),
-        onTap: () => context.push('/regions'),
+        onTap: () => context.openRoute('/regions'),
       ),
     ];
 
@@ -229,7 +229,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           title: l10n.translate('ancient_regions'),
           actionText: l10n.translate('see_all'),
           // Tümü → bölge dizini (sikke arama değil)
-          onAction: () => context.push('/regions'),
+          onAction: () => context.openRoute('/regions'),
         ),
         SizedBox(
           height: 100,
@@ -309,21 +309,21 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         icon: Icons.collections_bookmark_outlined,
         color: numPrimary,
         tint: const Color(0xFFF1EFE2),
-        onTap: () => context.push('/collections'),
+        onTap: () => context.openRoute('/collections'),
       ),
       _QuickFeature(
         title: l10n.translate('blog'),
         icon: Icons.menu_book_outlined,
         color: numPrimary,
         tint: const Color(0xFFF5EEE6),
-        onTap: () => context.push('/blog'),
+        onTap: () => context.openRoute('/blog'),
       ),
       _QuickFeature(
         title: l10n.translate('assistant_short'),
         icon: Icons.chat_bubble_outline,
         color: numPrimary,
         tint: const Color(0xFFEFEDE6),
-        onTap: () => context.push('/assistant'),
+        onTap: () => context.openRoute('/assistant'),
       ),
     ];
 
@@ -358,7 +358,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           title: l10n.translate('editors_pick'),
           actionText: l10n.translate('more'),
           // Blog menusune gider; "sikke arama" (/browse) yanlis hedefti.
-          onAction: () => context.push('/blog'),
+          onAction: () => context.openRoute('/blog'),
         ),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),

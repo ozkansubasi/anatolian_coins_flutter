@@ -387,7 +387,12 @@ class AppLocalizations {
       'tap_for_fullscreen': 'Tam ekran görüntülemek için dokunun',
       'coin_no': 'Sikke No',
       'view_on_website': 'Web sitesinde görüntüle',
-      'obverse_reverse': 'Ön Yüz / Arka Yüz',
+      'obverse_reverse': 'Yüz Tanımları',
+      'tab_details': 'Künye',
+      'tab_map': 'Harita',
+      'coin_not_found': 'Bu sikke artık katalogda yok',
+      'coin_load_failed': 'Sikke yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.',
+      'rotate_for_fullscreen': 'Haritayı tam ekran görmek için telefonunuzu yatay çevirin',
 
       // Tooltips
       'add_to_favorites': 'Favorilere ekle',
@@ -1141,7 +1146,12 @@ class AppLocalizations {
       'tap_for_fullscreen': 'Tap for fullscreen view',
       'coin_no': 'Coin No',
       'view_on_website': 'View on website',
-      'obverse_reverse': 'Obverse / Reverse',
+      'obverse_reverse': 'Obverse & Reverse',
+      'tab_details': 'Details',
+      'tab_map': 'Map',
+      'coin_not_found': 'This coin is no longer in the catalogue',
+      'coin_load_failed': 'Could not load the coin. Check your connection and try again.',
+      'rotate_for_fullscreen': 'Rotate your phone to see the map full screen',
 
       // Tooltips
       'add_to_favorites': 'Add to favorites',

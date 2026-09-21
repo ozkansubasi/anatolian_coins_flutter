@@ -17,6 +17,8 @@ import '../../core/region_data.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../core/num_colors.dart';
+import '../../core/num_text.dart';
+import '../../core/navigation.dart';
 import '../favorites/favorites_service.dart';
 import '../offline/offline_service.dart';
 import '../../widgets/fallback_image.dart';
@@ -105,9 +107,10 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
       });
     } catch (e) {
       setState(() {
+        final l10n = AppLocalizations.of(context);
         _error = e.toString().contains('404')
-            ? 'Coin not found in database'
-            : 'Loading error';
+            ? l10n.translate('coin_not_found')
+            : l10n.translate('coin_load_failed');
       });
     } finally {
       setState(() => _loading = false);
@@ -181,17 +184,17 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
               child: Icon(Icons.lock, color: c.accent, size: 20),
             ),
             12.width,
-            Text(l10n.translate('pro_feature'), style: boldTextStyle(size: 18, color: c.text)),
+            Text(l10n.translate('pro_feature'), style: context.numText.section),
           ],
         ),
         content: Text(
           l10n.translate('feature_locked_message', params: {'featureName': featureName}),
-          style: secondaryTextStyle(size: 14, color: c.textMuted),
+          style: context.numText.body.copyWith(color: c.textMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(l10n.translate('close'), style: primaryTextStyle(color: c.textMuted)),
+            child: Text(l10n.translate('close'), style: context.numText.value.copyWith(color: c.textMuted)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -228,12 +231,17 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     }
   }
 
-  String _formatDateRange(int? from, int? to) {
-    if (from == null && to == null) return '-';
-    final fromStr = from != null ? '${from.abs()} ${from < 0 ? 'BC' : 'AD'}' : '';
-    final toStr = to != null ? '${to.abs()} ${to < 0 ? 'BC' : 'AD'}' : '';
-    if (from == to) return fromStr;
-    return '$fromStr - $toStr'.trim();
+  /// "133 BC - 50 BC" yerine dile uygun: TR "MÖ 133 – MÖ 50", EN "133 BC – 50 BC".
+  String? _formatDateRange(int? from, int? to, AppLocalizations l10n, bool isEnglish) {
+    if (from == null && to == null) return null;
+    String one(int y) {
+      final era = l10n.translate(y < 0 ? 'bc' : 'ad');
+      return isEnglish ? '${y.abs()} $era' : '$era ${y.abs()}';
+    }
+
+    if (from == null) return one(to!);
+    if (to == null || from == to) return one(from);
+    return '${one(from)} – ${one(to)}';
   }
 
   @override
@@ -266,9 +274,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     final v = _variant!;
 
     return Scaffold(
-      body: DefaultTabController(
-        length: 3,
-        child: NestedScrollView(
+      body: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             return [
               SliverAppBar(
@@ -277,55 +283,100 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                 pinned: true,
                 backgroundColor: numPrimary,
                 iconTheme: const IconThemeData(color: Colors.white),
+                // Fotoğraf görünürken (açık fonlu müze fotoğrafı) durum çubuğu
+                // simgeleri koyu; başlık altın çubuğa dönüşünce açık.
+                systemOverlayStyle: innerBoxIsScrolled
+                    ? SystemUiOverlayStyle.light
+                    : SystemUiOverlayStyle.dark,
+                // Beyaz ikonlar açık fotoğrafta görünmüyordu: yarı saydam koyu
+                // yuvarlak zemin (cihazda görüldü).
+                leading: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: IconButton(
+                    style: _overlayIconStyle,
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                    onPressed: () => context.popOrGoHome(),
+                  ),
+                ),
                 title: innerBoxIsScrolled
                     ? Text(
                         v.title,
-                        style: boldTextStyle(size: 16, color: Colors.white),
+                        style: context.numText.section.copyWith(color: Colors.white),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       )
                     : null,
                 actions: [
                   IconButton(
+                    style: _overlayIconStyle,
                     icon: Icon(
                       isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: isFavorite ? Colors.red : Colors.white,
+                      color: isFavorite ? Colors.red.shade300 : Colors.white,
                     ),
                     onPressed: _handleFavoriteToggle,
                   ),
+                  4.width,
                   // ADR-006 Faz 3: asistana bu sikke hakkında sor (soru önceden doldurulur, gönderilmez)
                   IconButton(
+                    style: _overlayIconStyle,
                     icon: const Icon(Icons.smart_toy_outlined, color: Colors.white),
                     tooltip: l10n.translate('ask_assistant'),
                     onPressed: () => context.push(
                       '/assistant?q=${Uri.encodeQueryComponent(l10n.translate('assistant_prefill', params: {'title': v.title}))}',
                     ),
                   ),
+                  4.width,
                   IconButton(
+                    style: _overlayIconStyle,
                     icon: const Icon(Icons.share, color: Colors.white),
                     onPressed: _handleShare,
                   ),
+                  8.width,
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   background: _buildImageSlider(),
                   collapseMode: CollapseMode.pin,
                 ),
               ),
+              // Sekmeler: kapsül (segmented) biçim, ikon + kısa etiket.
+              // Eskiden 14pt kalın 4 etiket sığmıyor, "Sikke Bilg…" diye
+              // kesiliyordu; etiketler kısaldı ("Künye", "Harita").
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _SliverTabBarDelegate(
-                  TabBar(
-                    controller: _tabController,
-                    labelColor: c.accent,
-                    unselectedLabelColor: c.textMuted,
-                    indicatorColor: c.accent,
-                    labelStyle: boldTextStyle(size: 14, color: c.text),
-                    tabs: [
-                      Tab(text: l10n.translate('coin_info')),
-                      Tab(text: l10n.translate('images')),
-                      Tab(text: l10n.translate('ancient_map')),
-                      Tab(text: l10n.translate('source')),
-                    ],
+                  background: Theme.of(context).scaffoldBackgroundColor,
+                  tabBar: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: c.border),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      dividerColor: Colors.transparent,
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      indicator: BoxDecoration(
+                        color: c.card,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(color: c.shadow, blurRadius: 6, offset: const Offset(0, 1)),
+                        ],
+                      ),
+                      labelColor: c.accent,
+                      unselectedLabelColor: c.textMuted,
+                      labelStyle: context.numText.tab,
+                      unselectedLabelStyle: context.numText.tab.copyWith(fontWeight: FontWeight.w500),
+                      labelPadding: EdgeInsets.zero,
+                      splashBorderRadius: BorderRadius.circular(10),
+                      tabs: [
+                        _tab(Icons.badge_outlined, l10n.translate('tab_details')),
+                        _tab(Icons.photo_library_outlined, l10n.translate('images')),
+                        _tab(Icons.map_outlined, l10n.translate('tab_map')),
+                        _tab(Icons.menu_book_outlined, l10n.translate('source')),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -340,7 +391,6 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
               _buildSourceTab(v, l10n),
             ],
           ),
-        ),
       ),
     );
   }
@@ -409,130 +459,135 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     final isEnglish = currentLocale.languageCode == 'en';
     final obverseText = isEnglish ? (v.obverseDesc ?? v.obverseDescTr) : (v.obverseDescTr ?? v.obverseDesc);
     final reverseText = isEnglish ? (v.reverseDesc ?? v.reverseDescTr) : (v.reverseDescTr ?? v.reverseDesc);
+    final hasObverse = obverseText != null && obverseText.isNotEmpty;
+    final hasReverse = reverseText != null && reverseText.isNotEmpty;
+    final t = context.numText;
     final c = context.numColors;
-    // Ön/arka yüz etiketleri durum rengi değil: koyu temada açık tonlar (okunurluk).
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final obverseColor = isDark ? Colors.blue.shade200 : Colors.blue;
-    final reverseColor = isDark ? Colors.red.shade200 : Colors.red;
+
+    final period = _formatDateRange(v.dateFrom, v.dateTo, l10n, isEnglish);
+    final material = _materialLabel(v.material, l10n);
+    final region = v.regionCode != null && v.regionCode!.isNotEmpty
+        ? RegionData.getRegionName(v.regionCode)
+        : null;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          Text(
-            v.title,
-            style: boldTextStyle(size: 20, color: c.text),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
+          // Başlık + özet çipleri (dönem · materyal · bölge)
+          Text(v.title, style: t.pageTitle, maxLines: 3, overflow: TextOverflow.ellipsis),
           16.height,
 
-          // Basic Info Card
+          // Künye: tekrarlar çıkarıldı (başlıkla aynı "Sikke Adı" satırı ve sekme
+          // adıyla aynı kart başlığı). Koordinat Harita sekmesinde.
           _buildInfoCard(
-            title: l10n.translate('coin_info'),
-            icon: Icons.info_outline,
             children: [
-              _buildInfoRow(l10n.translate('coin_name'), v.title ?? '-'),
               if (v.authorityName != null && v.authorityName!.isNotEmpty)
                 _buildInfoRow(l10n.translate('authority_label'), v.authorityName!),
               if (v.mintName != null && v.mintName!.isNotEmpty)
-                _buildInfoRow(l10n.translate('mint_label'), v.mintName!),
-              if (v.coordinates != null && v.coordinates!.isNotEmpty)
-                _buildInfoRow(l10n.translate('mint_coordinates'), v.coordinates!),
-              _buildInfoRow(l10n.translate('material_label'), v.material ?? '-'),
-              _buildInfoRow(l10n.translate('period'), _formatDateRange(v.dateFrom, v.dateTo)),
+                _buildInfoRow(l10n.translate('mint_label'), _titleCase(v.mintName!)),
+              if (region != null && region != '-')
+                _buildInfoRow(l10n.translate('region_label'), region),
+              _buildInfoRow(
+                l10n.translate('material_label'),
+                material ?? '-',
+                dotColor: material == null ? null : _materialColor(v.material),
+              ),
+              _buildInfoRow(l10n.translate('period'), period ?? '-', last: true),
             ],
           ),
 
-          // Obverse & Reverse Combined
-          if ((obverseText != null && obverseText.isNotEmpty) ||
-              (reverseText != null && reverseText.isNotEmpty)) ...[
+          // Yüz Tanımları
+          if (hasObverse || hasReverse) ...[
             16.height,
             _buildInfoCard(
               title: l10n.translate('obverse_reverse'),
-              icon: Icons.monetization_on,
-              iconColor: c.accent,
+              icon: Icons.flip_outlined,
               children: [
-                if (obverseText != null && obverseText.isNotEmpty) ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.only(top: 6, right: 8),
-                        decoration: BoxDecoration(
-                          color: obverseColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.translate('obverse'),
-                              style: boldTextStyle(size: 14, color: obverseColor),
-                            ),
-                            4.height,
-                            Text(
-                              obverseText,
-                              style: secondaryTextStyle(size: 14, height: 1.5, color: c.textMuted),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                if (hasObverse) _faceBlock(l10n.translate('obverse'), obverseText),
+                if (hasObverse && hasReverse)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: Divider(color: c.divider, height: 1),
                   ),
-                ],
-                if ((obverseText != null && obverseText.isNotEmpty) &&
-                    (reverseText != null && reverseText.isNotEmpty)) ...[
-                  16.height,
-                  Divider(color: c.divider, height: 1),
-                  16.height,
-                ],
-                if (reverseText != null && reverseText.isNotEmpty) ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.only(top: 6, right: 8),
-                        decoration: BoxDecoration(
-                          color: reverseColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.translate('reverse'),
-                              style: boldTextStyle(size: 14, color: reverseColor),
-                            ),
-                            4.height,
-                            Text(
-                              reverseText,
-                              style: secondaryTextStyle(size: 14, height: 1.5, color: c.textMuted),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                if (hasReverse) _faceBlock(l10n.translate('reverse'), reverseText),
               ],
             ),
           ],
 
-          80.height, // Bottom padding
+          80.height, // alt çubuk payı
         ],
       ),
     );
+  }
+
+  /// Ön/Arka yüz bloğu: küçük altın etiket + okunur gövde metni.
+  Widget _faceBlock(String label, String text) {
+    final t = context.numText;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: t.tag),
+        6.height,
+        Text(text, style: t.body),
+      ],
+    );
+  }
+
+  /// Fotoğraf üstündeki AppBar ikonları için yarı saydam koyu yuvarlak zemin.
+  ButtonStyle get _overlayIconStyle => IconButton.styleFrom(
+        backgroundColor: Colors.black.withValues(alpha: 0.32),
+        minimumSize: const Size(40, 40),
+        padding: const EdgeInsets.all(8),
+        shape: const CircleBorder(),
+      );
+
+  Widget _tab(IconData icon, String label) {
+    return Tab(
+      height: 38,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 16),
+          4.width,
+          Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+        ],
+      ),
+    );
+  }
+
+  /// Veri tabanında darphane adları küçük harf gelebiliyor ("aezanis").
+  String _titleCase(String s) => s
+      .split(' ')
+      .map((w) => w.isEmpty ? w : w[0].toUpperCase() + w.substring(1))
+      .join(' ');
+
+  /// "bronze" → "Bronz" (TR) / "Bronze" (EN); bilinmeyen değer baş harfi büyük.
+  String? _materialLabel(String? raw, AppLocalizations l10n) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    final key = 'material_${raw.trim().toLowerCase()}';
+    final tr = l10n.translate(key);
+    return tr == key ? _titleCase(raw.trim()) : tr;
+  }
+
+  Color _materialColor(String? raw) {
+    switch (raw?.trim().toLowerCase()) {
+      case 'gold':
+      case 'au':
+        return numMaterialGold;
+      case 'silver':
+      case 'ar':
+        return numMaterialSilver;
+      case 'electrum':
+      case 'el':
+        return const Color(0xFFE5E4E2);
+      case 'lead':
+      case 'pb':
+        return const Color(0xFF3B3B3B);
+      default:
+        return numMaterialBronze;
+    }
   }
 
   Widget _buildAncientMapTab(Variant v, AppLocalizations l10n) {
@@ -544,35 +599,44 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
           children: [
             Icon(Icons.map_outlined, size: 64, color: c.textMuted.withValues(alpha: 0.5)),
             16.height,
-            Text(l10n.translate('coordinates'), style: secondaryTextStyle(size: 14, color: c.textMuted)),
+            Text(l10n.translate('coordinates'), style: context.numText.label),
             8.height,
-            Text('-', style: boldTextStyle(size: 16, color: c.text)),
+            Text('-', style: context.numText.section),
           ],
         ),
       );
     }
 
-    return Column(
+    // Kaydırılabilir + sabit yükseklikli önizleme: eskiden önizleme Expanded
+    // ile kalan alana bırakılmıştı ve 380 px fotoğraf başlığının altında ince
+    // bir şeride sıkışıyordu (cihazda görüldü).
+    return ListView(
+      padding: const EdgeInsets.only(top: 8, bottom: 80),
       children: [
         // Yatay mod için bilgi mesajı
         Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
           padding: const EdgeInsets.all(12),
-          color: numPrimary.withValues(alpha: 0.1),
+          decoration: BoxDecoration(
+            color: c.accent.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Row(
             children: [
               Icon(Icons.screen_rotation, size: 20, color: c.accent),
               12.width,
               Expanded(
                 child: Text(
-                  'Haritayı tam ekran görmek için telefonunuzu yatay çevirin',
-                  style: secondaryTextStyle(size: 12, color: c.accent),
+                  l10n.translate('rotate_for_fullscreen'),
+                  style: context.numText.caption.copyWith(color: c.accent),
                 ),
               ),
             ],
           ),
         ),
         // Harita preview alanı
-        Expanded(
+        SizedBox(
+          height: 260,
           child: GestureDetector(
             onTap: () => _openFullScreenMap(v.coordinates!),
             child: Container(
@@ -627,7 +691,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                             16.height,
                             Text(
                               l10n.translate('show_on_map'),
-                              style: boldTextStyle(size: 18, color: Colors.white),
+                              style: context.numText.section.copyWith(color: Colors.white),
                             ),
                             8.height,
                             Container(
@@ -638,13 +702,13 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                               ),
                               child: Text(
                                 v.coordinates!,
-                                style: secondaryTextStyle(size: 12, color: Colors.white70),
+                                style: context.numText.caption.copyWith(color: Colors.white70),
                               ),
                             ),
                             24.height,
                             Text(
                               l10n.translate('tap_for_fullscreen'),
-                              style: secondaryTextStyle(size: 12, color: Colors.white60),
+                              style: context.numText.caption.copyWith(color: Colors.white70),
                             ),
                           ],
                         ),
@@ -668,8 +732,9 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                   onPressed: () => _openFullScreenMap(v.coordinates!),
                   icon: const Icon(Icons.map),
                   label: Text(l10n.translate('ancient_map')),
+                  // Marka rengi (eskiden paletin dışında Colors.brown'du).
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.brown,
+                    backgroundColor: numPrimary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
@@ -686,7 +751,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                     label: Text(l10n.translate('show_on_modern_map')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: c.accent,
-                      side: const BorderSide(color: numPrimary),
+                      side: BorderSide(color: c.accent),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
@@ -734,7 +799,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
           children: [
             Icon(Icons.image_not_supported, size: 64, color: c.textMuted.withValues(alpha: 0.5)),
             16.height,
-            Text(l10n.translate('no_images_found'), style: secondaryTextStyle(size: 14, color: c.textMuted)),
+            Text(l10n.translate('no_images_found'), style: context.numText.caption),
           ],
         ),
       );
@@ -797,13 +862,13 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                             if (img.weight != null && img.weight!.isNotEmpty)
                               Text(
                                 '${img.weight}g',
-                                style: boldTextStyle(size: 10, color: Colors.white),
+                                style: context.numText.tag.copyWith(color: Colors.white),
                               ),
                             if (img.weight != null && img.diameter != null) 8.width,
                             if (img.diameter != null && img.diameter!.isNotEmpty)
                               Text(
                                 '${img.diameter}mm',
-                                style: boldTextStyle(size: 10, color: Colors.white),
+                                style: context.numText.tag.copyWith(color: Colors.white),
                               ),
                           ],
                         ),
@@ -846,7 +911,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                   Expanded(
                     child: Text(
                       coinNo ?? '-',
-                      style: boldTextStyle(size: 18, color: c.accent),
+                      style: context.numText.pageTitle.copyWith(color: c.accent),
                     ),
                   ),
                 ],
@@ -860,7 +925,8 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                   label: Text(l10n.translate('view_on_website')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: c.accent,
-                    side: const BorderSide(color: numPrimary),
+                    side: BorderSide(color: c.accent),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
               ),
@@ -872,10 +938,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
               title: l10n.translate('source'),
               icon: Icons.book,
               children: [
-                Text(
-                  v.sourceCitation!,
-                  style: secondaryTextStyle(size: 14, height: 1.5, color: c.textMuted),
-                ),
+                Text(v.sourceCitation!, style: context.numText.body),
               ],
             ),
           ],
@@ -885,10 +948,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
               title: l10n.translate('findspot'),
               icon: Icons.place,
               children: [
-                Text(
-                  v.findspotName!,
-                  style: secondaryTextStyle(size: 14, color: c.textMuted),
-                ),
+                Text(v.findspotName!, style: context.numText.value),
               ],
             ),
           ],
@@ -909,59 +969,79 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     }
   }
 
+  /// Bilgi kartı: ince kenarlık, ağır gölge yok. Başlık isteğe bağlı —
+  /// Künye kartında sekme adıyla aynı başlık tekrar edilmez.
   Widget _buildInfoCard({
-    required String title,
-    required IconData icon,
-    Color? iconColor,
+    String? title,
+    IconData? icon,
     required List<Widget> children,
   }) {
     final c = context.numColors;
+    final t = context.numText;
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 20, color: iconColor ?? c.accent),
-              8.width,
-              Text(title, style: boldTextStyle(size: 16, color: c.text)),
-            ],
-          ),
-          12.height,
-          Divider(color: c.divider, height: 1),
-          12.height,
+          if (title != null) ...[
+            Row(
+              children: [
+                if (icon != null) ...[
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: c.accent.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, size: 18, color: c.accent),
+                  ),
+                  10.width,
+                ],
+                Expanded(child: Text(title, style: t.section)),
+              ],
+            ),
+            14.height,
+          ],
           ...children,
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  /// Etiket / değer satırı; satırlar arasında ince ayraç.
+  Widget _buildInfoRow(String label, String value, {bool last = false, Color? dotColor}) {
     final c = context.numColors;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    final t = context.numText;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: last ? null : Border(bottom: BorderSide(color: c.divider)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(label, style: secondaryTextStyle(size: 14, color: c.textMuted)),
-          ),
-          Expanded(
-            child: Text(value, style: primaryTextStyle(size: 14, color: c.text)),
-          ),
+          SizedBox(width: 96, child: Text(label, style: t.label)),
+          12.width,
+          if (dotColor != null) ...[
+            Container(
+              width: 10,
+              height: 10,
+              margin: const EdgeInsets.only(top: 4, right: 8),
+              decoration: BoxDecoration(
+                color: dotColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: c.border),
+              ),
+            ),
+          ],
+          Expanded(child: Text(value, style: t.value)),
         ],
       ),
     );
@@ -969,47 +1049,55 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
 
   Widget _buildErrorWidget() {
     final l10n = AppLocalizations.of(context);
+    final t = context.numText;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-          16.height,
-          Text(_error!, style: boldTextStyle(size: 16, color: Colors.red)),
-          16.height,
-          ElevatedButton.icon(
-            onPressed: () => GoRouter.of(context).pop(),
-            icon: const Icon(Icons.arrow_back),
-            label: Text(l10n.translate('go_back')),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: numPrimary,
-              foregroundColor: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off_rounded, size: 56, color: context.numColors.hint),
+            16.height,
+            Text(_error!, style: t.section, textAlign: TextAlign.center),
+            20.height,
+            FilledButton.icon(
+              onPressed: () => context.popOrGoHome(),
+              icon: const Icon(Icons.arrow_back),
+              label: Text(l10n.translate('go_back')),
+              style: FilledButton.styleFrom(backgroundColor: numPrimary),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
-  final TabBar tabBar;
-  _SliverTabBarDelegate(this.tabBar);
+  final Widget tabBar;
+  final Color background;
+  _SliverTabBarDelegate({required this.tabBar, required this.background});
+
+  // 12 üst + 46 kapsül + 8 alt
+  static const double _height = 66;
 
   @override
-  double get minExtent => tabBar.preferredSize.height;
+  double get minExtent => _height;
 
   @override
-  double get maxExtent => tabBar.preferredSize.height;
+  double get maxExtent => _height;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: context.numColors.card,
+      color: background,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: tabBar,
     );
   }
 
+  // Tema değişince (renkler) yeniden çizilsin.
   @override
-  bool shouldRebuild(covariant _SliverTabBarDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant _SliverTabBarDelegate oldDelegate) =>
+      oldDelegate.background != background || oldDelegate.tabBar != tabBar;
 }

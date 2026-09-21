@@ -160,6 +160,43 @@ void main() {
     expect(handled, isTrue);
   });
 
+  testWidgets('openRoute: Menü sayfası Ana Sayfa dalına yapışmaz', (tester) async {
+    final router = await _pumpApp(tester);
+    final ctx = tester.element(find.text('home:0'));
+
+    // Ana Sayfa'dan Menü'ye ait bir ekran: kendi dalında (go) açılmalı.
+    ctx.openRoute('/account');
+    await tester.pumpAndSettle();
+    expect(find.text('account:0'), findsOneWidget);
+    expect(_isSelected(tester, 'Menu'), isTrue);
+
+    // Keşfet → Ana Sayfa: Ana Sayfa gelmeli, hesap sayfası DEĞİL (cihazda böyleydi).
+    await tester.tap(find.text('Browse'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    expect(find.text('home:0'), findsOneWidget);
+    expect(router.state.uri.path, '/');
+
+    // Sikke detayı her sekmeye ait: bulunulan sekmenin üstüne biner (push).
+    tester.element(find.text('home:0')).openRoute('/variant/3');
+    await tester.pumpAndSettle();
+    expect(find.text('variant:0'), findsOneWidget);
+    expect(_isSelected(tester, 'Home'), isTrue);
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.text('home:0'), findsOneWidget);
+  });
+
+  testWidgets('bulunulan sekmeye tekrar basmak köke döner', (tester) async {
+    final router = await _pumpApp(tester);
+    router.push('/variant/9');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    expect(find.text('home:0'), findsOneWidget);
+  });
+
   testWidgets('klavye açıkken alt çubuk gizlenir', (tester) async {
     await _pumpApp(tester);
     expect(find.text('Browse'), findsOneWidget);
