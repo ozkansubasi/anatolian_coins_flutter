@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../prokit_ui/numistr_colors.dart';
+import 'num_colors.dart';
 
 /// NumisTR App Theme System
 /// Professional Material 3 design with custom color scheme
@@ -37,6 +38,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       brightness: Brightness.light,
+      extensions: const [NumColors.light],
 
       // Typography
       textTheme: _buildTextTheme(colorScheme),
@@ -513,6 +515,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       brightness: Brightness.dark,
+      extensions: const [NumColors.dark],
 
       // Typography
       textTheme: _buildTextTheme(colorScheme),
