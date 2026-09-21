@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../core/coin_format.dart';
@@ -11,15 +10,8 @@ import '../../core/num_colors.dart';
 import '../../core/num_text.dart';
 import 'recognition_service.dart';
 import '../history/scan_history_service.dart';
-import '../variants/variants_api.dart';
+import '../../widgets/coin_list.dart';
 import '../settings/settings_provider.dart';
-
-/// Eşleşme küçük görseli. AYRI PROVIDER: eskiden FutureBuilder'ın future'ı
-/// build() içinde kuruluyordu → her yeniden çizimde görsel yeniden isteniyordu
-/// (20 Eylül'de "Editör'den" bloğunda düzeltilen hatanın aynısı).
-final _matchThumbProvider = FutureProvider.autoDispose.family<String?, int>(
-  (ref, articleId) => ref.read(variantsApiProvider).getFirstImageUrl(articleId, wm: true),
-);
 
 /// Tanıma sonuçları (2026-09-21 yeniden tasarım, sikke detayıyla aynı dil).
 ///
@@ -452,38 +444,6 @@ class _ScannedCoinStrip extends StatelessWidget {
   }
 }
 
-/// Eşleşme görseli: beyaz fotoğraf plakası (müze fotoğrafları beyaz fonlu).
-class _MatchImage extends ConsumerWidget {
-  final int articleId;
-  final double size;
-  const _MatchImage({required this.articleId, required this.size});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.numColors;
-    final url = ref.watch(_matchThumbProvider(articleId)).valueOrNull;
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.border),
-      ),
-      clipBehavior: Clip.antiAlias,
-      padding: const EdgeInsets.all(4),
-      child: url == null
-          ? Icon(Icons.monetization_on_outlined, color: numTextHint, size: size * 0.4)
-          : CachedNetworkImage(
-              imageUrl: url,
-              fit: BoxFit.contain,
-              errorWidget: (_, __, ___) =>
-                  Icon(Icons.image_not_supported_outlined, color: numTextHint, size: size * 0.4),
-            ),
-    );
-  }
-}
-
 /// Konum satırı: "Pamfilya · Aspendos · MÖ 400 – MÖ 350".
 String _metaLine(CoinMatch m, AppLocalizations l10n) {
   final parts = <String>[
@@ -581,7 +541,7 @@ class _TopMatchCard extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _MatchImage(articleId: match.articleId, size: 104),
+                  CoinThumb(articleId: match.articleId, size: 104),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -642,7 +602,7 @@ class _CandidateRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            _MatchImage(articleId: match.articleId, size: 56),
+            CoinThumb(articleId: match.articleId, size: 56),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

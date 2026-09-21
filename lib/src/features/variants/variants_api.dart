@@ -116,6 +116,23 @@ class VariantsApi {
       return null;
     }
   }
+
+  /// Bölgedeki darphaneler ve sikke sayıları (yalnız sikkesi olanlar).
+  /// `facet_limit` verilmezse sunucu 15'te keser (Karya'da 32 darphane var).
+  Future<Map<String, int>> mintCounts(String region) async {
+    final res = await _client.dio.get('/variants/facets', queryParameters: {
+      'filter[region]': region,
+      'facet_limit': 100,
+    });
+    final data = res.data;
+    final facets = data is Map ? (data['facets'] ?? (data['data'] as Map?)?['facets']) : null;
+    final list = facets is Map ? facets['mint'] : null;
+    if (list is! List) return const {};
+    return {
+      for (final m in list)
+        if (m is Map && m['name'] is String) m['name'] as String: (m['count'] as num?)?.toInt() ?? 0,
+    };
+  }
 }
 
 final variantsApiProvider = Provider<VariantsApi>((ref) => VariantsApi(ref));

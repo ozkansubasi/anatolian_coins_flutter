@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart';
 import '../../core/region_data.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../core/num_colors.dart';
+import '../../core/num_text.dart';
 import '../../l10n/app_localizations.dart';
+import '../variants/variants_api.dart';
+
+/// Açılan bölgenin canlı darphane sayıları (bölge başına bir istek, önbellekli).
+final _mintCountsProvider = FutureProvider.family<Map<String, int>, String>(
+  (ref, region) => ref.read(variantsApiProvider).mintCounts(region),
+);
 
 /// Tüm darphaneleri bölgelere göre gruplandırarak listeleyen sayfa
 class MintsListPage extends StatefulWidget {
@@ -43,6 +51,16 @@ class _MintsListPageState extends State<MintsListPage> {
     if (_searchQuery.isEmpty) return mints;
     return mints.where((mint) =>
         _formatMintName(mint).toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+  }
+
+  /// Bölge ekini kırpar: "antiocheia_pisidia" → "Antiocheia" (başlık zaten
+  /// bölge adını gösteriyor). Kırpınca boş kalırsa tam ad kullanılır.
+  String _displayMintName(String mintCode, String regionCode) {
+    final suffix = '_${regionCode.replaceAll('-coins', '')}';
+    final base = mintCode.endsWith(suffix) && mintCode.length > suffix.length
+        ? mintCode.substring(0, mintCode.length - suffix.length)
+        : mintCode;
+    return _formatMintName(base);
   }
 
   String _formatMintName(String mintCode) {
@@ -126,12 +144,16 @@ class _MintsListPageState extends State<MintsListPage> {
                     });
                   },
                   mints: mints,
+                  searching: _searchQuery.isNotEmpty,
                   onMintTap: (mint) {
                     // Hem bölge hem mint filtresi ile git (daha hızlı sorgu)
                     // Mint adı veritabanındaki gerçek isim (nomisma.org formatında)
-                    context.go('/browse?region=${region.key}&mint=$mint');
+                    // push: geri tuşu darphane listesine dönsün (go yığını siliyordu).
+                    // Odak bırakılır: yoksa dönüşte arama kutusu klavyeyi yeniden açıyordu.
+                    FocusScope.of(context).unfocus();
+                    context.push('/browse?region=${region.key}&mint=$mint');
                   },
-                  formatMintName: _formatMintName,
+                  formatMintName: (m) => _displayMintName(m, region.key),
                 );
               },
             ),
@@ -149,6 +171,7 @@ class _RegionExpansionTile extends StatelessWidget {
   final bool isExpanded;
   final VoidCallback onTap;
   final List<String> mints;
+  final bool searching;
   final void Function(String) onMintTap;
   final String Function(String) formatMintName;
 
@@ -159,6 +182,7 @@ class _RegionExpansionTile extends StatelessWidget {
     required this.isExpanded,
     required this.onTap,
     required this.mints,
+    required this.searching,
     required this.onMintTap,
     required this.formatMintName,
   });
@@ -191,7 +215,8 @@ class _RegionExpansionTile extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: getRegionColor(regionCode.replaceAll('-coins', '')).withValues(alpha: 0.1),
+                      // getRegionColor('-coins' eki kırpılınca hiç eşleşmiyordu → hep numPrimary).
+                      color: c.accent.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: ClipOval(
@@ -200,7 +225,7 @@ class _RegionExpansionTile extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Icon(
                           Icons.location_on,
-                          color: getRegionColor(regionCode.replaceAll('-coins', '')),
+                          color: c.accent,
                           size: 24,
                         ),
                       ),
@@ -211,14 +236,12 @@ class _RegionExpansionTile extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          regionName,
-                          style: boldTextStyle(size: 16, color: c.text),
-                        ),
+                        Text(regionName, style: context.numText.section),
                         4.height,
                         Text(
-                          '$mintCount darphane',
-                          style: secondaryTextStyle(size: 12, color: c.textMuted),
+                          AppLocalizations.of(context)
+                              .translate('mint_count', params: {'n': '$mintCount'}),
+                          style: context.numText.caption,
                         ),
                       ],
                     ),
@@ -239,17 +262,33 @@ class _RegionExpansionTile extends StatelessWidget {
         // Mints list (expandable)
         AnimatedCrossFade(
           firstChild: const SizedBox.shrink(),
-          secondChild: Container(
-            color: c.surface,
-            child: Column(
-              children: mints.map((mint) => _MintListItem(
-                mintCode: mint,
-                mintName: formatMintName(mint),
-                onTap: () => onMintTap(mint),
-                regionColor: getRegionColor(regionCode.replaceAll('-coins', '')),
-              )).toList(),
-            ),
-          ),
+          // Açıkken canlı sayılar: sayıya göre sıralı, gömülü listede henüz
+          // olmayan yeni darphaneler de eklenir (aramada yalnız eşleşenler).
+          secondChild: !isExpanded
+              ? const SizedBox.shrink()
+              : Consumer(builder: (context, ref, _) {
+                  final counts = ref.watch(_mintCountsProvider(regionCode)).valueOrNull;
+                  final names = <String>{
+                    ...mints,
+                    if (counts != null && !searching) ...counts.keys,
+                  }.toList();
+                  if (counts != null) {
+                    names.sort((a, b) => (counts[b] ?? 0).compareTo(counts[a] ?? 0));
+                  }
+                  return Container(
+                    color: c.surface,
+                    child: Column(
+                      children: names
+                          .map((mint) => _MintListItem(
+                                mintCode: mint,
+                                mintName: formatMintName(mint),
+                                count: counts?[mint],
+                                onTap: () => onMintTap(mint),
+                              ))
+                          .toList(),
+                    ),
+                  );
+                }),
           crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
           duration: const Duration(milliseconds: 200),
         ),
@@ -262,14 +301,14 @@ class _RegionExpansionTile extends StatelessWidget {
 class _MintListItem extends StatelessWidget {
   final String mintCode;
   final String mintName;
+  final int? count;
   final VoidCallback onTap;
-  final Color regionColor;
 
   const _MintListItem({
     required this.mintCode,
     required this.mintName,
+    required this.count,
     required this.onTap,
-    required this.regionColor,
   });
 
   @override
@@ -280,32 +319,23 @@ class _MintListItem extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            children: [
-              48.width, // Indent for alignment with region icon
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: regionColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              12.width,
-              Expanded(
-                child: Text(
-                  mintName,
-                  style: primaryTextStyle(size: 14, color: c.text),
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 14,
-                color: c.hint,
-              ),
-            ],
+        // ≥ 48 dp dokunma hedefi (eskiden ~40 dp); ad, bölge adıyla hizalı
+        // (16 + 40 ikon + 12). Süs noktası kaldırıldı.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(68, 8, 12, 8),
+            child: Row(
+              children: [
+                Expanded(child: Text(mintName, style: context.numText.value)),
+                if (count != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Text('$count', style: context.numText.caption),
+                  ),
+                Icon(Icons.chevron_right, color: c.hint),
+              ],
+            ),
           ),
         ),
       ),

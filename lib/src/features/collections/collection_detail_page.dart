@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/variant.dart';
-import '../../core/region_data.dart';
 import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../widgets/coin_list.dart';
 import '../variants/variants_api.dart';
 import 'collections_service.dart';
 
-/// Collection Detail Page - View and manage coins in a collection
+/// Koleksiyon detayı: koleksiyondaki sikkeler (2026-09-21 yeniden: ortak
+/// CoinRow dili, l10n, paralel yükleme, görünür "çıkar" düğmesi).
 class CollectionDetailPage extends ConsumerStatefulWidget {
   final int collectionId;
 
@@ -25,129 +25,88 @@ class CollectionDetailPage extends ConsumerStatefulWidget {
 class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
   bool _loading = true;
   List<Variant> _variants = [];
-  final Map<int, String?> _thumbnailCache = {};
   String _collectionName = '';
 
   @override
   void initState() {
     super.initState();
-    _loadCollection();
+    // İlk kareden sonra: _loadCollection AppLocalizations.of(context) kullanıyor
+    // (initState içinde inherited widget okumak hata fırlatır).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadCollection());
+  }
+
+  void _snack(String text, {SnackBarAction? action}) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text), action: action));
   }
 
   Future<void> _loadCollection() async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _loading = true);
 
     try {
       final service = ref.read(collectionsServiceProvider);
-      final api = ref.read(variantsApiProvider);
-
-      // Get collection details
       final collection = await service.getCollection(widget.collectionId);
       if (collection == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Koleksiyon bulunamadı')),
-          );
-          context.go('/');
+          _snack(l10n.translate('collection_not_found'));
+          context.go('/collections');
         }
         return;
       }
-
       _collectionName = collection.name;
 
-      // Get variant IDs in collection
-      final variantIds = await service.getCollectionItems(widget.collectionId);
-
-      // Fetch variant details
-      final variants = <Variant>[];
-      for (final id in variantIds) {
-        try {
-          final variant = await api.getVariant(id);
-          variants.add(variant);
-        } catch (e) {
-          debugPrint('Failed to load variant $id: $e');
-        }
-      }
+      final ids = await service.getCollectionItems(widget.collectionId);
+      final variants = await loadVariantsInOrder(ref.read(variantsApiProvider), ids);
 
       if (mounted) {
         setState(() {
           _variants = variants;
           _loading = false;
         });
-
-        // Load thumbnails
-        _loadThumbnails(variants);
       }
     } catch (e) {
+      debugPrint('Collection load error: $e');
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Yükleme hatası: $e')),
-        );
+        _snack(l10n.translate('error_generic'));
       }
     }
   }
 
-  Future<void> _loadThumbnails(List<Variant> variants) async {
-    final api = ref.read(variantsApiProvider);
-
-    for (final variant in variants) {
-      if (_thumbnailCache.containsKey(variant.articleId)) continue;
-
-      try {
-        final url = await api.getFirstImageUrl(variant.articleId, wm: true);
-        if (mounted) {
-          setState(() {
-            _thumbnailCache[variant.articleId] = url;
-          });
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _thumbnailCache[variant.articleId] = null;
-          });
-        }
-      }
-    }
-  }
-
-  Future<void> _removeFromCollection(int variantId, String variantTitle) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Koleksiyondan Çıkar?'),
-        content: Text('$variantTitle koleksiyondan çıkarılacak.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('İptal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Çıkar'),
-          ),
-        ],
-      ),
+  Future<bool> _confirmRemove(Variant v) {
+    final l10n = AppLocalizations.of(context);
+    return confirmDestructive(
+      context,
+      title: l10n.translate('remove_from_collection_title'),
+      message: l10n.translate('remove_from_collection_body', params: {'title': v.title}),
+      confirmLabel: l10n.translate('remove'),
     );
+  }
 
-    if (confirm == true) {
-      try {
-        final service = ref.read(collectionsServiceProvider);
-        await service.removeFromCollection(widget.collectionId, variantId);
-        await _loadCollection();
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Koleksiyondan çıkarıldı')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Hata: $e')),
-          );
-        }
+  /// Çıkarır ve "Geri Al" sunar. Liste yerelde güncellenir (tam yeniden yükleme yok).
+  Future<void> _remove(Variant v) async {
+    final l10n = AppLocalizations.of(context);
+    final service = ref.read(collectionsServiceProvider);
+    final index = _variants.indexOf(v);
+    setState(() => _variants.remove(v));
+    try {
+      await service.removeFromCollection(widget.collectionId, v.articleId);
+      if (!mounted) return;
+      _snack(
+        l10n.translate('removed_from_collection'),
+        action: SnackBarAction(
+          label: l10n.translate('undo'),
+          onPressed: () async {
+            await service.addToCollection(widget.collectionId, v.articleId);
+            if (mounted) setState(() => _variants.insert(index.clamp(0, _variants.length), v));
+          },
+        ),
+      );
+    } catch (e) {
+      debugPrint('Remove from collection error: $e');
+      if (mounted) {
+        setState(() => _variants.insert(index.clamp(0, _variants.length), v));
+        _snack(l10n.translate('error_generic'));
       }
     }
   }
@@ -155,214 +114,68 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
     final c = context.numColors;
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            const Icon(Icons.folder_rounded, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                _collectionName,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
+        title: Text(_collectionName, overflow: TextOverflow.ellipsis),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: c.accent))
           : _variants.isEmpty
-              ? _buildEmptyState(l10n, theme)
+              ? EmptyStateView(
+                  icon: Icons.collections_bookmark_outlined,
+                  title: l10n.translate('collection_empty'),
+                  message: l10n.translate('collection_empty_hint'),
+                  actionLabel: l10n.translate('browse_coins'),
+                  actionIcon: Icons.search,
+                  onAction: () => context.go('/browse'),
+                )
               : RefreshIndicator(
+                  color: c.accent,
                   onRefresh: _loadCollection,
-                  child: ListView.separated(
-                    itemCount: _variants.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final variant = _variants[index];
-                      final thumbnailUrl = _thumbnailCache[variant.articleId];
-
-                      return Dismissible(
-                        key: Key('variant_${variant.articleId}'),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          color: Colors.red,
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 16),
-                          child: const Icon(
-                            Icons.delete,
-                            color: Colors.white,
-                          ),
-                        ),
-                        confirmDismiss: (direction) async {
-                          return await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Koleksiyondan Çıkar?'),
-                              content: Text('${variant.title} koleksiyondan çıkarılacak.'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, false),
-                                  child: const Text('İptal'),
-                                ),
-                                FilledButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                                  child: const Text('Çıkar'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        onDismissed: (direction) async {
-                          try {
-                            final service = ref.read(collectionsServiceProvider);
-                            await service.removeFromCollection(widget.collectionId, variant.articleId);
-
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text('Koleksiyondan çıkarıldı'),
-                                  action: SnackBarAction(
-                                    label: 'Geri Al',
-                                    onPressed: () async {
-                                      await service.addToCollection(widget.collectionId, variant.articleId);
-                                      await _loadCollection();
-                                    },
-                                  ),
-                                ),
-                              );
-                            }
-                          } catch (e) {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Hata: $e')),
-                              );
-                            }
-                          }
-                        },
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          leading: SizedBox(
-                            width: 56,
-                            height: 56,
-                            child: thumbnailUrl == null
-                                ? Container(
-                                    decoration: BoxDecoration(
-                                      color: c.surface,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      Icons.image,
-                                      color: c.textMuted,
-                                      size: 24,
-                                    ),
-                                  )
-                                : ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: CachedNetworkImage(
-                                      imageUrl: thumbnailUrl,
-                                      fit: BoxFit.cover,
-                                      placeholder: (context, url) => Container(
-                                        color: c.surface,
-                                        child: const Center(
-                                          child: SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      errorWidget: (context, url, error) =>
-                                          Container(
-                                        color: c.surface,
-                                        child: Icon(
-                                          Icons.broken_image,
-                                          color: c.textMuted,
-                                          size: 24,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                          title: Text(
-                            variant.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          subtitle: Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              '${RegionData.getRegionName(variant.regionCode)} • ${variant.material ?? '-'}',
-                              style: TextStyle(
-                                color: c.textMuted,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w300,
-                              ),
-                            ),
-                          ),
-                          trailing: const Icon(
-                            Icons.chevron_right,
-                            size: 20,
-                          ),
-                          onTap: () => context.push('/variant/${variant.articleId}'),
-                        ),
-                      );
-                    },
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                    children: [
+                      CoinRowCard(
+                        children: [
+                          for (var i = 0; i < _variants.length; i++)
+                            _dismissible(_variants[i], last: i == _variants.length - 1, l10n: l10n),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
     );
   }
 
-  Widget _buildEmptyState(AppLocalizations l10n, ThemeData theme) {
+  Widget _dismissible(Variant v, {required bool last, required AppLocalizations l10n}) {
     final c = context.numColors;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.folder_open_rounded,
-            size: 64,
-            color: c.hint,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Koleksiyon boş',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: c.textMuted,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Sikke detay sayfasından koleksiyona ekleyebilirsiniz',
-            style: TextStyle(
-              fontSize: 14,
-              color: c.hint,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => context.go('/browse'),
-            icon: const Icon(Icons.search),
-            label: const Text('Sikke Ara'),
-          ),
-        ],
+    return Dismissible(
+      key: ValueKey('variant_${v.articleId}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: Theme.of(context).colorScheme.error,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Icon(Icons.remove_circle_outline, color: Colors.white),
+      ),
+      confirmDismiss: (_) => _confirmRemove(v),
+      onDismissed: (_) => _remove(v),
+      child: CoinRow(
+        leading: CoinThumb(articleId: v.articleId),
+        title: v.title,
+        meta: coinMetaLine(v, l10n),
+        last: last,
+        onTap: () => context.push('/variant/${v.articleId}'),
+        // Kaydırma tek başına keşfedilmiyordu: görünür çıkarma düğmesi.
+        trailing: IconButton(
+          tooltip: l10n.translate('remove'),
+          icon: Icon(Icons.remove_circle_outline, color: c.hint),
+          onPressed: () async {
+            if (await _confirmRemove(v)) _remove(v);
+          },
+        ),
       ),
     );
   }
