@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart' hide ContextExtensions;
 import '../../auth/auth_controller.dart';
+import '../../core/navigation.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 
@@ -87,7 +88,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
-                    onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+                    onPressed: () => context.popOrGoHome(),
                     icon: const Icon(Icons.arrow_back_ios_new_rounded),
                     style: IconButton.styleFrom(
                       backgroundColor: Colors.white,

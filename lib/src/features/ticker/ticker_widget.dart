@@ -67,6 +67,27 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
     _loadItems();
   }
 
+  /// Bölge/kategori/dil değişince yeniden yükle. Keşfet sekmesi canlı kaldığı
+  /// için (StatefulShellRoute) sayfa yeniden kurulmaz; bu olmadan Frigya
+  /// başlığının altında Bitinya bilgileri dönmeye devam ediyordu (cihazda görüldü).
+  @override
+  void didUpdateWidget(covariant NumistrTicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.region != widget.region ||
+        oldWidget.category != widget.category ||
+        oldWidget.language != widget.language) {
+      _autoAdvanceTimer?.cancel();
+      _fadeController.value = 0;
+      setState(() {
+        _items = [];
+        _currentIndex = 0;
+        _loading = true;
+        _hasError = false;
+      });
+      _loadItems();
+    }
+  }
+
   @override
   void dispose() {
     _autoAdvanceTimer?.cancel();
@@ -74,7 +95,11 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
     super.dispose();
   }
 
+  /// Son isteğin sırası: geç dönen eski bölge yanıtı yenisinin üstüne yazmasın.
+  int _request = 0;
+
   Future<void> _loadItems() async {
+    final request = ++_request;
     try {
       final api = ref.read(tickerApiProvider);
       debugPrint('🎫 Ticker loading for region: ${widget.region}, language: ${widget.language}');
@@ -86,7 +111,7 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
       );
       debugPrint('🎫 Ticker loaded ${items.length} items');
 
-      if (mounted) {
+      if (mounted && request == _request) {
         setState(() {
           _items = items;
           _loading = false;
@@ -102,7 +127,7 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
       }
     } catch (e) {
       debugPrint('❌ Ticker error: $e');
-      if (mounted) {
+      if (mounted && request == _request) {
         setState(() {
           _loading = false;
           _hasError = true;
@@ -124,7 +149,8 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
     // Fade out current
     await _fadeController.reverse();
 
-    if (!mounted) return;
+    // Beklerken bölge değişmiş olabilir (didUpdateWidget listeyi boşaltır).
+    if (!mounted || _items.isEmpty) return;
 
     // Update index
     setState(() {

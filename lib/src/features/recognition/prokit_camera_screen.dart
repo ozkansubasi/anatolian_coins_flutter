@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nb_utils/nb_utils.dart';
+import '../../core/navigation.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import 'recognition_service.dart';
@@ -400,7 +401,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                 textStyle: boldTextStyle(color: numTextPrimary),
                 color: numPrimaryLight,
                 shapeBorder: RoundedRectangleBorder(borderRadius: radius(12)),
-                onTap: () => GoRouter.of(context).pop(),
+                onTap: () => context.popOrGoHome(),
               ),
             ],
           ),
@@ -439,7 +440,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       child: Row(
         children: [
           IconButton(
-            onPressed: () => GoRouter.of(context).pop(),
+            onPressed: () => context.popOrGoHome(),
             icon: const Icon(Icons.arrow_back_ios, color: white),
           ),
           Expanded(

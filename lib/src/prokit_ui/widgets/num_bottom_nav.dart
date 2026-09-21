@@ -47,11 +47,21 @@ class NumShellScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: navigationShell,
-      bottomNavigationBar:
-          keyboardOpen ? null : NumBottomNav(navigationShell: navigationShell),
+    // Sistem geri tuşu: sekmenin içinde geri gidilecek sayfa varsa go_router
+    // önce onu kapatır (bu PopScope'a hiç gelmez). Ana Sayfa dışındaki bir
+    // sekmenin kökünde uygulamadan ÇIKMAZ, Ana Sayfa'ya döner; çıkış yalnız
+    // Ana Sayfa'dan. (Cihazda görüldü: Tara'da geri tuşu uygulamayı kapatıyordu.)
+    return PopScope(
+      canPop: navigationShell.currentIndex == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) navigationShell.goBranch(0);
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        body: navigationShell,
+        bottomNavigationBar:
+            keyboardOpen ? null : NumBottomNav(navigationShell: navigationShell),
+      ),
     );
   }
 }

@@ -132,6 +132,29 @@ void main() {
     expect(_isSelected(tester, 'Home'), isFalse);
   });
 
+  testWidgets('sistem geri tuşu: önce sekme içi, sekme kökünde Ana Sayfa', (tester) async {
+    final router = await _pumpApp(tester);
+
+    await tester.tap(find.text('Scan'));
+    await tester.pumpAndSettle();
+    router.push('/variant/7');
+    await tester.pumpAndSettle();
+    expect(find.text('variant:0'), findsOneWidget);
+
+    // 1) sekme içindeki detay kapanır
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('scan:0'), findsOneWidget);
+
+    // 2) Tara kökünde uygulamadan çıkılmaz, Ana Sayfa'ya dönülür
+    final handled = await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('home:0'), findsOneWidget);
+    expect(_isSelected(tester, 'Home'), isTrue);
+    expect(router.state.uri.path, '/');
+    expect(handled, isTrue);
+  });
+
   testWidgets('klavye açıkken alt çubuk gizlenir', (tester) async {
     await _pumpApp(tester);
     expect(find.text('Browse'), findsOneWidget);
