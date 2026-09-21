@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -243,7 +244,12 @@ class _MessageBubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SelectableText(message.text, style: theme.textTheme.bodyMedium?.copyWith(color: fg, height: 1.35)),
+              // Kullanıcının yazdığı düz metin kalır; asistan cevabı sunucudan
+              // Markdown gelir (**kalın**, *italik*, liste, bağlantı).
+              if (isUser)
+                SelectableText(message.text, style: theme.textTheme.bodyMedium?.copyWith(color: fg, height: 1.35))
+              else
+                _AssistantMarkdown(text: message.text, color: fg),
               if (message.sources.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -282,6 +288,54 @@ class _MessageBubble extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AssistantMarkdown extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _AssistantMarkdown({required this.text, required this.color});
+
+  Future<void> _openLink(String? href) async {
+    final uri = href == null ? null : Uri.tryParse(href);
+    if (uri == null || !(uri.scheme == 'http' || uri.scheme == 'https')) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final body = theme.textTheme.bodyMedium?.copyWith(color: color, height: 1.35);
+    final sheet = MarkdownStyleSheet.fromTheme(theme).copyWith(
+      p: body,
+      strong: const TextStyle(fontWeight: FontWeight.bold),
+      em: const TextStyle(fontStyle: FontStyle.italic),
+      listBullet: body,
+      h1: theme.textTheme.titleMedium?.copyWith(color: color, fontWeight: FontWeight.bold),
+      h2: theme.textTheme.titleSmall?.copyWith(color: color, fontWeight: FontWeight.bold),
+      h3: theme.textTheme.titleSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+      blockquote: body?.copyWith(fontStyle: FontStyle.italic),
+      blockquoteDecoration: BoxDecoration(
+        border: Border(left: BorderSide(color: numPrimary.withValues(alpha: 0.5), width: 3)),
+      ),
+      code: body?.copyWith(fontFamily: 'monospace', backgroundColor: color.withValues(alpha: 0.08)),
+      // Kaynak çipleriyle aynı bağlantı görünümü (#8B6914, fildişi zeminde 5,04:1).
+      a: const TextStyle(
+        color: numPrimary,
+        decoration: TextDecoration.underline,
+        decorationColor: numPrimary,
+      ),
+      blockSpacing: 8,
+    );
+    return MarkdownBody(
+      data: text,
+      selectable: true,
+      softLineBreak: true,
+      styleSheet: sheet,
+      onTapLink: (_, href, __) => _openLink(href),
+      // Cevaptaki uzak görseller yüklenmez (izlenme/bant genişliği); alt metin gösterilir.
+      imageBuilder: (_, __, alt) => Text(alt ?? '', style: body),
     );
   }
 }
