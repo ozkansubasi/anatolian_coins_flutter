@@ -8,7 +8,6 @@ import '../../models/article.dart';
 import '../../models/article_category.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import 'articles_api.dart';
-import '../../prokit_ui/widgets/num_bottom_nav.dart';
 
 /// ProKit styled Blog List Screen
 /// Features: Category filter chips, featured article, article cards
@@ -84,7 +83,6 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
 
     return Scaffold(
       backgroundColor: numScaffoldLight,
-      bottomNavigationBar: const NumBottomNav(currentTab: NavTab.home),
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           _buildAppBar(l10n),

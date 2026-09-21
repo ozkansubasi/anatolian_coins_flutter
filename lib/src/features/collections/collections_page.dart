@@ -5,7 +5,6 @@ import '../../core/subscription_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/collection.dart';
 import 'collections_service.dart';
-import '../../prokit_ui/widgets/num_bottom_nav.dart';
 
 /// Collections List Page - Manage user collections
 class CollectionsPage extends ConsumerWidget {
@@ -18,7 +17,6 @@ class CollectionsPage extends ConsumerWidget {
     final collectionsAsync = ref.watch(collectionsControllerProvider);
 
     return Scaffold(
-      bottomNavigationBar: const NumBottomNav(currentTab: NavTab.favorites),
       appBar: AppBar(
         title: Row(
           children: [
@@ -221,7 +219,7 @@ class CollectionsPage extends ConsumerWidget {
                     SnackBar(content: Text('$name oluşturuldu')),
                   );
                   // Navigate to the new collection
-                  context.go('/collection/$collectionId');
+                  context.push('/collection/$collectionId');
                 }
               }
             },
@@ -296,7 +294,7 @@ class _CollectionListItem extends ConsumerWidget {
         onPressed: () => _showOptionsMenu(context, ref),
       ),
       onTap: () {
-        context.go('/collection/${collection.id}');
+        context.push('/collection/${collection.id}');
       },
     );
   }

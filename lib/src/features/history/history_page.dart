@@ -313,7 +313,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
               onPressed: () => _deleteScan(scan),
             ),
             onTap: hasMatch
-                ? () => context.go('/variant/${scan.topArticleId}')
+                ? () => context.push('/variant/${scan.topArticleId}')
                 : null,
           );
         },
@@ -431,7 +431,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
               ),
             ),
             trailing: const Icon(Icons.chevron_right, size: 20),
-            onTap: () => context.go('/variant/${variant.articleId}'),
+            onTap: () => context.push('/variant/${variant.articleId}'),
           );
         },
       ),

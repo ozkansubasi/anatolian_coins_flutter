@@ -61,7 +61,7 @@ class _ArticleCard extends StatelessWidget {
       shadowColor: theme.colorScheme.shadow,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        onTap: () => context.go('/article/${article.id}'),
+        onTap: () => context.push('/article/${article.id}'),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),

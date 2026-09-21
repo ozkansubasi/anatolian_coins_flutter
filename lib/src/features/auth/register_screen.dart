@@ -87,7 +87,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
-                    onPressed: () => context.pop(),
+                    onPressed: () => context.canPop() ? context.pop() : context.go('/'),
                     icon: const Icon(Icons.arrow_back_ios_new_rounded),
                     style: IconButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -129,7 +129,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       style: secondaryTextStyle(),
                     ),
                     TextButton(
-                      onPressed: () => context.pop(),
+                      onPressed: () => context.canPop() ? context.pop() : context.go('/login'),
                       child: Text(
                         l10n.translate('sign_in'),
                         style: boldTextStyle(color: numPrimary),

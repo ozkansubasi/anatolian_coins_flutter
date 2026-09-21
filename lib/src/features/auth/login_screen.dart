@@ -7,7 +7,6 @@ import '../../auth/auth_controller.dart';
 import '../../core/env.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
-import '../../prokit_ui/widgets/num_bottom_nav.dart';
 
 /// Modern Login Screen with Email/Password + Social Login options
 /// Uses ProKit styling with NumisTR gold accents
@@ -105,7 +104,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      bottomNavigationBar: const NumBottomNav(currentTab: NavTab.profile),
       body: Container(
         width: size.width,
         height: size.height,
@@ -129,7 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: IconButton(
-                    onPressed: () => context.pop(),
+                    onPressed: () => context.canPop() ? context.pop() : context.go('/'),
                     icon: const Icon(Icons.arrow_back_ios_new_rounded),
                     style: IconButton.styleFrom(
                       backgroundColor: Colors.white,

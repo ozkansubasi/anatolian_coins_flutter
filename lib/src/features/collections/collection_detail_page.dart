@@ -316,7 +316,7 @@ class _CollectionDetailPageState extends ConsumerState<CollectionDetailPage> {
                             Icons.chevron_right,
                             size: 20,
                           ),
-                          onTap: () => context.go('/variant/${variant.articleId}'),
+                          onTap: () => context.push('/variant/${variant.articleId}'),
                         ),
                       );
                     },

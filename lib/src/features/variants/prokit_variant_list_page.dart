@@ -5,7 +5,6 @@ import 'package:nb_utils/nb_utils.dart';
 import '../../models/variant.dart';
 import '../../core/region_data.dart';
 import '../../prokit_ui/numistr_colors.dart';
-import '../../prokit_ui/widgets/num_bottom_nav.dart';
 import '../../widgets/fallback_image.dart';
 import '../../l10n/app_localizations.dart';
 import 'variants_api.dart';
@@ -67,37 +66,38 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     }
   }
 
+  /// Son uygulanan `?region=&mint=&search=` sorgusu.
+  ///
+  /// Keşfet sekmesi `StatefulShellRoute` dalında canlı tutulur: sayfa yeniden
+  /// kurulmaz, yalnız `didChangeDependencies` tetiklenir. Bu yüzden parametreler
+  /// "ilk yüklemede bir kez" değil, sorgu her DEĞİŞTİĞİNDE uygulanır; aksi hâlde
+  /// Bölgeler'den ikinci kez gelindiğinde eski filtre ekranda kalırdı.
+  String? _appliedQuery;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_initialLoad) {
-      final uri = GoRouterState.of(context).uri;
-      final regionParam = uri.queryParameters['region'];
-      final mintParam = uri.queryParameters['mint'];
-      final searchParam = uri.queryParameters['search'];
+    final uri = GoRouterState.of(context).uri;
+    if (uri.query.isEmpty || uri.query == _appliedQuery) return;
+    _appliedQuery = uri.query;
 
-      bool hasParams = false;
-
-      if (searchParam != null && searchParam.trim().isNotEmpty) {
-        _searchCtrl.text = searchParam.trim();
-        hasParams = true;
-      }
-
-      if (regionParam != null && regionParam.trim().isNotEmpty) {
-        _selectedRegion = regionParam.trim();
-        hasParams = true;
-      }
-
-      if (mintParam != null && mintParam.trim().isNotEmpty) {
-        _selectedMint = mintParam.trim();
-        hasParams = true;
-      }
-
-      if (hasParams) {
-        setState(() {});
-        _load(reset: true);
-      }
+    String? param(String key) {
+      final v = uri.queryParameters[key]?.trim();
+      return (v == null || v.isEmpty) ? null : v;
     }
+
+    final regionParam = param('region');
+    final mintParam = param('mint');
+    final searchParam = param('search');
+    if (regionParam == null && mintParam == null && searchParam == null) return;
+
+    // Bağlantı tam bir filtre tanımlar: önceki seçimler taşınmaz.
+    _searchCtrl.text = searchParam ?? '';
+    _selectedRegion = regionParam;
+    _selectedMint = mintParam;
+    _selectedMaterial = null;
+    setState(() {});
+    _load(reset: true);
   }
 
   @override
@@ -233,10 +233,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
           Expanded(child: _buildContent(l10n)),
         ],
       ),
-      // 2026-09-20: /browse alt menunun HEDEFI oldugu halde alt menusu yoktu --
-      // kullanici "Kesfet"e basinca menu kayboluyor ve geri donemiyordu.
-      // (Kalici cozum StatefulShellRoute; bu ara adim gorunur kaybi kapatiyor.)
-      bottomNavigationBar: const NumBottomNav(currentTab: NavTab.browse),
+      // Alt çubuk kabukta (NumShellScaffold); ekran kendi çubuğunu koymaz.
     );
   }
   

@@ -7,7 +7,6 @@ import '../../l10n/app_localizations.dart';
 import '../recognition/recognition_service.dart';
 import '../favorites/favorites_service.dart';
 import '../collections/collections_service.dart';
-import '../../prokit_ui/widgets/num_bottom_nav.dart';
 
 /// Account Screen - User profile and subscription management
 class AccountScreen extends ConsumerWidget {
@@ -24,7 +23,6 @@ class AccountScreen extends ConsumerWidget {
         title: Text(l10n.translate('account_title')),
         centerTitle: true,
       ),
-      bottomNavigationBar: const NumBottomNav(currentTab: NavTab.profile),
       body: authState.authenticated
           ? _AuthenticatedView(l10n: l10n, theme: theme)
           : _UnauthenticatedView(l10n: l10n, theme: theme),
@@ -334,7 +332,7 @@ class _SubscriptionCard extends StatelessWidget {
     return Card(
       elevation: 2,
       child: InkWell(
-        onTap: () => context.go('/subscription'),
+        onTap: () => context.push('/subscription'),
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.all(20),

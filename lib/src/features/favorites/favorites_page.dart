@@ -7,7 +7,6 @@ import '../../core/region_data.dart';
 import '../../l10n/app_localizations.dart';
 import '../variants/variants_api.dart';
 import 'favorites_service.dart';
-import '../../prokit_ui/widgets/num_bottom_nav.dart';
 
 /// Favoriler Sayfası - Pro Özelliği
 class FavoritesPage extends ConsumerStatefulWidget {
@@ -84,7 +83,6 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
     final favoritesController = ref.watch(favoritesControllerProvider);
 
     return Scaffold(
-      bottomNavigationBar: const NumBottomNav(currentTab: NavTab.favorites),
       appBar: AppBar(
         title: Row(
           children: [
@@ -211,7 +209,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                             }
                           },
                         ),
-                        onTap: () => context.go('/variant/${variant.articleId}'),
+                        onTap: () => context.push('/variant/${variant.articleId}'),
                       );
                     },
                   ),

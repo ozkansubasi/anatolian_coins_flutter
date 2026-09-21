@@ -7,7 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/subscription_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
-import '../../prokit_ui/widgets/num_bottom_nav.dart';
 
 /// ProKit-styled subscription/pricing page
 /// Modern design with gradient cards and premium aesthetics
@@ -21,7 +20,6 @@ class ProkitSubscriptionPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: numScaffoldLight,
-      bottomNavigationBar: const NumBottomNav(currentTab: NavTab.profile),
       body: subscription.isLoading
           ? const Center(child: CircularProgressIndicator(color: numPrimary))
           : subscription.isPro

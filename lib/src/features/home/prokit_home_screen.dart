@@ -49,8 +49,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       body: _buildBody(context, l10n, authState),
       // 2026-09-20: dashboard kendi alt menu kopyasini tasiyordu (7 oge,
       // paylasilan widget'ta 6 vardi ve _NavItem iki dosyada kopyalanmisti).
-      // Tek kaynak: NumBottomNav.
-      bottomNavigationBar: const NumBottomNav(currentTab: NavTab.home),
+      // Tek kaynak: NumBottomNav, kabukta (NumShellScaffold) çizilir.
     );
   }
 
@@ -122,7 +121,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
                 ),
             ],
           ),
-          onPressed: () => context.go('/account'),
+          onPressed: () => context.push('/account'),
           tooltip: l10n.translate('profile'),
         ),
       ],
@@ -181,7 +180,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       HomeBanner(
         image: 'assets/images/regions/pisidia_banner.jpg',
         slogan: l10n.translate('banner_regions'),
-        onTap: () => context.go('/regions'),
+        onTap: () => context.push('/regions'),
       ),
     ];
 
@@ -233,7 +232,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           title: l10n.translate('ancient_regions'),
           actionText: l10n.translate('see_all'),
           // Tümü → bölge dizini (sikke arama değil)
-          onAction: () => context.go('/regions'),
+          onAction: () => context.push('/regions'),
         ),
         SizedBox(
           height: 100,
@@ -313,14 +312,14 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         icon: Icons.collections_bookmark_outlined,
         color: numPrimary,
         tint: const Color(0xFFF1EFE2),
-        onTap: () => context.go('/collections'),
+        onTap: () => context.push('/collections'),
       ),
       _QuickFeature(
         title: l10n.translate('blog'),
         icon: Icons.menu_book_outlined,
         color: numPrimary,
         tint: const Color(0xFFF5EEE6),
-        onTap: () => context.go('/blog'),
+        onTap: () => context.push('/blog'),
       ),
       _QuickFeature(
         title: l10n.translate('assistant_short'),
@@ -362,7 +361,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           title: l10n.translate('editors_pick'),
           actionText: l10n.translate('more'),
           // Blog menusune gider; "sikke arama" (/browse) yanlis hedefti.
-          onAction: () => context.go('/blog'),
+          onAction: () => context.push('/blog'),
         ),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 16),

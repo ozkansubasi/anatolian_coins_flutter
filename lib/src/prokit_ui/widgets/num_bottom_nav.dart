@@ -4,145 +4,168 @@ import '../numistr_colors.dart';
 import '../../l10n/app_localizations.dart';
 import 'num_menu_sheet.dart';
 
-/// Navigation tab enumeration for consistent navigation across the app
-enum NavTab {
-  home,
-  browse,
-  scan,
-  favorites,
-  menu,
-  // profile ve settings ARTIK alt cubukta hedef degil (2026-09-20, 7 -> 5).
-  // Enum degerleri korunuyor cunku ekranlar bunlari geciriyor; ikisi de "Menu"
-  // hedefini secili gosterir.
-  profile,
-  settings,
+/// Alt çubuktaki hedefler. İlk dördü `ShellBranch` dallarıyla aynı sırada.
+enum NavTab { home, browse, scan, favorites, menu }
+
+/// Yalnız Menü sayfasından ulaşılan ekranlar. Bunlardan biri açıkken hangi
+/// sekmenin üstüne açılmış olursa olsun "Menü" hedefi seçili görünür; kullanıcı
+/// nerede olduğunu kaybetmesin (Profil ve Ayarlar 2026-09-20'de Menü'ye taşındı).
+const _menuOnlyPaths = <String>[
+  '/account',
+  '/settings',
+  '/assistant',
+  '/login',
+  '/register',
+  '/subscription',
+  '/university-application',
+  '/terms-of-service',
+  '/privacy-policy',
+  '/kvkk',
+  '/subscription-agreement',
+];
+
+/// Seçili sekme: Menü sayfasına ait bir ekran açıksa Menü, değilse içinde
+/// bulunulan dal. `/variant/1` gibi paylaşılan detaylar hangi sekmeden
+/// açıldıysa o sekme seçili kalır (push sayfayı o sekmenin üstüne koyar).
+NavTab navTabFor(String path, int branchIndex) {
+  final menuOnly = _menuOnlyPaths.any((p) => path == p || path.startsWith('$p/'));
+  if (menuOnly || branchIndex >= NavTab.menu.index) return NavTab.menu;
+  return NavTab.values[branchIndex];
 }
 
-/// Shared Bottom Navigation Bar for all screens
-/// Provides consistent navigation across the entire app
-class NumBottomNav extends StatelessWidget {
-  final NavTab currentTab;
+/// Kabuk: tüm sekme ekranlarının ortak iskeleti; alt çubuk yalnız burada çizilir.
+///
+/// Klavye açıkken alt çubuk gizlenir ve dış Scaffold klavyeye göre küçülmez
+/// (`resizeToAvoidBottomInset: false`). İç ekranların kendi Scaffold'ları
+/// klavye boşluğunu zaten bırakır; dış da küçülseydi asistan ve arama
+/// kutularında klavyenin üstünde çift boşluk oluşurdu.
+class NumShellScaffold extends StatelessWidget {
+  final StatefulNavigationShell navigationShell;
 
-  const NumBottomNav({
-    super.key,
-    required this.currentTab,
-  });
+  const NumShellScaffold({super.key, required this.navigationShell});
 
-  /// Creates a bottom nav bar with the current route pre-selected
-  factory NumBottomNav.fromRoute(String currentRoute) {
-    NavTab tab = NavTab.home;
-
-    if (currentRoute == '/' || currentRoute.isEmpty) {
-      tab = NavTab.home;
-    } else if (currentRoute.startsWith('/browse') || currentRoute.startsWith('/variant')) {
-      tab = NavTab.browse;
-    } else if (currentRoute.startsWith('/recognition')) {
-      tab = NavTab.scan;
-    } else if (currentRoute.startsWith('/favorites')) {
-      tab = NavTab.favorites;
-    } else if (currentRoute.startsWith('/account') || currentRoute.startsWith('/login')) {
-      tab = NavTab.profile;
-    } else if (currentRoute.startsWith('/settings')) {
-      tab = NavTab.settings;
-    }
-
-    return NumBottomNav(currentTab: tab);
+  @override
+  Widget build(BuildContext context) {
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      body: navigationShell,
+      bottomNavigationBar:
+          keyboardOpen ? null : NumBottomNav(navigationShell: navigationShell),
+    );
   }
+}
+
+/// Uygulamanın tek alt çubuğu (5 hedef). Yalnız [NumShellScaffold] kullanır;
+/// ekranlar artık kendi `bottomNavigationBar`'ını KOYMAZ.
+class NumBottomNav extends StatelessWidget {
+  final StatefulNavigationShell navigationShell;
+
+  const NumBottomNav({super.key, required this.navigationShell});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final router = GoRouter.of(context);
 
-    // Profil ve Ayarlar artik Menu sayfasinda; o ekranlardayken "Menu" hedefi
-    // secili gosterilir ki kullanici nerede oldugunu kaybetmesin.
-    final menuSelected = currentTab == NavTab.menu ||
-        currentTab == NavTab.profile ||
-        currentTab == NavTab.settings;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? numCardDark : numCardLight,
-        boxShadow: [
-          BoxShadow(
-            color: numShadow,
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          // DIKKAT: burada SingleChildScrollView KULLANILMAZ.
-          // 2026-09-20 oncesinde Row yatay bir SingleChildScrollView icindeydi:
-          // (1) sinirsiz genislikte `spaceAround` hicbir sey yapmiyordu, ogeler
-          // bitisiyordu; (2) scroll gesture arena'da `onTap`'i yutuyordu, parmak
-          // 1-2 px kayinca dokunma dusuyordu ("bazen tepki vermiyor").
-          // Expanded ile her hedef esit pay alir ve 48dp'nin altina inmez.
-          child: Row(
-            children: [
-              Expanded(
-                child: _NavItem(
-                  icon: Icons.home_outlined,
-                  selectedIcon: Icons.home,
-                  label: l10n.translate('home'),
-                  isSelected: currentTab == NavTab.home,
-                  onTap: () => _navigateTo(context, '/'),
-                ),
-              ),
-              Expanded(
-                child: _NavItem(
-                  icon: Icons.search,
-                  selectedIcon: Icons.search,
-                  label: l10n.translate('browse'),
-                  isSelected: currentTab == NavTab.browse,
-                  onTap: () => _navigateTo(context, '/browse'),
-                ),
-              ),
-              Expanded(
-                child: _NavItem(
-                  // QR ikonu DEGIL: QR/barkod ikonu sektorde gercek kod okuma
-                  // icin ayrilmis (PCGS slab barkodu, muze levha QR'i). Burada
-                  // goruntu tanima yapiliyor -> kamera dogru metafor.
-                  icon: Icons.photo_camera_outlined,
-                  selectedIcon: Icons.photo_camera,
-                  label: l10n.translate('scan'),
-                  isSelected: currentTab == NavTab.scan,
-                  isPrimary: true,
-                  onTap: () => _navigateTo(context, '/recognition'),
-                ),
-              ),
-              Expanded(
-                child: _NavItem(
-                  icon: Icons.favorite_border,
-                  selectedIcon: Icons.favorite,
-                  label: l10n.translate('favorites'),
-                  isSelected: currentTab == NavTab.favorites,
-                  onTap: () => _navigateTo(context, '/favorites'),
-                ),
-              ),
-              Expanded(
-                child: _NavItem(
-                  icon: Icons.menu,
-                  selectedIcon: Icons.menu,
-                  label: l10n.translate('menu'),
-                  isSelected: menuSelected,
-                  onTap: () => showNumMenuSheet(context),
-                ),
+    // push'lanan sayfalar kabuğu yeniden kurmayabilir; konumu dinle.
+    return ListenableBuilder(
+      listenable: router.routerDelegate,
+      builder: (context, _) {
+        final current = navTabFor(
+          router.state.uri.path,
+          navigationShell.currentIndex,
+        );
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? numCardDark : numCardLight,
+            boxShadow: [
+              BoxShadow(
+                color: numShadow,
+                blurRadius: 8,
+                offset: const Offset(0, -2),
               ),
             ],
           ),
-        ),
-      ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              // DIKKAT: burada SingleChildScrollView KULLANILMAZ.
+              // 2026-09-20 oncesinde Row yatay bir SingleChildScrollView icindeydi:
+              // (1) sinirsiz genislikte `spaceAround` hicbir sey yapmiyordu, ogeler
+              // bitisiyordu; (2) scroll gesture arena'da `onTap`'i yutuyordu, parmak
+              // 1-2 px kayinca dokunma dusuyordu ("bazen tepki vermiyor").
+              // Expanded ile her hedef esit pay alir ve 48dp'nin altina inmez.
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _NavItem(
+                      icon: Icons.home_outlined,
+                      selectedIcon: Icons.home,
+                      label: l10n.translate('home'),
+                      isSelected: current == NavTab.home,
+                      onTap: () => _goTab(NavTab.home, current),
+                    ),
+                  ),
+                  Expanded(
+                    child: _NavItem(
+                      icon: Icons.search,
+                      selectedIcon: Icons.search,
+                      label: l10n.translate('browse'),
+                      isSelected: current == NavTab.browse,
+                      onTap: () => _goTab(NavTab.browse, current),
+                    ),
+                  ),
+                  Expanded(
+                    child: _NavItem(
+                      // QR ikonu DEGIL: QR/barkod ikonu sektorde gercek kod okuma
+                      // icin ayrilmis (PCGS slab barkodu, muze levha QR'i). Burada
+                      // goruntu tanima yapiliyor -> kamera dogru metafor.
+                      icon: Icons.photo_camera_outlined,
+                      selectedIcon: Icons.photo_camera,
+                      label: l10n.translate('scan'),
+                      isSelected: current == NavTab.scan,
+                      isPrimary: true,
+                      onTap: () => _goTab(NavTab.scan, current),
+                    ),
+                  ),
+                  Expanded(
+                    child: _NavItem(
+                      icon: Icons.favorite_border,
+                      selectedIcon: Icons.favorite,
+                      label: l10n.translate('favorites'),
+                      isSelected: current == NavTab.favorites,
+                      onTap: () => _goTab(NavTab.favorites, current),
+                    ),
+                  ),
+                  Expanded(
+                    child: _NavItem(
+                      icon: Icons.menu,
+                      selectedIcon: Icons.menu,
+                      label: l10n.translate('menu'),
+                      isSelected: current == NavTab.menu,
+                      onTap: () => showNumMenuSheet(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  void _navigateTo(BuildContext context, String path) {
-    final currentPath = GoRouterState.of(context).uri.toString();
-    if (currentPath != path) {
-      context.go(path);
-    }
+  /// Sekmeye geçiş sekmenin kaldığı yeri korur (kaydırma, filtre, açık detay).
+  /// Zaten seçili sekmeye dokunmak o sekmenin köküne döner (platform alışkanlığı).
+  /// Tara her zaman kameradan başlar: eski sonuç ekranına dönmek yanıltıcı olur,
+  /// sonuçlar zaten Geçmiş'e kaydediliyor.
+  void _goTab(NavTab tab, NavTab current) {
+    navigationShell.goBranch(
+      tab.index,
+      initialLocation: tab == current || tab == NavTab.scan,
+    );
   }
 }
 
