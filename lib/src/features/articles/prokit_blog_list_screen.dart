@@ -104,6 +104,9 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
       pinned: true,
       backgroundColor: numPrimary,
       foregroundColor: Colors.white,
+      // Açık temada AppBar teması geri okunu koyu griye çekiyordu; fotoğraf
+      // üstünde seçilmiyordu (cihazda görüldü).
+      iconTheme: const IconThemeData(color: Colors.white),
       flexibleSpace: FlexibleSpaceBar(
         title: Text(
           l10n.translate('blog'),
