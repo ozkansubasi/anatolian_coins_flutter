@@ -10,6 +10,7 @@ import '../../core/num_colors.dart';
 import '../../core/num_text.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import 'articles_api.dart';
+import 'article_related.dart';
 
 /// ProKit styled Article Detail Screen
 /// Features: Hero header, elegant typography, share functionality
@@ -281,7 +282,10 @@ class _ArticleContent extends StatelessWidget {
                         },
                       ),
 
-                    40.height,
+                    32.height,
+
+                    // İlgili sikkeler (başlıkta bölge/darphane varsa) + ilgili makaleler
+                    ArticleRelatedSection(article: article),
 
                     // Bottom action buttons
                     _buildBottomActions(context),
