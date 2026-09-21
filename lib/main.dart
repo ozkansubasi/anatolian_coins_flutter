@@ -35,12 +35,15 @@ void main() async {
     );
   }
 
-  // Set system UI overlay style
+  // Sistem çubukları: YALNIZ ikon parlaklığı. Renk VERİLMEZ — Android 15'te
+  // (API 35) uygulama zaten kenardan kenara çizilir ve Flutter motoru bir renk
+  // verildiğinde kullanımdan kalkan Window.setStatusBarColor /
+  // setNavigationBarColor'ı çağırır (Play Console "deprecated APIs for
+  // edge-to-edge" uyarısı, 2026-09-21).
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarColor: Colors.transparent,
+      statusBarBrightness: Brightness.light,
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );

@@ -285,9 +285,14 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                 iconTheme: const IconThemeData(color: Colors.white),
                 // Fotoğraf görünürken (açık fonlu müze fotoğrafı) durum çubuğu
                 // simgeleri koyu; başlık altın çubuğa dönüşünce açık.
-                systemOverlayStyle: innerBoxIsScrolled
-                    ? SystemUiOverlayStyle.light
-                    : SystemUiOverlayStyle.dark,
+                // Renksiz stil: hazır .light/.dark gezinme çubuğunu SİYAHA boyuyor
+                // ve kullanımdan kalkan setNavigationBarColor'ı tetikliyordu.
+                systemOverlayStyle: SystemUiOverlayStyle(
+                  statusBarIconBrightness:
+                      innerBoxIsScrolled ? Brightness.light : Brightness.dark,
+                  statusBarBrightness:
+                      innerBoxIsScrolled ? Brightness.dark : Brightness.light,
+                ),
                 // Beyaz ikonlar açık fotoğrafta görünmüyordu: yarı saydam koyu
                 // yuvarlak zemin (cihazda görüldü).
                 leading: Padding(
