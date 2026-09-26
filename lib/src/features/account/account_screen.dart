@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/free_trial.dart';
@@ -600,8 +601,10 @@ class _QuotaCard extends StatelessWidget {
     final progress = (quota.limit > 0) ? (quota.used / quota.limit) : 0.0;
     final remaining = quota.remaining;
     final c = context.numColors;
+    // Durum rengi yalnız kota azalınca: bolken altın (paletle aynı), azalınca
+    // turuncu, bitmek üzereyken kırmızı. Eski yeşil altın paletle çakışıyordu.
     final Color progressColor = remaining > 5
-        ? Colors.green
+        ? numPrimary
         : remaining > 2
             ? Colors.orange
             : Colors.red;
@@ -618,7 +621,7 @@ class _QuotaCard extends StatelessWidget {
               children: [
                 Icon(
                   Icons.camera_alt_rounded,
-                  color: progressColor,
+                  color: numPrimary,
                   size: 28,
                 ),
                 const SizedBox(width: 12),
@@ -670,7 +673,9 @@ class _QuotaCard extends StatelessWidget {
                 if (quota.resetDate != null)
                   Text(
                     l10n.translate('resets_on', params: {
-                      'date': _formatDate(quota.resetDate!),
+                      'date': DateFormat.yMMMd(
+                              Localizations.localeOf(context).languageCode)
+                          .format(quota.resetDate!),
                     }),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -715,10 +720,6 @@ class _QuotaCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
   }
 }
 
