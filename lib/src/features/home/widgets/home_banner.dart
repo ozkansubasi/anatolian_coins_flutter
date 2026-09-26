@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../prokit_ui/numistr_colors.dart';
 
 /// Ana sayfa banner'i: gorsel banner'i KAPLAR, slogan altta ayri zeminli seritte.
@@ -37,90 +38,89 @@ class HomeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Material(
-        color: Colors.transparent,
-        // CERCEVE: beyaz zeminli arsiv fotograflari cercevesiz birakilinca
-        // banner'in siniri kaybolup "bosluk" hissi veriyordu (2026-09-20).
-        // Altin kenarlik, gorsel alani ile slogan seridini tek parca yapar.
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: numPrimary.withAlpha(90)),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          // Slogan seridi gorselin UZERINE BINMEZ, altinda ayri satirdir.
-          // Onceki surumde Stack ile bindiriliyordu; beyaz zeminli sikke
-          // fotograflarinda seridin altinda kalan kisim kesik gorunuyordu.
-          child: Column(
-            children: [
-              Expanded(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Gorsel: kendi alanini kaplar
-                    Container(
-                      // contain modunda zemin BEYAZ: arsiv fotograflarinin kendi
-                      // zemini beyaz, krem zeminde ortada gorunur bir dikis birakiyordu.
-                      color: fit == BoxFit.contain ? _plakaZemin : numPrimaryDark,
-                      child: ColorFiltered(
-                        // Arsiv fotograflarinin BEYAZ zeminini sicak bir plaka
-                        // tonuna cevirir (carpma karisimi): beyaz -> krem, sikke
-                        // tonu korunur. Manzara fotografinda filtre uygulanmaz.
-                        colorFilter: ColorFilter.mode(
-                          fit == BoxFit.contain ? _plakaZemin : Colors.transparent,
-                          fit == BoxFit.contain ? BlendMode.multiply : BlendMode.dst,
-                        ),
-                        child: Image.asset(
-                          image,
-                          fit: fit,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: numPrimaryDark,
-                            child: const Icon(Icons.image_not_supported_outlined,
-                                color: Colors.white38, size: 32),
-                          ),
+    // Tam genişlik (kenar boşluğu, köşe yuvarlaması ve çerçeve yok):
+    // kullanıcı kararı 2026-09-26 — "slider tam ekran olsun, kenarlarda
+    // boşluk kalmasın". Görsel ile slogan şeridi yine tek parça.
+    return Material(
+      color: Colors.transparent,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        // Slogan seridi gorselin UZERINE BINMEZ, altinda ayri satirdir.
+        // Onceki surumde Stack ile bindiriliyordu; beyaz zeminli sikke
+        // fotograflarinda seridin altinda kalan kisim kesik gorunuyordu.
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Gorsel: kendi alanini kaplar
+                  Container(
+                    // contain modunda zemin BEYAZ: arsiv fotograflarinin kendi
+                    // zemini beyaz, krem zeminde ortada gorunur bir dikis birakiyordu.
+                    color: fit == BoxFit.contain ? _plakaZemin : numPrimaryDark,
+                    child: ColorFiltered(
+                      // Arsiv fotograflarinin BEYAZ zeminini sicak bir plaka
+                      // tonuna cevirir (carpma karisimi): beyaz -> krem, sikke
+                      // tonu korunur. Manzara fotografinda filtre uygulanmaz.
+                      colorFilter: ColorFilter.mode(
+                        fit == BoxFit.contain
+                            ? _plakaZemin
+                            : Colors.transparent,
+                        fit == BoxFit.contain
+                            ? BlendMode.multiply
+                            : BlendMode.dst,
+                      ),
+                      child: Image.asset(
+                        image,
+                        fit: fit,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: numPrimaryDark,
+                          child: const Icon(Icons.image_not_supported_outlined,
+                              color: Colors.white38, size: 32),
                         ),
                       ),
                     ),
+                  ),
 
-                    // Isaretler yalniz gorsel alanina konur
-                    for (final m in markers)
-                      Align(
-                        alignment: m.at,
-                        child: _MarkerRing(label: m.label),
-                      ),
-                  ],
+                  // Isaretler yalniz gorsel alanina konur
+                  for (final m in markers)
+                    Align(
+                      alignment: m.at,
+                      child: _MarkerRing(label: m.label),
+                    ),
+                ],
+              ),
+            ),
+
+            // Slogan seridi: gorselin ALTINDA, ayri zeminde
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [numPrimaryDark, numPrimary],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
               ),
-
-              // Slogan seridi: gorselin ALTINDA, ayri zeminde
-              Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [numPrimaryDark, numPrimary],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
+              // Başlıktaki logo yazısıyla aynı yazı tipi (Cinzel), ortalı.
+              child: Text(
+                slogan,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.cinzel(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                  height: 1.2,
                 ),
-                child: Text(
-                  slogan,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    height: 1.2,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
