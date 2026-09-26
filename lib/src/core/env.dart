@@ -26,6 +26,13 @@ class Env {
   );
 
   // ---- Auth0 (OIDC + PKCE) ----
+  /// "Apple ile devam et" düğmesi. Auth0'da `apple` bağlantısı açılana kadar
+  /// KAPALI: 2026-09-26 Play ön-yayın robotu düğmeye bastı, Auth0 "the connection
+  /// is not enabled" döndü — Android'de gerçek kullanıcı da aynı hatayı alırdı.
+  /// iOS yayınından önce açılmalı (App Store 4.8: Google girişi varsa Apple şart).
+  static const appleSignInEnabled =
+      bool.fromEnvironment('APPLE_SIGNIN_ENABLED', defaultValue: false);
+
   static const oidcIssuer = String.fromEnvironment(
     'OIDC_ISSUER',
     defaultValue: 'https://dev-ja5k8sumb7005j4n.us.auth0.com',

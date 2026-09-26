@@ -505,16 +505,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
         12.height,
 
-        // Apple button
-        _SocialLoginButton(
-          iconWidget: const Icon(Icons.apple, color: Colors.white, size: 24),
-          label: l10n.translate('continue_with_apple'),
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
-          onPressed: loading ? null : () => _handleSocialLogin('apple'),
-        ),
-
-        12.height,
+        // Apple button — Auth0 bağlantısı açılana kadar gizli (Env.appleSignInEnabled)
+        if (Env.appleSignInEnabled) ...[
+          _SocialLoginButton(
+            iconWidget: const Icon(Icons.apple, color: Colors.white, size: 24),
+            label: l10n.translate('continue_with_apple'),
+            backgroundColor: Colors.black,
+            textColor: Colors.white,
+            onPressed: loading ? null : () => _handleSocialLogin('apple'),
+          ),
+          12.height,
+        ],
 
         // Auth0 Universal Login (fallback)
         OutlinedButton.icon(
