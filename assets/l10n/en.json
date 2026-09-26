@@ -739,7 +739,7 @@
   "tos_intellectual_title": "Intellectual Property Rights",
   "tos_intellectual_content": "The Application itself, its visual interfaces, graphics, design, computer code, database structure and all other elements (\"Company Materials\") are owned by the Company and are protected by the Intellectual and Artistic Works Law of the Republic of Turkey and international copyright laws.",
   "tos_user_content_title": "User Content",
-  "tos_user_content_content": "You retain ownership of photographs you upload to the Application. However, by uploading these photographs to the Application, you grant the Company the right to use this content to provide and improve the service and to train artificial intelligence models (anonymized).",
+  "tos_user_content_content": "You retain ownership of the photographs you upload to the Application. Photographs are processed only to provide the recognition service and are not stored. They are not used to train artificial intelligence models; should such use ever be considered, your separate and explicit consent will be requested, and declining will not prevent you from using the Service.",
   "tos_prohibited_title": "Prohibited Uses",
   "tos_prohibited_content": "You agree not to do the following while using the Service:",
   "tos_prohibited_1": "Engage in illegal activities, criminal acts or activities that violate laws such as antiquities trafficking",

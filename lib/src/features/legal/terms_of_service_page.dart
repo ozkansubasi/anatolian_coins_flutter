@@ -10,7 +10,7 @@ class TermsOfServicePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProkitLegalPage(
       titleKey: 'terms_of_service',
-      lastUpdated: '29.11.2025',
+      lastUpdated: '26.09.2026',
       headerIcon: Icons.gavel,
       headerColor: numPrimary,
       sections: const [
