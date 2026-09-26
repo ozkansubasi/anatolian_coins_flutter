@@ -10,61 +10,71 @@ import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Antik Anadolu haritası için veri modelleri
+///
+/// Veri dosyası (`assets/data/ancient_map_data.json`) yalnız kimlik ve
+/// koordinat taşır; görünen ad/açıklama çeviri dosyalarındadır: bölge adı
+/// `region_<kod>`, darphane adı `map_mint_<id>`, açıklaması `map_mint_<id>_desc`.
 class AncientMapRegion {
-  final String name;
-  final String nameTr;
   final double lat;
   final double lng;
   final String regionCode;
-  final String? desc;
 
   AncientMapRegion({
-    required this.name,
-    required this.nameTr,
     required this.lat,
     required this.lng,
     required this.regionCode,
-    this.desc,
   });
 
   factory AncientMapRegion.fromJson(Map<String, dynamic> json) {
     return AncientMapRegion(
-      name: json['name'] ?? '',
-      nameTr: json['nameTr'] ?? json['name'] ?? '',
       lat: (json['lat'] ?? 0).toDouble(),
       lng: (json['lng'] ?? 0).toDouble(),
       regionCode: json['regionCode'] ?? '',
-      desc: json['desc'],
     );
   }
+
+  String displayName(AppLocalizations l10n) => RegionData.getRegionName(regionCode, l10n);
 }
 
 class AncientMapMint {
+  final String id;
+
+  /// Latince/kanonik ad — sikkenin darphane adıyla eşleştirmede kullanılır.
   final String name;
-  final String nameTr;
+
+  /// Eşleştirmede kabul edilen diğer yazımlar (görüntü metni değil).
+  final List<String> aliases;
   final double lat;
   final double lng;
   final String region;
-  final String? desc;
 
   AncientMapMint({
+    required this.id,
     required this.name,
-    required this.nameTr,
+    this.aliases = const [],
     required this.lat,
     required this.lng,
     required this.region,
-    this.desc,
   });
 
   factory AncientMapMint.fromJson(Map<String, dynamic> json) {
     return AncientMapMint(
+      id: json['id'] ?? '',
       name: json['name'] ?? '',
-      nameTr: json['nameTr'] ?? json['name'] ?? '',
+      aliases: (json['aliases'] as List?)?.cast<String>() ?? const [],
       lat: (json['lat'] ?? 0).toDouble(),
       lng: (json['lng'] ?? 0).toDouble(),
       region: json['region'] ?? '',
-      desc: json['desc'],
     );
+  }
+
+  String displayName(AppLocalizations l10n) => l10n.translate('map_mint_$id');
+  String description(AppLocalizations l10n) => l10n.translate('map_mint_${id}_desc');
+
+  /// Sikkenin darphane adı bu darphaneye mi ait? (büyük/küçük harf duyarsız)
+  bool matches(String mintName) {
+    final wanted = mintName.toLowerCase();
+    return name.toLowerCase() == wanted || aliases.any((a) => a.toLowerCase() == wanted);
   }
 }
 
@@ -152,10 +162,7 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
       // eskiden `orElse: mints.first` listedeki ilk darphaneyi (Kyzikos) seçiyor,
       // Aezanis sikkesinde Kyzikos kartı gösteriyordu (cihazda görüldü).
       if (widget.highlightMint != null && _mapData != null) {
-        final wanted = widget.highlightMint!.toLowerCase();
-        final matches = _mapData!.mints.where(
-          (m) => m.name.toLowerCase() == wanted || m.nameTr.toLowerCase() == wanted,
-        );
+        final matches = _mapData!.mints.where((m) => m.matches(widget.highlightMint!));
         if (matches.isNotEmpty) setState(() => _selectedMint = matches.first);
       }
     } catch (e) {
@@ -302,7 +309,7 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
               ],
             ),
             child: Text(
-              region.nameTr,
+              region.displayName(AppLocalizations.of(context)),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -325,9 +332,8 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
 
     return MarkerLayer(
       markers: filteredMints.map((mint) {
-        final isHighlighted = widget.highlightMint != null &&
-            (mint.name.toLowerCase() == widget.highlightMint!.toLowerCase() ||
-             mint.nameTr.toLowerCase() == widget.highlightMint!.toLowerCase());
+        final isHighlighted =
+            widget.highlightMint != null && mint.matches(widget.highlightMint!);
         final isSelected = _selectedMint == mint;
         final color = getRegionColor(mint.region.replaceAll('-coins', ''));
 
@@ -526,12 +532,12 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  mint.nameTr,
+                  mint.displayName(l10n),
                   style: boldTextStyle(size: 16, color: c.text),
                 ),
                 4.height,
                 Text(
-                  mint.desc ?? l10n.translate('ancient_mint'),
+                  mint.description(l10n),
                   style: secondaryTextStyle(size: 12, color: c.textMuted),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
