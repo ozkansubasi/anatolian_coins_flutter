@@ -32,7 +32,7 @@
     </queries>
 
     <application
-        android:label="Anatolian Coins"
+        android:label="${appLabel}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="false">

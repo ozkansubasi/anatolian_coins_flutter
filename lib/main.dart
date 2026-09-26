@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'src/core/app_log.dart';
 import 'src/app_router.dart';
 import 'src/l10n/app_localizations.dart';
 import 'src/core/locale_provider.dart';
@@ -14,6 +15,19 @@ import 'src/features/settings/settings_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Hata günlüğü (bkz. app_log.dart): widget hataları ve yakalanmamış
+  // istisnalar logcat'e `[NumisTR]` etiketiyle, release'de de.
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    appLog('UI', '${details.exceptionAsString()} | ${details.library ?? '-'}'
+        ' | ${details.context?.toDescription() ?? '-'}');
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    appLog('UNCAUGHT', '${error.runtimeType}: $error | '
+        '${stack.toString().split('\n').take(3).join(' <- ')}');
+    return true;
+  };
 
   // Tipografi seti: nb_utils (ProKit) stil varsayılanlarını tek kaynağa bağlar
   initNumistrTypography();
@@ -93,7 +107,7 @@ class AnatolianCoinsApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      routerConfig: appRouter(ref),
+      routerConfig: ref.watch(appRouterProvider),
 
       // Sistem yazı-boyutu ayarını makul aralığa sıkıştır. Cihaz %125+ font
       // ölçeğindeyken tüm tipografi seti şişiyor ve yerleşimler bozuluyordu;

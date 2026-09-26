@@ -44,7 +44,8 @@ android {
         // ❗ flutter_appauth için redirect scheme placeholder'ı ver
         // com.anatoliancoins.app://callback -> scheme: com.anatoliancoins.app
         manifestPlaceholders += mapOf(
-            "appAuthRedirectScheme" to "com.anatoliancoins.app"
+            "appAuthRedirectScheme" to "com.anatoliancoins.app",
+            "appLabel" to "Anatolian Coins"
         )
     }
 
@@ -60,6 +61,13 @@ android {
     }
 
     buildTypes {
+        // Geliştirme sürümü Play sürümünün YANINA kurulur (farklı paket adı):
+        // cihazda düzen/görsel iterasyonu ve log izleme için, Play kurulumuna
+        // ve verisine dokunmadan (2026-09-26). Satın alma bu pakette çalışmaz.
+        debug {
+            applicationIdSuffix = ".dev"
+            manifestPlaceholders += mapOf("appLabel" to "AC Dev")
+        }
         release {
             // key.properties varsa upload anahtarıyla, yoksa debug imzasıyla
             // (Play'e yükleme için key.properties ZORUNLU)

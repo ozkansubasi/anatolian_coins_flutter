@@ -105,6 +105,7 @@
   "try_different_filters": "Farklı filtreler deneyin",
   "start_searching": "Sikke aramaya başlayın",
   "select_region_or_mint": "Yukarıdan bölge veya darphane seçin",
+  "choose_region_or_search": "Bir bölge seçin ya da darphane/sikke adıyla arayın.",
   "material_needs_region": "Materyal filtresi tek başına kullanılamaz; bir bölge ya da darphane de seçin.",
   "filter_images_only": "Yalnız görselli",
   "sort_uid_asc": "UID ↑",

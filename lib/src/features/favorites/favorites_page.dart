@@ -48,7 +48,10 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       if (mounted) {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context).translate('favorites_load_failed', params: {'error': '$e'}))),
+          SnackBar(
+              content: Text(AppLocalizations.of(context).translate(
+                  'favorites_load_failed',
+                  params: {'error': '$e'}))),
         );
       }
     }
@@ -114,7 +117,8 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                     itemBuilder: (context, index) {
                       final variant = _favorites[index];
                       final thumbnailUrl = _thumbnailCache[variant.articleId];
-                      final isFavorite = favoritesController.contains(variant.articleId);
+                      final isFavorite =
+                          favoritesController.contains(variant.articleId);
 
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(
@@ -187,9 +191,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                         ),
                         trailing: IconButton(
                           icon: Icon(
-                            isFavorite
-                                ? Icons.favorite
-                                : Icons.favorite_border,
+                            isFavorite ? Icons.favorite : Icons.favorite_border,
                             color: isFavorite ? Colors.red : c.textMuted,
                             size: 24,
                           ),
@@ -204,14 +206,16 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(l10n.translate('removed_from_favorites')),
+                                  content: Text(
+                                      l10n.translate('removed_from_favorites')),
                                   duration: const Duration(seconds: 1),
                                 ),
                               );
                             }
                           },
                         ),
-                        onTap: () => context.push('/variant/${variant.articleId}'),
+                        onTap: () =>
+                            context.push('/variant/${variant.articleId}'),
                       );
                     },
                   ),
@@ -222,39 +226,43 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
   Widget _buildEmptyState(AppLocalizations l10n, ThemeData theme) {
     final c = context.numColors;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.favorite_border,
-            size: 64,
-            color: c.hint,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.translate('no_favorites_yet'),
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: c.textMuted,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.translate('no_favorites_hint'),
-            style: TextStyle(
-              fontSize: 14,
+      child: Padding(
+        // Açıklama kenarlara dayanıyordu (2026-09-26 cihaz incelemesi)
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.favorite_border,
+              size: 64,
               color: c.hint,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => context.go('/browse'),
-            icon: const Icon(Icons.search),
-            label: Text(l10n.translate('browse_coins')),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              l10n.translate('no_favorites_yet'),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: c.text,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.translate('no_favorites_hint'),
+              style: TextStyle(
+                fontSize: 14,
+                color: c.textMuted,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => context.go('/browse'),
+              icon: const Icon(Icons.search),
+              label: Text(l10n.translate('browse_coins')),
+            ),
+          ],
+        ),
       ),
     );
   }

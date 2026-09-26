@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart';
 import '../../core/region_data.dart';
 import '../../core/navigation.dart';
@@ -46,6 +45,7 @@ class RegionsListPage extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         children: [
           GridView.builder(
+            padding: EdgeInsets.zero,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

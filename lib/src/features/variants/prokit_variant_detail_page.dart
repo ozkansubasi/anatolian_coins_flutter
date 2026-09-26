@@ -426,11 +426,18 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
           left: 12,
           right: 12,
           bottom: 6,
-          child: ImageCredit(image: _images[_currentImageIndex.clamp(0, _images.length - 1)], fontSize: 10),
+          child: Center(
+            child: ImageCredit(
+              image: _images[_currentImageIndex.clamp(0, _images.length - 1)],
+              fontSize: 10,
+              // Açık renkli görselde beyaz yazı okunmuyordu: koyu zemin
+              background: Colors.black.withValues(alpha: 0.45),
+            ),
+          ),
         ),
         if (_images.length > 1)
           Positioned(
-            bottom: 26,
+            bottom: 34,
             left: 0,
             right: 0,
             child: Center(
@@ -657,18 +664,22 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                               l10n.translate('show_on_map'),
                               style: context.numText.section.copyWith(color: Colors.white),
                             ),
-                            8.height,
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(20),
+                            // Ham koordinat yerine darphane adı (koordinat kullanıcıya
+                            // bir şey söylemiyordu; 2026-09-26 cihaz incelemesi).
+                            if (v.mintName != null && v.mintName!.trim().isNotEmpty) ...[
+                              8.height,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  CoinFormat.titleCase(v.mintName!.trim()),
+                                  style: context.numText.caption.copyWith(color: Colors.white),
+                                ),
                               ),
-                              child: Text(
-                                v.coordinates!,
-                                style: context.numText.caption.copyWith(color: Colors.white70),
-                              ),
-                            ),
+                            ],
                             24.height,
                             Text(
                               l10n.translate('tap_for_fullscreen'),

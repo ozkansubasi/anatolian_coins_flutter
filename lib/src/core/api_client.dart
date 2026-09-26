@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import 'app_log.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import '../core/env.dart';
@@ -21,23 +22,9 @@ class ApiClient {
     // JSON parse interceptor - String response'u Map'e çevir
     dio.interceptors.add(InterceptorsWrapper(
       onResponse: (response, handler) {
-        // Debug: Response'u logla
-        if (response.requestOptions.path.contains('variants')) {
-          debugPrint('🔍 Response for ${response.requestOptions.path}');
-          debugPrint('🔍 Response data type: ${response.data.runtimeType}');
-          if (response.data is String) {
-            final preview = (response.data as String).substring(
-              0,
-              (response.data as String).length > 500 ? 500 : (response.data as String).length
-            );
-            debugPrint('🔍 Response preview: $preview...');
-          }
-        }
-
         if (response.data is String) {
           try {
             response.data = jsonDecode(response.data);
-            debugPrint('✅ JSON parsed successfully');
           } catch (e) {
             debugPrint('⚠️ JSON parse error: $e');
           }
@@ -45,26 +32,24 @@ class ApiClient {
         handler.next(response);
       },
       onError: (error, handler) {
-        // 🔥 DEBUG: Error response body
-        debugPrint('❌ API Error: ${error.response?.statusCode}');
-        debugPrint('❌ Path: ${error.requestOptions.path}');
-        debugPrint('❌ Method: ${error.requestOptions.method}');
-
-        if (error.response?.data != null) {
-          debugPrint('❌ Response Body:');
-          debugPrint(error.response!.data);
-
-          // Try to parse error JSON
-          try {
-            if (error.response!.data is String) {
-              final errorJson = jsonDecode(error.response!.data);
-              debugPrint('❌ Parsed Error: $errorJson');
-            }
-          } catch (e) {
-            debugPrint('⚠️ Could not parse error response');
+        final o = error.requestOptions;
+        var detail = '';
+        try {
+          final raw = error.response?.data;
+          final j = raw is String ? jsonDecode(raw) : raw;
+          if (j is Map && j['errors'] is List && (j['errors'] as List).isNotEmpty) {
+            final e0 = (j['errors'] as List).first;
+            if (e0 is Map) detail = '${e0['detail'] ?? e0['title'] ?? ''}';
           }
+        } catch (_) {}
+        // Jetonsuz istekte 401 beklenen durum (giriş yapılmamış): kaydetme.
+        if (error.response?.statusCode == 401 && !o.headers.containsKey('Authorization')) {
+          handler.next(error);
+          return;
         }
-
+        final query = o.uri.hasQuery ? '?${o.uri.query}' : '';
+        appLog('HTTP', '${error.response?.statusCode ?? error.type.name} ${o.method} ${o.uri.path}$query'
+            '${detail.isEmpty ? '' : ' → $detail'}');
         handler.next(error);
       },
     ));

@@ -13,12 +13,16 @@ class ImageCredit extends StatelessWidget {
   final double fontSize;
   final TextAlign textAlign;
 
+  /// Görselin üstüne binerken okunaklılık için zemin (null = zeminsiz).
+  final Color? background;
+
   const ImageCredit({
     super.key,
     required this.image,
     this.color = Colors.white,
     this.fontSize = 11,
     this.textAlign = TextAlign.center,
+    this.background,
   });
 
   static String? text(VariantImage image, AppLocalizations l10n) {
@@ -34,7 +38,7 @@ class ImageCredit extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = text(image, AppLocalizations.of(context));
     if (label == null) return const SizedBox.shrink();
-    return Text(
+    final caption = Text(
       label,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
@@ -42,8 +46,14 @@ class ImageCredit extends StatelessWidget {
       style: TextStyle(
         color: color,
         fontSize: fontSize,
-        shadows: const [Shadow(blurRadius: 3, color: Colors.black54)],
+        shadows: background == null ? const [Shadow(blurRadius: 3, color: Colors.black54)] : null,
       ),
+    );
+    if (background == null) return caption;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(10)),
+      child: caption,
     );
   }
 }

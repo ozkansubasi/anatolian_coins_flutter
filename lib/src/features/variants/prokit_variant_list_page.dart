@@ -231,6 +231,8 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true, // alt çubuğun üstünde, daha çok yer
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _FilterBottomSheet(
         selectedRegion: _selectedRegion,
@@ -261,7 +263,9 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
           // Region header image when region is selected
           if (_selectedRegion != null) _buildRegionHeader(),
           // Ticker for region facts
-          if (_selectedRegion != null) RegionTicker(region: _selectedRegion!),
+          // Kısa bant: başlık bölümü sonuçlara yer bırakmalı (2026-09-26 cihaz
+          // incelemesi: görsel + bant + arama + çipler ekranın ~%65'iydi).
+          if (_selectedRegion != null) RegionTicker(region: _selectedRegion!, height: 60, maxLines: 3),
           _buildSearchBar(l10n),
           _buildFilterChips(l10n),
           Expanded(child: _buildContent(l10n)),
@@ -285,7 +289,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     
     return Container(
       width: double.infinity,
-      height: 140,
+      height: 96,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -336,7 +340,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
               children: [
                 Text(
                   regionName,
-                  style: boldTextStyle(size: 22, color: Colors.white),
+                  style: boldTextStyle(size: 18, color: Colors.white),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -552,29 +556,64 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
       );
     }
 
+    if (!_initialLoad) return _buildRegionPicker(l10n);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            _initialLoad ? Icons.search_off : Icons.monetization_on_outlined,
-            size: 64,
-            color: context.numColors.textMuted,
-          ),
+          Icon(Icons.search_off, size: 64, color: context.numColors.textMuted),
           16.height,
           Text(
-            _initialLoad
-                ? l10n.translate('no_results')
-                : l10n.translate('start_searching'),
+            l10n.translate('no_results'),
             style: boldTextStyle(size: 16, color: context.numColors.text),
           ),
           8.height,
           Text(
-            _initialLoad
-                ? l10n.translate('try_different_filters')
-                : l10n.translate(_selectedMaterial != null ? 'material_needs_region' : 'select_region_or_mint'),
+            l10n.translate('try_different_filters'),
             textAlign: TextAlign.center,
             style: secondaryTextStyle(size: 14, color: context.numColors.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Başlangıç: bölgeler doğrudan seçilebilir. Eskiden "Yukarıdan bölge veya
+  /// darphane seçin" yazıyordu ama yukarıda seçici yoktu — seçim yalnız filtre
+  /// ikonunun içindeydi (2026-09-26 cihaz incelemesi).
+  Widget _buildRegionPicker(AppLocalizations l10n) {
+    final c = context.numColors;
+    final regions = RegionData.getRegionsByPopularity(l10n);
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.translate('start_searching'), style: boldTextStyle(size: 16, color: c.text)),
+          6.height,
+          Text(
+            l10n.translate(_selectedMaterial != null ? 'material_needs_region' : 'choose_region_or_search'),
+            style: secondaryTextStyle(size: 13, color: c.textMuted),
+          ),
+          16.height,
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final r in regions)
+                ActionChip(
+                  avatar: Icon(Icons.location_on_outlined, size: 16, color: c.accent),
+                  label: Text(r.value, style: TextStyle(fontSize: 13, color: c.text)),
+                  backgroundColor: c.card,
+                  side: BorderSide(color: c.border),
+                  shape: const StadiumBorder(),
+                  onPressed: () {
+                    setState(() => _selectedRegion = r.key);
+                    _load(reset: true);
+                  },
+                ),
+            ],
           ),
         ],
       ),
@@ -707,7 +746,7 @@ class _CoinGridCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            variant.material!,
+                            CoinFormat.material(variant.material, AppLocalizations.of(context)) ?? variant.material!,
                             style: boldTextStyle(size: 8, color: Colors.white),
                           ),
                         ),
@@ -851,7 +890,7 @@ class _CoinListCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            variant.material!,
+                            CoinFormat.material(variant.material, AppLocalizations.of(context)) ?? variant.material!,
                             style: boldTextStyle(size: 10, color: c.accent),
                           ),
                         ),
@@ -902,10 +941,11 @@ class _FilterChipIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.numColors;
     return InputChip(
-      avatar: Icon(icon, size: 16, color: color ?? c.accent),
-      label: Text(label, style: secondaryTextStyle(size: 13, color: c.text)),
+      visualDensity: VisualDensity.compact,
+      avatar: Icon(icon, size: 14, color: color ?? c.accent),
+      label: Text(label, style: secondaryTextStyle(size: 12, color: c.text)),
       onDeleted: onRemove,
-      deleteIcon: Icon(Icons.close, size: 18, color: c.accent),
+      deleteIcon: Icon(Icons.close, size: 16, color: c.accent),
       deleteButtonTooltipMessage: MaterialLocalizations.of(context).deleteButtonTooltip,
       backgroundColor: numPrimary.withValues(alpha: 0.1),
       side: BorderSide(color: numPrimary.withValues(alpha: 0.3)),
@@ -1099,7 +1139,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l10n.translate('with_images_only'),
+                              l10n.translate('filter_images_only'),
                               style: boldTextStyle(size: 14, color: c.text),
                             ),
                             4.height,

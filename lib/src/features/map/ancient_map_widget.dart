@@ -252,7 +252,12 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
                 alignment: Alignment.topRight,
                 child: Padding(
                   padding: const EdgeInsets.all(8),
-                  child: SingleChildScrollView(child: _buildControlPanel(l10n)),
+                  // Sabit genişlik: paneldeki Divider'lar verilen tüm genişliği
+                  // kaplıyordu, panel haritanın üstünü örttü (cihazda görüldü).
+                  child: SizedBox(
+                    width: 52,
+                    child: SingleChildScrollView(child: _buildControlPanel(l10n)),
+                  ),
                 ),
               ),
             ),
@@ -683,7 +688,12 @@ class _FullScreenAncientMapPageState extends State<FullScreenAncientMapPage> {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
+    // Uygulamanın varsayılanına dön (main.dart: edgeToEdge). `manual`
+    // gezinme çubuğunu siyah bırakıyordu (cihazda görüldü).
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+      overlays: [SystemUiOverlay.top, SystemUiOverlay.bottom],
+    );
     super.dispose();
   }
 

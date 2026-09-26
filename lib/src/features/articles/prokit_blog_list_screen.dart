@@ -220,10 +220,6 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
                       : l10n.translate('latest_articles'),
                   style: boldTextStyle(size: 18, color: c.text),
                 ),
-                Text(
-                  '${_articles.length} ${l10n.translate('articles')}',
-                  style: secondaryTextStyle(color: c.textMuted),
-                ),
               ],
             ),
             16.height,
@@ -233,6 +229,9 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
               _buildEmptyView(l10n)
             else
               ListView.separated(
+                // Dolgu verilmezse ListView güvenli alan boşluğunu (durum çubuğu
+                // yüksekliği) ekliyordu: başlık ile ilk kart arası ~50 px boşluk.
+                padding: EdgeInsets.zero,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _articles.length,
@@ -280,7 +279,13 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
         width: double.infinity,
         decoration: boxDecorationWithRoundedCorners(
           borderRadius: radius(16),
-          gradient: numGoldGradient,
+          // Koyu kahve-altın: açık altın zeminde beyaz metin okunmuyordu
+          // (2026-09-26 cihaz incelemesi).
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF5C4410), numPrimary],
+          ),
           boxShadow: [
             BoxShadow(
               color: numPrimary.withValues(alpha: 0.3),
@@ -330,8 +335,8 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
                   // Title
                   Text(
                     article.title,
-                    style: boldTextStyle(size: 20, color: Colors.white),
-                    maxLines: 2,
+                    style: boldTextStyle(size: 18, color: Colors.white),
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
                   8.height,

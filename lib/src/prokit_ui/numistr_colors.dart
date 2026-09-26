@@ -69,8 +69,11 @@ const LinearGradient numPrimaryGradient = LinearGradient(
   end: Alignment.bottomRight,
 );
 
+/// Altın gradyan — üzerinde beyaz metin durur (abonelik başlığı, makale
+/// rozeti). Ortası eskiden #F5E6A3'tü (krem): beyaz yazı okunmuyordu
+/// (2026-09-26 cihaz incelemesi). Koyu altın tonlarında kaldı.
 const LinearGradient numGoldGradient = LinearGradient(
-  colors: [Color(0xFFD4AF37), Color(0xFFF5E6A3), Color(0xFFD4AF37)],
+  colors: [Color(0xFF8B6914), Color(0xFFB8860B), Color(0xFF8B6914)],
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
 );

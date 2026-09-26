@@ -12,6 +12,9 @@ class NumistrTicker extends ConsumerStatefulWidget {
   final String? language; // Language code: 'tr-TR', 'en-GB', or '*' for all
   final int itemCount;
   final double height;
+
+  /// Olgu metninin en çok satırı (bölge listesinde 3, varsayılan 4).
+  final int maxLines;
   final Color? backgroundColor;
   final Color? textColor;
   final Duration fadeInterval;
@@ -24,6 +27,7 @@ class NumistrTicker extends ConsumerStatefulWidget {
     this.language,
     this.itemCount = 20,
     this.height = 88, // Height for 4 lines of text
+    this.maxLines = 4,
     this.backgroundColor,
     this.textColor,
     this.fadeInterval = const Duration(seconds: 8), // Time between transitions
@@ -251,7 +255,7 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
               ],
             ),
             textAlign: TextAlign.center,
-            maxLines: 4, // Uzun ipuçlarının sonu kesilmesin (3→4 satır)
+            maxLines: widget.maxLines,
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -265,11 +269,13 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
 class RegionTicker extends ConsumerWidget {
   final String region; // Region code (e.g., 'lydia-coins', 'pisidia-coins')
   final double height;
+  final int maxLines;
 
   const RegionTicker({
     super.key,
     required this.region,
     this.height = 88, // Height for 4 lines of text
+    this.maxLines = 4,
   });
 
   @override
@@ -283,6 +289,7 @@ class RegionTicker extends ConsumerWidget {
       region: region,
       language: joomlaLanguage,
       height: height,
+      maxLines: maxLines,
       backgroundColor: numPrimary.withValues(alpha: 0.95),
       fadeInterval: const Duration(seconds: 8),
       fadeDuration: const Duration(milliseconds: 600),

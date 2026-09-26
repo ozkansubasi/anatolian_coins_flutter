@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/app_log.dart';
 import 'features/home/prokit_home_screen.dart';
 import 'features/variants/prokit_variant_list_page.dart';
 import 'features/variants/prokit_variant_detail_page.dart';
@@ -45,11 +46,17 @@ class GoRouterRefreshStream extends ChangeNotifier {
 /// sahibi olan sekmeye atlar ve geri dönüş kalmaz (ölçüldü: go_router 14.8.1).
 enum ShellBranch { home, browse, scan, favorites, menu }
 
-GoRouter appRouter(WidgetRef ref) {
+/// Tek yönlendirici örneği. Eskiden kök widget her yeniden çizildiğinde
+/// `appRouter(ref)` yeni bir GoRouter kuruyordu: dil ya da tema değişince
+/// (ve her hot reload'da) gezinme geçmişi sıfırlanıp Ana Sayfa'ya dönülüyordu
+/// (2026-09-26 cihaz incelemesi).
+final appRouterProvider = Provider<GoRouter>((ref) => appRouter());
+
+GoRouter appRouter() {
   // ❌ REMOVED: GoRouter refresh on auth changes causes navigation loops
   // Each page handles its own auth state with ref.watch()
 
-  return GoRouter(
+  final router = GoRouter(
     // No refreshListenable - pages manage their own auth state
     routes: [
       StatefulShellRoute.indexedStack(
@@ -202,4 +209,11 @@ GoRouter appRouter(WidgetRef ref) {
       ),
     ],
   );
+  // Ekran geçişleri hata günlüğüne: bir hatanın hangi ekranda çıktığı görünsün.
+  String? last;
+  router.routerDelegate.addListener(() {
+    final loc = router.routerDelegate.currentConfiguration.uri.toString();
+    if (loc != last) appLog('NAV', last = loc);
+  });
+  return router;
 }

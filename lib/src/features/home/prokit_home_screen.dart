@@ -339,6 +339,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: GridView.count(
+        padding: EdgeInsets.zero,
         crossAxisCount: 2,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -427,14 +428,18 @@ class _RegionChip extends StatelessWidget {
               ),
             ),
             6.height,
+            // Uzun adlar ("Kapadokya", "Paflagonya") kesilmek yerine hafifçe
+            // küçülür (2026-09-26 cihaz incelemesi: "Kapadok…").
             SizedBox(
-              width: 60,
-              child: Text(
-                regionName,
-                style: secondaryTextStyle(size: 10, color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : numTextPrimary),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              width: 68,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  regionName,
+                  style: secondaryTextStyle(size: 10, color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : numTextPrimary),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                ),
               ),
             ),
           ],

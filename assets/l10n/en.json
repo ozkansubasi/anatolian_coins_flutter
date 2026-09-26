@@ -105,6 +105,7 @@
   "try_different_filters": "Try different filters",
   "start_searching": "Start searching for coins",
   "select_region_or_mint": "Select region or mint above",
+  "choose_region_or_search": "Choose a region, or search by mint or coin name.",
   "material_needs_region": "The material filter needs a region or mint as well.",
   "filter_images_only": "With images only",
   "sort_uid_asc": "UID ↑",

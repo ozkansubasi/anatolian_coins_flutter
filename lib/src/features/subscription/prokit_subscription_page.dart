@@ -574,6 +574,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                     ],
                   ),
                 ),
+                8.width, // uzun açıklama ikona yapışıyordu
                 const Icon(Icons.check_circle, color: numSuccess, size: 24),
               ],
             ),
