@@ -941,7 +941,9 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   late bool _onlyImages;
   late String _sort;
 
-  final _materials = ['AU', 'AR', 'AE', 'EL', 'PB'];
+  /// API kodları (`/v1/materials`). Eskiden AU/AR/AE kısaltmaları gidiyordu;
+  /// sunucu tanımayınca 500 dönüyordu (2026-09-26 cihaz testi, Bitinya + altın).
+  final _materials = ['gold', 'silver', 'bronze', 'electrum', 'lead'];
 
   @override
   void initState() {
@@ -1191,22 +1193,8 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     );
   }
 
-  String _getMaterialLabel(AppLocalizations l10n, String material) {
-    switch (material) {
-      case 'AU':
-        return l10n.translate('material_gold');
-      case 'AR':
-        return l10n.translate('material_silver');
-      case 'AE':
-        return l10n.translate('material_bronze');
-      case 'EL':
-        return l10n.translate('material_electrum');
-      case 'PB':
-        return l10n.translate('material_lead');
-      default:
-        return material;
-    }
-  }
+  String _getMaterialLabel(AppLocalizations l10n, String material) =>
+      CoinFormat.material(material, l10n) ?? material;
 
   Widget _buildChoiceChip({
     required String label,

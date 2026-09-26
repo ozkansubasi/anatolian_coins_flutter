@@ -8,6 +8,7 @@ import '../../auth/auth_controller.dart';
 import '../../l10n/app_localizations.dart';
 import '../../core/region_data.dart';
 import '../../prokit_ui/prokit_ui.dart';
+import '../../prokit_ui/widgets/num_bottom_nav.dart';
 import '../favorites/favorites_service.dart';
 import '../articles/editors_pick_card.dart';
 import 'widgets/home_banner.dart';
@@ -255,7 +256,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
                       regionCode: region.key,
                       regionName: region.value,
                       color: getRegionColor(region.key.replaceAll('-coins', '')),
-                      onTap: () => context.go('/browse?region=${region.key}'),
+                      onTap: () => context.openRoute('/browse?region=${region.key}'),
                     );
                   },
                 ),

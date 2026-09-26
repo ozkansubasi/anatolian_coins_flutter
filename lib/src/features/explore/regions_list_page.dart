@@ -6,6 +6,7 @@ import '../../core/navigation.dart';
 import '../../core/num_colors.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../prokit_ui/widgets/num_bottom_nav.dart';
 import '../ticker/ticker_widget.dart';
 
 /// Bölge dizini: tüm bölge kartları + tüm bölgelerden karışık ipuçları
@@ -59,7 +60,7 @@ class RegionsListPage extends StatelessWidget {
               return _RegionCard(
                 regionCode: region.key,
                 regionName: region.value,
-                onTap: () => context.go('/browse?region=${region.key}'),
+                onTap: () => context.openRoute('/browse?region=${region.key}'),
               );
             },
           ),
@@ -103,7 +104,7 @@ class _SearchField extends StatelessWidget {
         onSubmitted: (q) {
           final query = q.trim();
           if (query.isNotEmpty) {
-            context.go('/browse?search=${Uri.encodeQueryComponent(query)}');
+            context.openRoute('/browse?search=${Uri.encodeQueryComponent(query)}');
           }
         },
         decoration: InputDecoration(

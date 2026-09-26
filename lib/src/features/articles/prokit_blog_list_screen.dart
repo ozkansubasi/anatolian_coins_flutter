@@ -423,22 +423,22 @@ class _CategoryChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        // Arama sayfasındaki seçim çipleriyle aynı ölçü (12 pt); sarılı düzende
+        // 14 pt kalın + gölge kalabalık duruyordu (2026-09-26 cihaz testi).
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: boxDecorationWithRoundedCorners(
           backgroundColor: isSelected ? numPrimary : c.card,
-          borderRadius: radius(20),
+          borderRadius: radius(16),
           border: Border.all(
             color: isSelected ? numPrimary : c.border,
           ),
-          boxShadow: isSelected
-              ? [BoxShadow(color: numPrimary.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2))]
-              : null,
         ),
         child: Text(
           label,
-          style: boldTextStyle(
-            size: 14,
-            color: isSelected ? Colors.white : c.textMuted,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            color: isSelected ? Colors.white : c.text,
           ),
         ),
       ),

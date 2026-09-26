@@ -55,9 +55,26 @@ class Variant {
 
   String get title => titleTr ?? titleEn ?? slug;
 
+  /// Kimlik: `article_id` / `variant_id`; yoksa `uid`'den (`ntr:var:00003266`).
+  ///
+  /// Detay ucu (`/v1/variants/{id}`) `article_id` döndürmüyor → eskiden 0
+  /// oluyordu: web bağlantısı `id=0` (404), Kaynak'ta sikke no "0", çevrimdışı
+  /// indirmede her sikke kimlik 0 ile öncekinin üstüne yazılıyordu
+  /// (2026-09-26 cihaz testi).
+  static int _articleIdOf(Map<String, dynamic> j) {
+    for (final key in const ['article_id', 'variant_id']) {
+      final v = j[key];
+      if (v is int && v > 0) return v;
+      final parsed = int.tryParse('${v ?? ''}');
+      if (parsed != null && parsed > 0) return parsed;
+    }
+    final m = RegExp(r'(\d+)$').firstMatch('${j['uid'] ?? ''}');
+    return m == null ? 0 : int.parse(m.group(1)!);
+  }
+
   factory Variant.fromJson(Map<String, dynamic> j) {
     return Variant(
-      articleId: j['article_id'] ?? j['variant_id'] ?? 0, // variant_id de dene
+      articleId: _articleIdOf(j),
       uid: j['uid'] ?? '',
       slug: j['slug'] ?? '',
       titleTr: j['title_tr'] ?? j['title'], // title de dene
