@@ -76,7 +76,8 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
         final msg = next.error == 'auth'
             ? l10n.translate('assistant_login_required')
             : l10n.translate('assistant_error_network');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(msg)));
       }
       if (next.messages.length != (prev?.messages.length ?? 0)) _scrollToEnd();
     });
@@ -110,15 +111,19 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                       : ListView.builder(
                           controller: _scroll,
                           padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                          itemCount: state.messages.length + (state.sending ? 1 : 0),
+                          itemCount:
+                              state.messages.length + (state.sending ? 1 : 0),
                           itemBuilder: (context, i) {
-                            if (i >= state.messages.length) return const _TypingBubble();
-                            return _MessageBubble(message: state.messages[i], l10n: l10n);
+                            if (i >= state.messages.length)
+                              return const _TypingBubble();
+                            return _MessageBubble(
+                                message: state.messages[i], l10n: l10n);
                           },
                         ),
                 ),
                 if (state.quotaExceeded && !isPro) _UpsellBanner(l10n: l10n),
-                _Footer(l10n: l10n, remaining: state.remainingToday, theme: theme),
+                _Footer(
+                    l10n: l10n, remaining: state.remainingToday, theme: theme),
                 _InputBar(
                   controller: _controller,
                   enabled: !state.sending,
@@ -143,7 +148,8 @@ class _LoginCta extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.smart_toy_outlined, size: 56, color: context.numColors.accent),
+            Icon(Icons.smart_toy_outlined,
+                size: 56, color: context.numColors.accent),
             const SizedBox(height: 16),
             Text(
               l10n.translate('assistant_login_required'),
@@ -180,12 +186,14 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       children: [
         const SizedBox(height: 24),
-        Icon(Icons.smart_toy_outlined, size: 56, color: context.numColors.accent),
+        Icon(Icons.smart_toy_outlined,
+            size: 56, color: context.numColors.accent),
         const SizedBox(height: 12),
         Text(
           l10n.translate('assistant_empty_title'),
           textAlign: TextAlign.center,
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 6),
         Text(
@@ -203,7 +211,8 @@ class _EmptyState extends StatelessWidget {
                 foregroundColor: context.numColors.accent,
                 side: const BorderSide(color: numPrimary),
                 alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               ),
               child: Text(s),
             ),
@@ -229,7 +238,8 @@ class _MessageBubble extends StatelessWidget {
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -248,14 +258,17 @@ class _MessageBubble extends StatelessWidget {
               // Kullanıcının yazdığı düz metin kalır; asistan cevabı sunucudan
               // Markdown gelir (**kalın**, *italik*, liste, bağlantı).
               if (isUser)
-                SelectableText(message.text, style: theme.textTheme.bodyMedium?.copyWith(color: fg, height: 1.35))
+                SelectableText(message.text,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: fg, height: 1.35))
               else
                 _AssistantMarkdown(text: message.text, color: fg),
               if (message.sources.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
                   l10n.translate('assistant_sources'),
-                  style: theme.textTheme.labelSmall?.copyWith(color: fg.withValues(alpha: 0.7)),
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: fg.withValues(alpha: 0.7)),
                 ),
                 const SizedBox(height: 4),
                 Wrap(
@@ -275,11 +288,14 @@ class _MessageBubble extends StatelessWidget {
                           decorationColor: context.numColors.accent,
                         ),
                       ),
-                      avatar: Icon(Icons.open_in_new, size: 14, color: context.numColors.accent),
+                      avatar: Icon(Icons.open_in_new,
+                          size: 14, color: context.numColors.accent),
                       visualDensity: VisualDensity.compact,
                       onPressed: () async {
                         final uri = Uri.tryParse(s.url);
-                        if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        if (uri != null)
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
                       },
                     );
                   }).toList(),
@@ -307,20 +323,28 @@ class _AssistantMarkdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final body = theme.textTheme.bodyMedium?.copyWith(color: color, height: 1.35);
+    final body =
+        theme.textTheme.bodyMedium?.copyWith(color: color, height: 1.35);
     final sheet = MarkdownStyleSheet.fromTheme(theme).copyWith(
       p: body,
       strong: const TextStyle(fontWeight: FontWeight.bold),
       em: const TextStyle(fontStyle: FontStyle.italic),
       listBullet: body,
-      h1: theme.textTheme.titleMedium?.copyWith(color: color, fontWeight: FontWeight.bold),
-      h2: theme.textTheme.titleSmall?.copyWith(color: color, fontWeight: FontWeight.bold),
-      h3: theme.textTheme.titleSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+      h1: theme.textTheme.titleMedium
+          ?.copyWith(color: color, fontWeight: FontWeight.bold),
+      h2: theme.textTheme.titleSmall
+          ?.copyWith(color: color, fontWeight: FontWeight.bold),
+      h3: theme.textTheme.titleSmall
+          ?.copyWith(color: color, fontWeight: FontWeight.w600),
       blockquote: body?.copyWith(fontStyle: FontStyle.italic),
       blockquoteDecoration: BoxDecoration(
-        border: Border(left: BorderSide(color: numPrimary.withValues(alpha: 0.5), width: 3)),
+        border: Border(
+            left:
+                BorderSide(color: numPrimary.withValues(alpha: 0.5), width: 3)),
       ),
-      code: body?.copyWith(fontFamily: 'monospace', backgroundColor: color.withValues(alpha: 0.08)),
+      code: body?.copyWith(
+          fontFamily: 'monospace',
+          backgroundColor: color.withValues(alpha: 0.08)),
       // Kaynak çipleriyle aynı bağlantı görünümü (accent: açıkta #8B6914, koyuda #E8C766).
       a: TextStyle(
         color: context.numColors.accent,
@@ -401,7 +425,8 @@ class _Footer extends StatelessWidget {
   final AppLocalizations l10n;
   final int? remaining;
   final ThemeData theme;
-  const _Footer({required this.l10n, required this.remaining, required this.theme});
+  const _Footer(
+      {required this.l10n, required this.remaining, required this.theme});
 
   @override
   Widget build(BuildContext context) {
@@ -410,9 +435,16 @@ class _Footer extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
       child: Row(
         children: [
-          Expanded(child: Text(l10n.translate('assistant_disclaimer'), style: style)),
-          if (remaining != null)
-            Text(l10n.translate('assistant_remaining_today', params: {'n': '$remaining'}), style: style),
+          Expanded(
+              child:
+                  Text(l10n.translate('assistant_disclaimer'), style: style)),
+          // Yalnız azaldığında: Pro'nun yüksek günlük sınırında "Bugün kalan:
+          // 999" yapay bir tavan gibi okunuyordu.
+          if (remaining != null && remaining! <= 20)
+            Text(
+                l10n.translate('assistant_remaining_today',
+                    params: {'n': '$remaining'}),
+                style: style),
         ],
       ),
     );
@@ -424,7 +456,11 @@ class _InputBar extends StatelessWidget {
   final bool enabled;
   final String hint;
   final VoidCallback onSend;
-  const _InputBar({required this.controller, required this.enabled, required this.hint, required this.onSend});
+  const _InputBar(
+      {required this.controller,
+      required this.enabled,
+      required this.hint,
+      required this.onSend});
 
   @override
   Widget build(BuildContext context) {
@@ -449,8 +485,11 @@ class _InputBar extends StatelessWidget {
                   counterText: '',
                   isDense: true,
                   filled: true,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none),
                 ),
               ),
             ),

@@ -6,6 +6,7 @@ import '../../models/variant.dart';
 import '../../core/region_data.dart';
 import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
+import '../../core/navigation.dart';
 import '../variants/variants_api.dart';
 import 'favorites_service.dart';
 
@@ -89,13 +90,8 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            const Icon(Icons.favorite, size: 20),
-            const SizedBox(width: 8),
-            Text(l10n.translate('my_favorites')),
-          ],
-        ),
+        leading: context.returnLeading,
+        title: Text(l10n.translate('my_favorites')),
         actions: [
           if (_favorites.isNotEmpty)
             IconButton(

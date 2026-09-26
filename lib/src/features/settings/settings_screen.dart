@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
+import '../../core/navigation.dart';
+import '../../prokit_ui/numistr_colors.dart';
 import '../../core/app_version.dart';
 import '../../core/locale_provider.dart';
 import '../../core/subscription_provider.dart';
 import '../../core/region_data.dart';
-import '../../widgets/custom_toggle_switch.dart';
 import 'settings_provider.dart';
 
 /// Settings screen for app configuration
@@ -21,8 +22,8 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: context.returnLeading,
         title: Text(l10n.translate('settings_title')),
-        centerTitle: true,
       ),
       body: ListView(
         children: [
@@ -166,7 +167,8 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildLanguageRadioButtons(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  Widget _buildLanguageRadioButtons(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final currentLocale = ref.watch(localeProvider);
 
     return Padding(
@@ -235,7 +237,8 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAutoSyncTile(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  Widget _buildAutoSyncTile(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final subscription = ref.watch(subscriptionProvider);
     final autoSync = ref.watch(autoSyncFavoritesProvider);
     final isEnabled = subscription.isPro;
@@ -249,21 +252,21 @@ class SettingsScreen extends ConsumerWidget {
             ? l10n.translate('auto_download_favorites_subtitle_pro')
             : l10n.translate('auto_download_favorites_subtitle_free'),
       ),
-      trailing: CustomToggleSwitch(
+      // Standart anahtar, altın vurgu. Eski özel anahtar yeşildi ve koda
+      // gömülü "ON/OFF" yazısı taşıyordu (i18n dışı).
+      trailing: Switch(
         value: value,
+        activeThumbColor: Colors.white,
+        activeTrackColor: numPrimary,
         onChanged: isEnabled
-            ? (newValue) async {
-                await ref.read(autoSyncFavoritesProvider.notifier).toggle();
-              }
-            : (_) {}, // Disabled, do nothing
-        width: 56,
-        height: 28,
-        activeColor: isEnabled ? Colors.green : Colors.grey,
+            ? (_) => ref.read(autoSyncFavoritesProvider.notifier).toggle()
+            : null,
       ),
     );
   }
 
-  Widget _buildConfidenceThresholdTile(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  Widget _buildConfidenceThresholdTile(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final threshold = ref.watch(recognitionConfidenceThresholdProvider);
 
     return ListTile(
@@ -272,15 +275,19 @@ class SettingsScreen extends ConsumerWidget {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(l10n.translate('minimum_similarity', params: {'value': '${(threshold * 100).toInt()}'})),
+          Text(l10n.translate('minimum_similarity',
+              params: {'value': '${(threshold * 100).toInt()}'})),
           Slider(
             value: threshold,
             min: 0.4,
             max: 0.95,
             divisions: 11,
-            label: l10n.translate('percent_value', params: {'value': '${(threshold * 100).toInt()}'}),
+            label: l10n.translate('percent_value',
+                params: {'value': '${(threshold * 100).toInt()}'}),
             onChanged: (value) {
-              ref.read(recognitionConfidenceThresholdProvider.notifier).set(value);
+              ref
+                  .read(recognitionConfidenceThresholdProvider.notifier)
+                  .set(value);
             },
           ),
         ],
@@ -288,13 +295,15 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildTopKTile(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  Widget _buildTopKTile(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final topK = ref.watch(recognitionTopKProvider);
 
     return ListTile(
       leading: const Icon(Icons.format_list_numbered),
       title: Text(l10n.translate('result_count')),
-      subtitle: Text(l10n.translate('showing_top_n_results', params: {'count': '$topK'})),
+      subtitle: Text(
+          l10n.translate('showing_top_n_results', params: {'count': '$topK'})),
       trailing: DropdownButton<int>(
         value: topK,
         items: const [
@@ -311,7 +320,8 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRegionFilterTile(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  Widget _buildRegionFilterTile(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final filterRegion = ref.watch(recognitionFilterRegionProvider);
 
     return ListTile(
@@ -327,7 +337,8 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMaterialFilterTile(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  Widget _buildMaterialFilterTile(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final filterMaterial = ref.watch(recognitionFilterMaterialProvider);
 
     // Get material name from translations
@@ -342,11 +353,13 @@ class SettingsScreen extends ConsumerWidget {
       title: Text(l10n.translate('material_filter')),
       subtitle: Text(getMaterialName(filterMaterial)),
       trailing: const Icon(Icons.chevron_right),
-      onTap: () => _showMaterialFilterDialog(context, ref, l10n, filterMaterial),
+      onTap: () =>
+          _showMaterialFilterDialog(context, ref, l10n, filterMaterial),
     );
   }
 
-  void _showRegionFilterDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n, String? currentValue) {
+  void _showRegionFilterDialog(BuildContext context, WidgetRef ref,
+      AppLocalizations l10n, String? currentValue) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -372,7 +385,9 @@ class SettingsScreen extends ConsumerWidget {
                   groupValue: currentValue,
                   onChanged: (value) {
                     if (value != null) {
-                      ref.read(recognitionFilterRegionProvider.notifier).set(value);
+                      ref
+                          .read(recognitionFilterRegionProvider.notifier)
+                          .set(value);
                       Navigator.of(context).pop();
                     }
                   },
@@ -391,7 +406,8 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildThemeModeTile(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  Widget _buildThemeModeTile(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final themeMode = ref.watch(themeModeProvider);
     final theme = Theme.of(context);
 
@@ -547,7 +563,9 @@ class SettingsScreen extends ConsumerWidget {
                   groupValue: currentValue?.toLowerCase(),
                   onChanged: (value) {
                     if (value != null) {
-                      ref.read(recognitionFilterMaterialProvider.notifier).set(value);
+                      ref
+                          .read(recognitionFilterMaterialProvider.notifier)
+                          .set(value);
                       Navigator.of(context).pop();
                     }
                   },

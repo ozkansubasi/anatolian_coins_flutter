@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/auth_controller.dart';
+import '../../core/navigation.dart';
 import '../../core/num_colors.dart';
+import '../../prokit_ui/numistr_colors.dart';
 import '../../core/subscription_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../recognition/recognition_service.dart';
@@ -21,8 +23,8 @@ class AccountScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: context.returnLeading,
         title: Text(l10n.translate('account_title')),
-        centerTitle: true,
       ),
       body: authState.authenticated
           ? _AuthenticatedView(l10n: l10n, theme: theme)
@@ -89,9 +91,11 @@ class _AuthenticatedView extends ConsumerWidget {
 
             // ADR-006 Faz 3: AI Numizmatik Asistanı girişi (ikinci ve son giriş noktası; A15)
             Card(
-              elevation: 2,
+              elevation: 0,
+              shape: _cardShape,
               child: ListTile(
-                leading: Icon(Icons.smart_toy_outlined, color: theme.colorScheme.primary),
+                leading: Icon(Icons.smart_toy_outlined,
+                    color: theme.colorScheme.primary),
                 title: Text(l10n.translate('assistant_title')),
                 subtitle: Text(l10n.translate('assistant_subtitle')),
                 trailing: const Icon(Icons.chevron_right),
@@ -252,6 +256,14 @@ class _UnauthenticatedView extends ConsumerWidget {
   }
 }
 
+/// Hesap kartlarının ortak kabuğu: ana sayfa kartlarıyla aynı dil (gölge yok,
+/// ince altın çerçeve). Eski gölgeli kartlar sayfayı ayrı bir uygulama gibi
+/// gösteriyordu (2026-09-26 cihaz incelemesi).
+final _cardShape = RoundedRectangleBorder(
+  borderRadius: BorderRadius.circular(14),
+  side: BorderSide(color: numPrimary.withAlpha(70)),
+);
+
 /// Profile Card
 class _ProfileCard extends StatelessWidget {
   final AppLocalizations l10n;
@@ -267,7 +279,8 @@ class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: 0,
+      shape: _cardShape,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Row(
@@ -329,16 +342,16 @@ class _SubscriptionCard extends StatelessWidget {
     // Pro if a RevenueCat entitlement is active OR the user is Pro via Joomla
     // group membership (admin-granted, university, comped) reported by the
     // scan-quota endpoint.
-    final isPro =
-        subscription.tier == SubscriptionTier.pro || joomlaIsPro;
+    final isPro = subscription.tier == SubscriptionTier.pro || joomlaIsPro;
     final isDarkTint = Theme.of(context).brightness == Brightness.dark;
     final c = context.numColors;
 
     return Card(
-      elevation: 2,
+      elevation: 0,
+      shape: _cardShape,
       child: InkWell(
         onTap: () => context.push('/subscription'),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -349,12 +362,12 @@ class _SubscriptionCard extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.amber.shade100,
-                      Colors.orange.shade50,
+                      numPrimary.withAlpha(40),
+                      numPrimary.withAlpha(12),
                     ],
                   )
                 : null,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,7 +376,7 @@ class _SubscriptionCard extends StatelessWidget {
                 children: [
                   Icon(
                     isPro ? Icons.star_rounded : Icons.account_circle_outlined,
-                    color: isPro ? Colors.amber.shade700 : theme.colorScheme.primary,
+                    color: numPrimary,
                     size: 28,
                   ),
                   const SizedBox(width: 12),
@@ -384,7 +397,7 @@ class _SubscriptionCard extends StatelessWidget {
                               : l10n.translate('free_tier'),
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: isPro ? Colors.amber.shade900 : null,
+                            color: isPro ? numPrimaryDark : null,
                           ),
                         ),
                       ],
@@ -457,7 +470,8 @@ class _QuotaCard extends StatelessWidget {
             : Colors.red;
 
     return Card(
-      elevation: 2,
+      elevation: 0,
+      shape: _cardShape,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -597,7 +611,8 @@ class _UsageStatsCard extends ConsumerWidget {
         );
 
     return Card(
-      elevation: 2,
+      elevation: 0,
+      shape: _cardShape,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -721,9 +736,10 @@ class _LoadingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Card(
-      elevation: 2,
-      child: Padding(
+    return Card(
+      elevation: 0,
+      shape: _cardShape,
+      child: const Padding(
         padding: EdgeInsets.all(40),
         child: Center(
           child: CircularProgressIndicator(),
@@ -748,7 +764,8 @@ class _ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: 0,
+      shape: _cardShape,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(

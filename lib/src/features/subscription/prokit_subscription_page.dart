@@ -99,7 +99,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                             color: numSuccess.withAlpha(50),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.event_available, color: numSuccess),
+                          child: const Icon(Icons.event_available,
+                              color: numSuccess),
                         ),
                         16.width,
                         Expanded(
@@ -108,13 +109,16 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                             children: [
                               Text(
                                 l10n.translate('subscription_valid'),
-                                style: secondaryTextStyle(size: 12, color: c.textMuted),
+                                style: secondaryTextStyle(
+                                    size: 12, color: c.textMuted),
                               ),
                               4.height,
                               Text(
-                                l10n.translate('valid_until',
-                                    params: {'date': _formatDate(subscription.expiryDate!)}),
-                                style: boldTextStyle(size: 16, color: numSuccess),
+                                l10n.translate('valid_until', params: {
+                                  'date': _formatDate(subscription.expiryDate!)
+                                }),
+                                style:
+                                    boldTextStyle(size: 16, color: numSuccess),
                               ),
                             ],
                           ),
@@ -154,7 +158,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildUpgradeView(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  Widget _buildUpgradeView(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final offeringsAsync = ref.watch(offeringsProvider);
     final c = context.numColors;
 
@@ -170,7 +175,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                 children: [
                   // Back button row
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     child: Row(
                       children: [
                         IconButton(
@@ -180,7 +186,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                         const Spacer(),
                         TextButton.icon(
                           onPressed: () => _handleRestore(context, ref, l10n),
-                          icon: const Icon(Icons.restore, color: white, size: 18),
+                          icon:
+                              const Icon(Icons.restore, color: white, size: 18),
                           label: Text(
                             l10n.translate('restore_purchases'),
                             style: primaryTextStyle(size: 12, color: white),
@@ -197,7 +204,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                       color: white.withAlpha(50),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.workspace_premium, size: 64, color: white),
+                    child: const Icon(Icons.workspace_premium,
+                        size: 64, color: white),
                   ),
                   20.height,
                   Text(
@@ -209,7 +217,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Text(
                       l10n.translate('upgrade_your_collection'),
-                      style: primaryTextStyle(size: 14, color: white.withAlpha(200)),
+                      style: primaryTextStyle(
+                          size: 14, color: white.withAlpha(200)),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -256,8 +265,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                           child: CircularProgressIndicator(color: numPrimary),
                         ),
                       ),
-                      error: (error, _) =>
-                          _buildPricingError(context, ref, l10n, error.toString()),
+                      error: (error, _) => _buildPricingError(
+                          context, ref, l10n, error.toString()),
                     ),
 
                     32.height,
@@ -327,7 +336,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                   4.height,
                   Text(
                     l10n.translate('free_for_students'),
-                    style: secondaryTextStyle(size: 12, color: context.numColors.textMuted),
+                    style: secondaryTextStyle(
+                        size: 12, color: context.numColors.textMuted),
                   ),
                 ],
               ),
@@ -346,12 +356,14 @@ class ProkitSubscriptionPage extends ConsumerWidget {
     Offerings? offerings,
   ) {
     if (offerings == null || offerings.current == null) {
-      return _buildPricingError(context, ref, l10n, l10n.translate('no_products_available'));
+      return _buildPricingError(
+          context, ref, l10n, l10n.translate('no_products_available'));
     }
 
     final packages = offerings.current!.availablePackages;
     if (packages.isEmpty) {
-      return _buildPricingError(context, ref, l10n, l10n.translate('no_products_available'));
+      return _buildPricingError(
+          context, ref, l10n, l10n.translate('no_products_available'));
     }
 
     return Column(
@@ -412,7 +424,9 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: isPopular ? white.withAlpha(50) : numPrimary.withAlpha(26),
+                      color: isPopular
+                          ? white.withAlpha(50)
+                          : numPrimary.withAlpha(26),
                       borderRadius: radius(12),
                     ),
                     child: Icon(
@@ -438,14 +452,19 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                         if (trial != null) ...[
                           4.height,
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
                             decoration: boxDecorationWithRoundedCorners(
-                              backgroundColor: isPopular ? white.withAlpha(50) : numSuccess.withAlpha(30),
+                              backgroundColor: isPopular
+                                  ? white.withAlpha(50)
+                                  : numSuccess.withAlpha(30),
                               borderRadius: radius(6),
                             ),
                             child: Text(
                               trial,
-                              style: boldTextStyle(size: 12, color: isPopular ? white : numSuccess),
+                              style: boldTextStyle(
+                                  size: 12,
+                                  color: isPopular ? white : numSuccess),
                             ),
                           ),
                         ],
@@ -467,7 +486,9 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                                 period,
                                 style: secondaryTextStyle(
                                   size: 12,
-                                  color: isPopular ? white.withAlpha(180) : c.textMuted,
+                                  color: isPopular
+                                      ? white.withAlpha(180)
+                                      : c.textMuted,
                                 ),
                               ),
                             ),
@@ -477,10 +498,15 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                         if (trial != null) ...[
                           4.height,
                           Text(
-                            l10n.translate('trial_terms', params: {'price': product.priceString, 'period': period}),
+                            l10n.translate('trial_terms', params: {
+                              'price': product.priceString,
+                              'period': period
+                            }),
                             style: secondaryTextStyle(
                               size: 11,
-                              color: isPopular ? white.withAlpha(200) : c.textMuted,
+                              color: isPopular
+                                  ? white.withAlpha(200)
+                                  : c.textMuted,
                             ),
                           ),
                         ],
@@ -504,7 +530,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                 top: 0,
                 right: 20,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: boxDecorationWithRoundedCorners(
                     backgroundColor: numMaterialGold,
                     borderRadius: radiusOnly(bottomLeft: 8, bottomRight: 8),
@@ -527,9 +554,11 @@ class ProkitSubscriptionPage extends ConsumerWidget {
     // "Reklamsız" kaldırıldı — uygulamada hiç reklam yok, ayrıcalık değil;
     // ücretsiz taraftaki güven mesajına dönüştü (bkz. _buildTrustCard).
     final features = [
-      _Feature(Icons.camera_enhance, 'feature_unlimited_recognition', numSecondary),
+      _Feature(
+          Icons.camera_enhance, 'feature_unlimited_recognition', numSecondary),
       _Feature(Icons.all_inclusive, 'feature_unlimited_favorites', numError),
-      _Feature(Icons.collections_bookmark, 'feature_unlimited_collections', c.accent),
+      _Feature(Icons.collections_bookmark, 'feature_unlimited_collections',
+          c.accent),
       _Feature(Icons.smart_toy, 'feature_ai_assistant', numWarning),
       _Feature(Icons.high_quality, 'feature_high_res', numSuccess),
       _Feature(Icons.offline_bolt, 'feature_offline_access', numInfo),
@@ -591,26 +620,32 @@ class ProkitSubscriptionPage extends ConsumerWidget {
     // ham anahtar olarak görünüyorlardı (cihazda görüldü).
     final c = context.numColors;
     final features = [
-      _Feature(Icons.all_inclusive, 'unlimited_favorites', numError),
-      _Feature(Icons.offline_bolt, 'offline_access', numInfo),
-      _Feature(Icons.camera_enhance, 'unlimited_scans', numSecondary),
-      _Feature(Icons.high_quality, 'high_res_images', numSuccess),
+      // Tek vurgu rengi (altın); kırmızı/mavi/yeşil ikon zeminleri paletle
+      // çakışıyordu (2026-09-26 cihaz incelemesi).
+      _Feature(Icons.all_inclusive, 'unlimited_favorites', numPrimary),
+      _Feature(Icons.offline_bolt, 'offline_access', numPrimary),
+      _Feature(Icons.camera_enhance, 'unlimited_scans', numPrimary),
+      _Feature(Icons.high_quality, 'high_res_images', numPrimary),
     ];
 
     return GridView.builder(
+      // padding: zero ŞART — verilmezse GridView MediaQuery'nin üst boşluğunu
+      // (durum çubuğu) ekler; başlıkla kartlar arasında ~35 dp boşluk kalıyordu.
+      padding: EdgeInsets.zero,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      // 1.5 oranında iki satırlık etiket 10 px taşıyordu.
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.5,
+        childAspectRatio: 1.25,
       ),
       itemCount: features.length,
       itemBuilder: (context, index) {
         final feature = features[index];
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: boxDecorationWithRoundedCorners(
             backgroundColor: c.card,
             borderRadius: radius(12),
@@ -620,7 +655,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: feature.color.withAlpha(26),
                   shape: BoxShape.circle,
@@ -628,11 +663,16 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                 child: Icon(feature.icon, color: feature.color, size: 24),
               ),
               8.height,
-              Text(
-                l10n.translate(feature.titleKey),
-                style: boldTextStyle(size: 12, color: c.text),
-                textAlign: TextAlign.center,
-                maxLines: 2,
+              // Flexible: uzun etiket (ör. "Koleksiyon ve tarama geçmişine
+              // çevrimdışı erişim") kartı taşırmaz, gerekirse kısalır.
+              Flexible(
+                child: Text(
+                  l10n.translate(feature.titleKey),
+                  style: boldTextStyle(size: 12, color: c.text),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -712,7 +752,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
               children: [
                 Expanded(
                   flex: 2,
-                  child: Text(l10n.translate('feature'), style: boldTextStyle(size: 14, color: c.text)),
+                  child: Text(l10n.translate('feature'),
+                      style: boldTextStyle(size: 14, color: c.text)),
                 ),
                 Expanded(
                   child: Text(
@@ -723,7 +764,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                 ),
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: boxDecorationWithRoundedCorners(
                       backgroundColor: numPrimary,
                       borderRadius: radius(8),
@@ -743,20 +785,28 @@ class ProkitSubscriptionPage extends ConsumerWidget {
           _buildComparisonRow(c, l10n.translate('coin_catalog'), true, true),
           _buildComparisonRow(c, l10n.translate('search_filter'), true, true),
           // ADR-005: tarama satırı "Sınırsız" DEĞİL — adil kullanım tavanı var.
+          _buildComparisonRow(c, l10n.translate('monthly_scans'), '10',
+              l10n.translate('high_capacity')),
+          _buildComparisonRow(c, l10n.translate('favorites'), '10',
+              l10n.translate('unlimited')),
+          _buildComparisonRow(c, l10n.translate('collections'), '1',
+              l10n.translate('unlimited')),
           _buildComparisonRow(
-              c, l10n.translate('monthly_scans'), '10', l10n.translate('high_capacity')),
-          _buildComparisonRow(c, l10n.translate('favorites'), '10', l10n.translate('unlimited')),
-          _buildComparisonRow(c, l10n.translate('collections'), '1', l10n.translate('unlimited')),
-          _buildComparisonRow(c, l10n.translate('comparison_ai_assistant'),
-              l10n.translate('assistant_free_daily'), l10n.translate('assistant_pro_daily')),
+              c,
+              l10n.translate('comparison_ai_assistant'),
+              l10n.translate('assistant_free_daily'),
+              l10n.translate('assistant_pro_daily')),
           _buildComparisonRow(c, l10n.translate('offline'), false, true),
-          _buildComparisonRow(c, l10n.translate('comparison_high_res'), false, true, isLast: true),
+          _buildComparisonRow(
+              c, l10n.translate('comparison_high_res'), false, true,
+              isLast: true),
         ],
       ),
     );
   }
 
-  Widget _buildComparisonRow(NumColors c, String feature, dynamic freeValue, dynamic proValue,
+  Widget _buildComparisonRow(
+      NumColors c, String feature, dynamic freeValue, dynamic proValue,
       {bool isLast = false}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -767,7 +817,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
         children: [
           Expanded(
             flex: 2,
-            child: Text(feature, style: primaryTextStyle(size: 14, color: c.text)),
+            child:
+                Text(feature, style: primaryTextStyle(size: 14, color: c.text)),
           ),
           Expanded(
             child: _buildComparisonValue(c, freeValue, false),
@@ -821,7 +872,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
           8.height,
           Text(
             error,
-            style: secondaryTextStyle(size: 12, color: context.numColors.textMuted),
+            style: secondaryTextStyle(
+                size: 12, color: context.numColors.textMuted),
             textAlign: TextAlign.center,
           ),
           16.height,
@@ -1036,7 +1088,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
               onPressed: () async {
                 Navigator.pop(context);
                 if (await canLaunchUrl(accountUrl)) {
-                  await launchUrl(accountUrl, mode: LaunchMode.externalApplication);
+                  await launchUrl(accountUrl,
+                      mode: LaunchMode.externalApplication);
                 }
               },
               child: Text(l10n.translate('open_web_account'),
@@ -1044,7 +1097,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
             ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(l10n.translate('ok'), style: primaryTextStyle(color: c.accent)),
+            child: Text(l10n.translate('ok'),
+                style: primaryTextStyle(color: c.accent)),
           ),
         ],
       ),

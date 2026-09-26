@@ -15,7 +15,8 @@ class AppTheme {
 
   // Light Theme Colors (from numistr_colors.dart)
   static const Color _lightSurface = numCardLight; // White
-  static const Color _lightBackground = numScaffoldLight; // Warm white/parchment
+  static const Color _lightBackground =
+      numScaffoldLight; // Warm white/parchment
   static const Color _lightSurfaceVariant = numSurfaceLight; // Surface light
 
   // Dark Theme Colors (from numistr_colors.dart)
@@ -48,12 +49,15 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 2,
         centerTitle: true,
-        backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
+        // Altın çubuk tüm sayfaların varsayılanı (2026-09-26 cihaz incelemesi):
+        // Bölgeler/arama/makale altın, Profil/Ayarlar/Koleksiyon/Geçmiş beyazdı;
+        // uygulama iki ayrı kimlik gösteriyordu.
+        backgroundColor: numPrimary,
+        foregroundColor: Colors.white,
         titleTextStyle: GoogleFonts.inter(
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: colorScheme.onSurface,
+          color: Colors.white,
         ),
         // iconTheme BİLEREK yok: tanımlıysa (renksiz bile) AppBar onu kullanır ve
         // foregroundColor'ı yok sayar. Sabit onSurfaceVariant, altın çubuklarda
@@ -185,7 +189,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: colorScheme.error),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         labelStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w500,
@@ -207,7 +212,8 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: colorScheme.outline),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         textStyle: GoogleFonts.inter(
           fontSize: 14,
@@ -525,12 +531,15 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 2,
         centerTitle: true,
-        backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
+        // Altın çubuk tüm sayfaların varsayılanı (2026-09-26 cihaz incelemesi):
+        // Bölgeler/arama/makale altın, Profil/Ayarlar/Koleksiyon/Geçmiş beyazdı;
+        // uygulama iki ayrı kimlik gösteriyordu.
+        backgroundColor: numPrimary,
+        foregroundColor: Colors.white,
         titleTextStyle: GoogleFonts.inter(
-          fontSize: 20,
+          fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: colorScheme.onSurface,
+          color: Colors.white,
         ),
         // iconTheme BİLEREK yok: tanımlıysa (renksiz bile) AppBar onu kullanır ve
         // foregroundColor'ı yok sayar. Sabit onSurfaceVariant, altın çubuklarda
@@ -619,7 +628,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         labelStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w500,

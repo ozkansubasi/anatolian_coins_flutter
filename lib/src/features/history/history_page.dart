@@ -6,6 +6,7 @@ import '../../models/variant.dart';
 import '../../core/num_colors.dart';
 import '../../core/num_text.dart';
 import '../../l10n/app_localizations.dart';
+import '../../core/navigation.dart';
 import '../../widgets/coin_list.dart';
 import '../variants/variants_api.dart';
 import '../offline/offline_service.dart'; // offlineDatabaseProvider burada tanımlı
@@ -56,8 +57,8 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
   }
 
   void _snack(String key) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).translate(key))));
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).translate(key))));
   }
 
   // ---------- Veri ----------
@@ -97,8 +98,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
   Future<void> _loadViewHistory() async {
     setState(() => _viewsLoading = true);
     try {
-      final ids = await ref.read(offlineDatabaseProvider).getRecentlyViewed(limit: 50);
-      final variants = await loadVariantsInOrder(ref.read(variantsApiProvider), ids);
+      final ids =
+          await ref.read(offlineDatabaseProvider).getRecentlyViewed(limit: 50);
+      final variants =
+          await loadVariantsInOrder(ref.read(variantsApiProvider), ids);
       if (mounted) {
         setState(() {
           _viewHistory = variants;
@@ -120,7 +123,8 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
     final ok = await confirmDestructive(
       context,
       title: l10n.translate('clear_history'),
-      message: l10n.translate(isScansTab ? 'clear_scans_confirm' : 'clear_views_confirm'),
+      message: l10n.translate(
+          isScansTab ? 'clear_scans_confirm' : 'clear_views_confirm'),
       confirmLabel: l10n.translate('clear'),
     );
     if (!ok) return;
@@ -130,7 +134,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
         await ref.read(scanHistoryServiceProvider).clearAll();
         await _loadScans();
       } else {
-        await ref.read(offlineDatabaseProvider).cleanOldViewHistory(keepRecent: 0);
+        await ref
+            .read(offlineDatabaseProvider)
+            .cleanOldViewHistory(keepRecent: 0);
         await _loadViewHistory();
       }
       if (mounted) _snack('history_cleared');
@@ -148,10 +154,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final c = context.numColors;
 
     return Scaffold(
       appBar: AppBar(
+        leading: context.returnLeading,
         title: Text(l10n.translate('history_title')),
         actions: [
           if (_activeTabHasItems)
@@ -163,9 +169,11 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: c.accent,
-          unselectedLabelColor: c.textMuted,
-          indicatorColor: c.accent,
+          // Altın çubuğun üstünde: beyaz etiket ve gösterge
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
+          dividerColor: Colors.transparent,
           labelStyle: context.numText.tab.copyWith(fontSize: 14),
           tabs: [
             Tab(text: l10n.translate('scans_tab')),
@@ -183,7 +191,8 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
     );
   }
 
-  Widget _loader() => Center(child: CircularProgressIndicator(color: context.numColors.accent));
+  Widget _loader() =>
+      Center(child: CircularProgressIndicator(color: context.numColors.accent));
 
   Widget _buildScansTab(AppLocalizations l10n) {
     if (_scansLoading) return _loader();
@@ -211,7 +220,8 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
           CoinRowCard(
             children: [
               for (var i = 0; i < _scans.length; i++)
-                _scanRow(_scans[i], l10n, dateFormat, last: i == _scans.length - 1),
+                _scanRow(_scans[i], l10n, dateFormat,
+                    last: i == _scans.length - 1),
             ],
           ),
         ],
@@ -219,22 +229,26 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
     );
   }
 
-  Widget _scanRow(ScanRecord scan, AppLocalizations l10n, DateFormat dateFormat, {required bool last}) {
+  Widget _scanRow(ScanRecord scan, AppLocalizations l10n, DateFormat dateFormat,
+      {required bool last}) {
     final c = context.numColors;
     final hasMatch = scan.topArticleId != null && scan.topArticleId != 0;
     final confidence = scan.topConfidence;
     return CoinRow(
       leading: CoinPhotoThumb(path: scan.imagePath),
-      title: hasMatch ? (scan.topTitle ?? '-') : l10n.translate('no_match_found'),
+      title:
+          hasMatch ? (scan.topTitle ?? '-') : l10n.translate('no_match_found'),
       // Eşleşmesi olmayan satır tıklanamaz: soluk başlıkla belli edilir.
       dim: !hasMatch,
       meta: [
         if (confidence != null && hasMatch)
-          l10n.translate('similarity_pct', params: {'n': '${(confidence * 100).round()}'}),
+          l10n.translate('similarity_pct',
+              params: {'n': '${(confidence * 100).round()}'}),
         dateFormat.format(scan.scannedAt),
       ].join(' · '),
       last: last,
-      onTap: hasMatch ? () => context.push('/variant/${scan.topArticleId}') : null,
+      onTap:
+          hasMatch ? () => context.push('/variant/${scan.topArticleId}') : null,
       trailing: IconButton(
         icon: Icon(Icons.delete_outline, color: c.hint, size: 22),
         tooltip: l10n.translate('delete'),
@@ -272,7 +286,8 @@ class _HistoryPageState extends ConsumerState<HistoryPage>
                   meta: coinMetaLine(_viewHistory[i], l10n),
                   last: i == _viewHistory.length - 1,
                   trailing: Icon(Icons.chevron_right, color: c.hint),
-                  onTap: () => context.push('/variant/${_viewHistory[i].articleId}'),
+                  onTap: () =>
+                      context.push('/variant/${_viewHistory[i].articleId}'),
                 ),
             ],
           ),

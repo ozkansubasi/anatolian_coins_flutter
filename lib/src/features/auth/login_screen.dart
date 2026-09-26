@@ -38,10 +38,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     setState(() => _errorMessage = null);
 
-    final error = await ref.read(authControllerProvider.notifier).signInWithPassword(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
+    final error =
+        await ref.read(authControllerProvider.notifier).signInWithPassword(
+              _emailController.text.trim(),
+              _passwordController.text,
+            );
 
     if (error != null && mounted) {
       setState(() => _errorMessage = error);
@@ -74,7 +75,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final ok = (response.statusCode ?? 500) < 300;
 
       if (!ok) {
-        debugPrint('! Password reset failed (${response.statusCode}): ${response.data}');
+        debugPrint(
+            '! Password reset failed (${response.statusCode}): ${response.data}');
       }
 
       return ok;
@@ -88,7 +90,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _errorMessage = null);
 
     try {
-      await ref.read(authControllerProvider.notifier).signInWithSocial(connection);
+      await ref
+          .read(authControllerProvider.notifier)
+          .signInWithSocial(connection);
       if (mounted && ref.read(authControllerProvider).authenticated) {
         context.go('/');
       }
@@ -312,8 +316,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               hintText: l10n.translate('enter_password'),
               prefixIcon: const Icon(Icons.lock_outlined),
               suffixIcon: IconButton(
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
+                icon: Icon(_obscurePassword
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined),
               ),
               filled: true,
               fillColor: c.surface,
@@ -351,65 +358,75 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: loading ? null : () async {
-                // Show password reset dialog
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    title: Text(l10n.translate('forgot_password'), style: boldTextStyle(size: 18, color: c.text)),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          l10n.translate('forgot_password_message'),
-                          style: secondaryTextStyle(size: 14, color: c.textMuted),
-                          textAlign: TextAlign.center,
-                        ),
-                        16.height,
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: InputDecoration(
-                            labelText: l10n.translate('email'),
-                            hintText: l10n.translate('enter_email'),
-                            prefixIcon: const Icon(Icons.email_outlined),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              onPressed: loading
+                  ? null
+                  : () async {
+                      // Show password reset dialog
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16)),
+                          title: Text(l10n.translate('forgot_password'),
+                              style: boldTextStyle(size: 18, color: c.text)),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                l10n.translate('forgot_password_message'),
+                                style: secondaryTextStyle(
+                                    size: 14, color: c.textMuted),
+                                textAlign: TextAlign.center,
+                              ),
+                              16.height,
+                              TextField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: InputDecoration(
+                                  labelText: l10n.translate('email'),
+                                  hintText: l10n.translate('enter_email'),
+                                  prefixIcon: const Icon(Icons.email_outlined),
+                                  border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: Text(l10n.translate('cancel')),
-                      ),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final resetEmail = _emailController.text.trim();
-                          if (resetEmail.isEmpty || !resetEmail.contains('@')) {
-                            toast(l10n.translate('invalid_email'));
-                            return;
-                          }
-                          Navigator.pop(ctx);
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: Text(l10n.translate('cancel')),
+                            ),
+                            ElevatedButton(
+                              onPressed: () async {
+                                final resetEmail = _emailController.text.trim();
+                                if (resetEmail.isEmpty ||
+                                    !resetEmail.contains('@')) {
+                                  toast(l10n.translate('invalid_email'));
+                                  return;
+                                }
+                                Navigator.pop(ctx);
 
-                          final sent = await _requestPasswordReset(resetEmail);
-                          if (!mounted) return;
+                                final sent =
+                                    await _requestPasswordReset(resetEmail);
+                                if (!mounted) return;
 
-                          toast(l10n.translate(
-                            sent ? 'password_reset_sent' : 'password_reset_failed',
-                          ));
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: numPrimary,
-                          foregroundColor: Colors.white,
+                                toast(l10n.translate(
+                                  sent
+                                      ? 'password_reset_sent'
+                                      : 'password_reset_failed',
+                                ));
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: numPrimary,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: Text(l10n.translate('send_reset_link')),
+                            ),
+                          ],
                         ),
-                        child: Text(l10n.translate('send_reset_link')),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                      );
+                    },
               child: Text(
                 l10n.translate('forgot_password'),
                 style: primaryTextStyle(color: c.accent),
@@ -476,25 +493,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       children: [
         // Google button
         _SocialLoginButton(
+          // Resmi Google "G" logosu (developers.google.com/identity/images/g-logo.png).
+          // Dosya eksikti; yerine kırmızı bir "G" harfi + boş 24 px çiziliyordu.
           icon: 'assets/images/google_icon.png',
-          iconWidget: Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: radius(4),
-            ),
-            child: const Center(
-              child: Text(
-                'G',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
           label: l10n.translate('continue_with_google'),
           backgroundColor: c.card,
           textColor: c.text,
@@ -517,19 +518,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
         // Auth0 Universal Login (fallback)
         OutlinedButton.icon(
-          onPressed: loading ? null : () async {
-            try {
-              await ref.read(authControllerProvider.notifier).signIn();
-              if (mounted && ref.read(authControllerProvider).authenticated) {
-                context.go('/');
-              }
-            } catch (e) {
-              // User cancelled or error occurred - just dismiss spinner
-              if (mounted) {
-                setState(() => _errorMessage = null); // Clear any previous errors
-              }
-            }
-          },
+          onPressed: loading
+              ? null
+              : () async {
+                  try {
+                    await ref.read(authControllerProvider.notifier).signIn();
+                    if (mounted &&
+                        ref.read(authControllerProvider).authenticated) {
+                      context.go('/');
+                    }
+                  } catch (e) {
+                    // User cancelled or error occurred - just dismiss spinner
+                    if (mounted) {
+                      setState(() =>
+                          _errorMessage = null); // Clear any previous errors
+                    }
+                  }
+                },
           icon: const Icon(Icons.login_rounded),
           label: Text(l10n.translate('other_login_options')),
           style: OutlinedButton.styleFrom(

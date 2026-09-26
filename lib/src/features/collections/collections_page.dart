@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/subscription_provider.dart';
+import '../../core/navigation.dart';
 import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/collection.dart';
 import 'collections_service.dart';
+import '../../widgets/coin_list.dart';
 
 /// Collections List Page - Manage user collections
 class CollectionsPage extends ConsumerWidget {
@@ -14,19 +16,13 @@ class CollectionsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
     final collectionsAsync = ref.watch(collectionsControllerProvider);
     final c = context.numColors;
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            const Icon(Icons.collections_rounded, size: 20),
-            const SizedBox(width: 8),
-            Text(l10n.translate('my_collections')),
-          ],
-        ),
+        leading: context.returnLeading,
+        title: Text(l10n.translate('my_collections')),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -38,11 +34,13 @@ class CollectionsPage extends ConsumerWidget {
       body: collectionsAsync.when(
         data: (collections) {
           if (collections.isEmpty) {
-            return _buildEmptyState(context, l10n, theme);
+            return _buildEmptyState(context, ref, l10n);
           }
           return RefreshIndicator(
             onRefresh: () async {
-              ref.read(collectionsControllerProvider.notifier).loadCollections();
+              ref
+                  .read(collectionsControllerProvider.notifier)
+                  .loadCollections();
             },
             child: ListView.separated(
               itemCount: collections.length,
@@ -65,7 +63,9 @@ class CollectionsPage extends ConsumerWidget {
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {
-                  ref.read(collectionsControllerProvider.notifier).loadCollections();
+                  ref
+                      .read(collectionsControllerProvider.notifier)
+                      .loadCollections();
                 },
                 child: Text(l10n.translate('retry')),
               ),
@@ -76,37 +76,17 @@ class CollectionsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, AppLocalizations l10n, ThemeData theme) {
-    final c = context.numColors;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.collections_rounded,
-            size: 64,
-            color: c.hint,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.translate('no_collections_yet'),
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: c.textMuted,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.translate('no_collections_hint'),
-            style: TextStyle(
-              fontSize: 14,
-              color: c.hint,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+  /// Boş durum: Geçmiş sayfasındaki gibi doğrudan eylem düğmesi taşır; tek
+  /// giriş sağ üstteki küçük + idi ve boş sayfada gözden kaçıyordu.
+  Widget _buildEmptyState(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    return EmptyStateView(
+      icon: Icons.collections_rounded,
+      title: l10n.translate('no_collections_yet'),
+      message: l10n.translate('no_collections_hint'),
+      actionLabel: l10n.translate('new_collection'),
+      actionIcon: Icons.add,
+      onAction: () => _showCreateDialog(context, ref),
     );
   }
 
@@ -125,7 +105,9 @@ class CollectionsPage extends ConsumerWidget {
         content: Text(
           l10n.translate(
             'feature_locked_message',
-            params: {'featureName': l10n.translate('feature_unlimited_collections')},
+            params: {
+              'featureName': l10n.translate('feature_unlimited_collections')
+            },
           ),
         ),
         actions: [
@@ -154,7 +136,8 @@ class CollectionsPage extends ConsumerWidget {
     final subscription = ref.read(subscriptionProvider);
 
     if (!subscription.isPro) {
-      final existing = ref.read(collectionsControllerProvider).value ?? const [];
+      final existing =
+          ref.read(collectionsControllerProvider).value ?? const [];
       if (existing.length >= FeatureLimits.freeMaxCollections) {
         _showCollectionLimitDialog(context, l10n);
         return;
@@ -219,7 +202,9 @@ class CollectionsPage extends ConsumerWidget {
                 Navigator.pop(context);
                 if (collectionId != null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.translate('collection_created', params: {'name': name}))),
+                    SnackBar(
+                        content: Text(l10n.translate('collection_created',
+                            params: {'name': name}))),
                   );
                   // Navigate to the new collection
                   context.push('/collection/$collectionId');
@@ -321,7 +306,8 @@ class _CollectionListItem extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: Text(l10n.translate('delete'), style: const TextStyle(color: Colors.red)),
+              title: Text(l10n.translate('delete'),
+                  style: const TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
                 _showDeleteDialog(context, ref);
@@ -392,7 +378,8 @@ class _CollectionListItem extends ConsumerWidget {
                 Navigator.pop(context);
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.translate('collection_updated'))),
+                    SnackBar(
+                        content: Text(l10n.translate('collection_updated'))),
                   );
                 }
               }
@@ -409,10 +396,14 @@ class _CollectionListItem extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        icon: const Icon(Icons.warning_amber_rounded, size: 48, color: Colors.orange),
+        icon: const Icon(Icons.warning_amber_rounded,
+            size: 48, color: Colors.orange),
         title: Text(l10n.translate('delete_collection_title')),
         content: Text(
-          l10n.translate('delete_collection_body', params: {'name': collection.name, 'count': '${collection.itemCount}'}),
+          l10n.translate('delete_collection_body', params: {
+            'name': collection.name,
+            'count': '${collection.itemCount}'
+          }),
         ),
         actions: [
           TextButton(
@@ -429,7 +420,8 @@ class _CollectionListItem extends ConsumerWidget {
                 Navigator.pop(context);
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.translate('collection_deleted'))),
+                    SnackBar(
+                        content: Text(l10n.translate('collection_deleted'))),
                   );
                 }
               }
