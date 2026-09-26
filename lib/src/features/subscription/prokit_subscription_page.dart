@@ -856,31 +856,64 @@ class ProkitSubscriptionPage extends ConsumerWidget {
     }
   }
 
+  /// Satın alma / geri yükleme sürerken ikinci bir işlemin başlamasını önler.
+  static bool _busy = false;
+
+  /// [message] ile ilerleme penceresi açar, [task] bitince — hata dahil — kapatır.
+  ///
+  /// Pencere kök navigator'a açılır; sayfa StatefulShellRoute dalında olduğu için
+  /// `Navigator.of(context)` dal navigator'ını verir ve pencereyi kapatamaz (M1).
+  /// Bu yüzden rota elde tutulur ve tam olarak o rota kaldırılır. Geri tuşu
+  /// işlem sürerken pencereyi kapatamaz. İşlem zaten sürüyorsa `null` döner.
+  Future<T?> _withProgress<T>(
+    BuildContext context,
+    String message,
+    Future<T> Function() task,
+  ) async {
+    if (_busy) return null;
+    _busy = true;
+
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final route = DialogRoute<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: radius(16)),
+          content: Row(
+            children: [
+              const CircularProgressIndicator(color: numPrimary),
+              16.width,
+              Expanded(child: Text(message)),
+            ],
+          ),
+        ),
+      ),
+    );
+    navigator.push(route);
+
+    try {
+      return await task();
+    } finally {
+      if (route.isActive) navigator.removeRoute(route);
+      _busy = false;
+    }
+  }
+
   Future<void> _handlePurchase(
     BuildContext context,
     WidgetRef ref,
     AppLocalizations l10n,
     Package package,
   ) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: radius(16)),
-        content: Row(
-          children: [
-            const CircularProgressIndicator(color: numPrimary),
-            16.width,
-            Expanded(child: Text(l10n.translate('processing_purchase'))),
-          ],
-        ),
-      ),
-    );
-
     try {
-      final result = await ref.read(subscriptionProvider.notifier).purchase(package);
-
-      if (context.mounted) Navigator.of(context).pop();
+      final result = await _withProgress(
+        context,
+        l10n.translate('processing_purchase'),
+        () => ref.read(subscriptionProvider.notifier).purchase(package),
+      );
+      if (result == null) return;
 
       if (result.success && result.isPro) {
         if (context.mounted) {
@@ -894,7 +927,6 @@ class ProkitSubscriptionPage extends ConsumerWidget {
         }
       }
     } catch (e) {
-      if (context.mounted) Navigator.of(context).pop();
       if (context.mounted) {
         toast('${l10n.translate('error')}: $e', bgColor: numError);
       }
@@ -906,25 +938,13 @@ class ProkitSubscriptionPage extends ConsumerWidget {
     WidgetRef ref,
     AppLocalizations l10n,
   ) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: radius(16)),
-        content: Row(
-          children: [
-            const CircularProgressIndicator(color: numPrimary),
-            16.width,
-            Expanded(child: Text(l10n.translate('restoring_purchases'))),
-          ],
-        ),
-      ),
-    );
-
     try {
-      final result = await ref.read(subscriptionProvider.notifier).restorePurchases();
-
-      if (context.mounted) Navigator.of(context).pop();
+      final result = await _withProgress(
+        context,
+        l10n.translate('restoring_purchases'),
+        () => ref.read(subscriptionProvider.notifier).restorePurchases(),
+      );
+      if (result == null) return;
 
       if (result.success && result.isPro) {
         if (context.mounted) {
@@ -940,7 +960,6 @@ class ProkitSubscriptionPage extends ConsumerWidget {
         }
       }
     } catch (e) {
-      if (context.mounted) Navigator.of(context).pop();
       if (context.mounted) {
         toast('${l10n.translate('error')}: $e', bgColor: numError);
       }
