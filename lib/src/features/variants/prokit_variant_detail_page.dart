@@ -25,6 +25,7 @@ import '../favorites/favorites_service.dart';
 import '../offline/offline_service.dart';
 import '../../widgets/fallback_image.dart';
 import '../../widgets/image_credit.dart';
+import '../../widgets/coin_image_placeholder.dart';
 import '../map/ancient_map_widget.dart';
 
 class ProkitVariantDetailPage extends ConsumerStatefulWidget {
@@ -394,18 +395,8 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
   }
 
   Widget _buildImageSlider() {
-    final c = context.numColors;
     if (_images.isEmpty) {
-      return Container(
-        color: c.surface,
-        child: Center(
-          child: Icon(
-            Icons.monetization_on_outlined,
-            size: 64,
-            color: c.textMuted.withValues(alpha: 0.5),
-          ),
-        ),
-      );
+      return const CoinImagePlaceholder();
     }
 
     return Stack(
@@ -424,6 +415,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                   url: img.url,
                   remoteUrl: img.remoteUrl,
                   fit: BoxFit.contain,
+                  errorWidget: const CoinImagePlaceholder(),
                 ),
               ),
             );
@@ -810,6 +802,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                     url: img.url,
                     remoteUrl: img.remoteUrl,
                     fit: BoxFit.cover,
+                    errorWidget: const CoinImagePlaceholder(compact: true),
                   ),
                   if (img.weight != null || img.diameter != null)
                     Positioned(
