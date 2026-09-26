@@ -76,6 +76,8 @@ flutter:
     - assets/images/banners/
     - assets/icon/
     - assets/data/
+    # Arayuz metinleri: dil basina bir dosya (lib/src/l10n/app_localizations.dart).
+    - assets/l10n/
 
 flutter_launcher_icons:
   android: true

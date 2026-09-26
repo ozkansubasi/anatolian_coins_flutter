@@ -8,8 +8,14 @@ import 'package:anatolian_coins/src/core/coin_format.dart';
 import 'package:anatolian_coins/src/l10n/app_localizations.dart';
 
 void main() {
-  final tr = AppLocalizations(const Locale('tr'));
-  final en = AppLocalizations(const Locale('en'));
+  TestWidgetsFlutterBinding.ensureInitialized();
+  late AppLocalizations tr;
+  late AppLocalizations en;
+
+  setUpAll(() async {
+    tr = await AppLocalizations.load(const Locale('tr'));
+    en = await AppLocalizations.load(const Locale('en'));
+  });
 
   test('dönem: MÖ/MS, dile göre sıra', () {
     expect(CoinFormat.dateRange(-133, -50, tr), 'MÖ 133 – MÖ 50');
