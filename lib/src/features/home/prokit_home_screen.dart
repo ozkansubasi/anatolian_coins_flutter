@@ -166,7 +166,9 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         image: 'assets/images/banners/coin_bilgi.jpg',
         slogan: l10n.translate('banner_knowledge'),
         fit: BoxFit.contain,
-        onTap: () => context.go('/browse'),
+        // Bilgi bankası = makaleler (kullanıcı kararı 2026-09-26); eskiden
+        // Keşfet'e gidip Keşfet ikonuyla aynı yere düşüyordu.
+        onTap: () => context.openRoute('/blog'),
         // Isaretler: sikkenin okunan kisimlarina dikkat ceker. Konumlar bu
         // fotografa gore ayarlandi; gorsel degisirse yeniden hizalanmali.
         markers: [
