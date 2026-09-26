@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart';
@@ -13,6 +12,7 @@ import '../../prokit_ui/widgets/num_bottom_nav.dart';
 import '../favorites/favorites_service.dart';
 import '../articles/editors_pick_card.dart';
 import 'widgets/home_banner.dart';
+import '../../widgets/brand_title.dart';
 
 /// Profil ikonundaki bildirim noktasi.
 ///
@@ -67,48 +67,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       // Logo sol üst köşede (kullanıcı kararı 2026-09-26)
       centerTitle: false,
       titleSpacing: 12,
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Altın bantta logo seçilsin diye çok ince beyaz çizgi (logoyu örtmez)
-          Container(
-            padding: const EdgeInsets.all(0.8),
-            decoration: BoxDecoration(
-                color: Colors.white, borderRadius: BorderRadius.circular(8.8)),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                'assets/icon/app_icon.png',
-                height: 32,
-                width: 32,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Container(
-                  height: 32,
-                  width: 32,
-                  decoration: BoxDecoration(
-                    color: numPrimary.withAlpha(30),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.monetization_on,
-                      color: numPrimary, size: 20),
-                ),
-              ),
-            ),
-          ),
-          10.width,
-          // numistr.org logosundaki yazıt harfleri (Trajan tarzı, küçük
-          // harfler küçük büyük harf): en yakın serbest karşılık Cinzel.
-          Text(
-            l10n.translate('app_name'),
-            style: GoogleFonts.cinzel(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-              color: Colors.white,
-            ),
-          ),
-        ],
-      ),
+      title: const BrandTitle(),
       actions: [
         // Arama ikonu 2026-09-21'de kaldırıldı: aynı hedef alt çubukta (Keşfet)
         // ve hızlı erişimde (Sikke Ara) zaten var; üçüncü kopya gereksizdi.

@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../auth/auth_controller.dart';
+import '../../core/free_trial.dart';
 import '../../core/navigation.dart';
 import '../../core/num_colors.dart';
+import '../../core/web_links.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../core/subscription_provider.dart';
 import '../../l10n/app_localizations.dart';
+import '../../widgets/brand_title.dart';
 import '../recognition/recognition_service.dart';
 import '../favorites/favorites_service.dart';
 import '../collections/collections_service.dart';
 
-/// Account Screen - User profile and subscription management
+/// Hesabım: marka başlığı + profil bandı (ad, e-posta, abonelik rozeti),
+/// altında bağlantı listeleri (Hesabım / Yardım) ve istatistik kartları.
+///
+/// 2026-09-26 yeniden tasarım (kullanıcı kararı): eski abonelik kartı ayrıcalık
+/// listesini tekrar ediyordu (Abonelik sayfasında zaten var) ve "Ücretsiz Üyelik >"
+/// satırı, ücretsiz üyelik için tıklanacakmış gibi okunuyordu. Artık eylem açık:
+/// "Abonelik Satın Al" (deneme varsa alt satırda yazar).
 class AccountScreen extends ConsumerWidget {
   const AccountScreen({super.key});
 
@@ -24,7 +34,11 @@ class AccountScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         leading: context.returnLeading,
-        title: Text(l10n.translate('account_title')),
+        centerTitle: false,
+        titleSpacing: context.returnLeading == null ? 16 : 0,
+        // Profil bandıyla tek parça görünsün: kaydırınca gölge yok
+        scrolledUnderElevation: 0,
+        title: const BrandTitle(),
       ),
       body: authState.authenticated
           ? _AuthenticatedView(l10n: l10n, theme: theme)
@@ -49,122 +63,198 @@ class _AuthenticatedView extends ConsumerWidget {
     final quotaAsync = ref.watch(scanQuotaProvider);
     final authState = ref.watch(authControllerProvider);
 
-    // Pro status can come from two independent sources: a RevenueCat purchase
-    // OR Joomla user-group membership (admin-granted, university, comped),
-    // reported by the /v1/user/scan-quota endpoint. Treat either as Pro.
+    // Pro iki bağımsız kaynaktan gelebilir: mağaza (RevenueCat) VEYA site grubu
+    // (yönetici/web aboneliği; /v1/user/scan-quota bildirir). Biri yeter.
     final joomlaIsPro = quotaAsync.maybeWhen(
       data: (quota) => quota.isPro,
       orElse: () => false,
     );
+    final isPro = subscription.tier == SubscriptionTier.pro || joomlaIsPro;
+
+    // Deneme etiketi: Google/Apple yalnız uygun olan kullanıcıya deneme teklifi
+    // döndürür; etiket görünüyorsa kullanıcı gerçekten uygundur.
+    final trialLabel = isPro
+        ? null
+        : ref.watch(offeringsProvider).maybeWhen(
+              data: (offerings) {
+                for (final p
+                    in offerings?.current?.availablePackages ?? const []) {
+                  final label = freeTrialLabel(p.storeProduct, l10n);
+                  if (label != null) return label;
+                }
+                return null;
+              },
+              orElse: () => null,
+            );
+
+    final email = authState.email ?? '—';
+    final languageCode = Localizations.localeOf(context).languageCode;
 
     return RefreshIndicator(
+      color: numPrimary,
       onRefresh: () async {
         ref.invalidate(subscriptionProvider);
         ref.invalidate(scanQuotaProvider);
+        ref.invalidate(offeringsProvider);
         ref.invalidate(favoritesControllerProvider);
         ref.invalidate(collectionsControllerProvider);
       },
-      child: SingleChildScrollView(
+      child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Profile Card
-            _ProfileCard(
-              l10n: l10n,
-              theme: theme,
-              email: authState.email ?? '—',
-            ),
-
-            const SizedBox(height: 16),
-
-            // Subscription Card
-            _SubscriptionCard(
-              l10n: l10n,
-              theme: theme,
-              subscription: subscription,
-              joomlaIsPro: joomlaIsPro,
-            ),
-
-            const SizedBox(height: 16),
-
-            // ADR-006 Faz 3: AI Numizmatik Asistanı girişi (ikinci ve son giriş noktası; A15)
-            Card(
-              elevation: 0,
-              shape: _cardShape,
-              child: ListTile(
-                leading: Icon(Icons.smart_toy_outlined,
-                    color: theme.colorScheme.primary),
-                title: Text(l10n.translate('assistant_title')),
-                subtitle: Text(l10n.translate('assistant_subtitle')),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => context.push('/assistant'),
+        padding: const EdgeInsets.only(bottom: 32),
+        children: [
+          _ProfileHeader(
+            name: authState.name,
+            email: email,
+            badge: l10n.translate(isPro ? 'plan_badge_pro' : 'plan_badge_free'),
+            isPro: isPro,
+          ),
+          _SectionLabel(l10n.translate('account_title')),
+          _MenuGroup(children: [
+            if (isPro)
+              _MenuItem(
+                icon: Icons.workspace_premium_rounded,
+                title: l10n.translate('manage_subscription'),
+                subtitle: l10n.translate('pro_active_subtitle'),
+                onTap: () => context.push('/subscription'),
+              )
+            else
+              _MenuItem(
+                icon: Icons.workspace_premium_rounded,
+                title: l10n.translate('buy_subscription'),
+                subtitle: trialLabel != null
+                    ? l10n.translate('trial_start_subtitle',
+                        params: {'trial': trialLabel})
+                    : l10n.translate('buy_subscription_subtitle'),
+                emphasize: true,
+                onTap: () => context.push('/subscription'),
               ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Quota Card (only for free users)
-            // Note: If quota fetch fails (e.g., 401), show a simplified info instead
-            quotaAsync.when(
-              data: (quota) {
-                // Only show quota card for free users. The store reports Pro
-                // right after purchase; Joomla learns it ~1 min later via the
-                // RevenueCat webhook, so either source hides the card.
-                if (quota.isPro || subscription.isPro) {
-                  return const SizedBox.shrink();
-                }
-                return Column(
-                  children: [
-                    _QuotaCard(
-                      l10n: l10n,
-                      theme: theme,
-                      quota: quota,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                );
-              },
-              loading: () => const _LoadingCard(),
-              error: (error, stack) {
-                // Don't show error card for quota - it's not critical
-                // Just show nothing and let user continue
-                debugPrint('Quota fetch error (non-critical): $error');
-                return const SizedBox.shrink();
-              },
-            ),
-
-            // Usage Stats Card
-            _UsageStatsCard(l10n: l10n, theme: theme),
-
-            const SizedBox(height: 24),
-
-            // Sign Out Button
-            OutlinedButton.icon(
-              onPressed: () async {
-                final confirm = await _showSignOutDialog(context, l10n);
-                if (confirm == true && context.mounted) {
-                  // Çıkıştan sonra ana sayfaya GİTMİYORUZ: kullanıcı çıkışı bu
-                  // ekrandan yaptı, giriş de buradan yapılıyor. Ekran authState'i
-                  // izlediği için token temizlenince kendiliğinden
-                  // _UnauthenticatedView'e döner; bulunduğu yerde kalmak bağlamı
-                  // korur ve tekrar giriş tek dokunuş kalır.
-                  await ref.read(authControllerProvider.notifier).signOut();
-                }
-              },
-              icon: const Icon(Icons.logout_rounded),
-              label: Text(l10n.translate('sign_out')),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                foregroundColor: Colors.red,
-                side: BorderSide(color: Colors.red.shade300),
+            if (!isPro)
+              _MenuItem(
+                icon: Icons.school_outlined,
+                title: l10n.translate('university_pro_title'),
+                subtitle: l10n.translate('university_pro_subtitle'),
+                onTap: () => context.push('/university-application'),
               ),
+            // Google girişli hesabın şifresi yok: satır yalnız şifreli hesapta
+            if (authState.isPasswordAccount && authState.email != null)
+              _MenuItem(
+                icon: Icons.lock_outline_rounded,
+                title: l10n.translate('change_password'),
+                onTap: () => _changePassword(context, ref, authState.email!),
+              ),
+            _MenuItem(
+              icon: Icons.smart_toy_outlined,
+              title: l10n.translate('assistant_title'),
+              onTap: () => context.push('/assistant'),
             ),
-          ],
-        ),
+            _MenuItem(
+              icon: Icons.settings_outlined,
+              title: l10n.translate('settings'),
+              onTap: () => context.push('/settings'),
+            ),
+          ]),
+          _SectionLabel(l10n.translate('help')),
+          _MenuGroup(children: [
+            _MenuItem(
+              icon: Icons.help_outline_rounded,
+              title: l10n.translate('faq'),
+              trailingIcon: Icons.open_in_new_rounded,
+              onTap: () => launchUrl(faqWebUrl(languageCode),
+                  mode: LaunchMode.externalApplication),
+            ),
+            _MenuItem(
+              icon: Icons.privacy_tip_outlined,
+              title: l10n.translate('privacy_policy'),
+              onTap: () => context.push('/privacy-policy'),
+            ),
+            _MenuItem(
+              icon: Icons.description_outlined,
+              title: l10n.translate('terms_of_service'),
+              onTap: () => context.push('/terms-of-service'),
+            ),
+          ]),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Kota kartı yalnız ücretsiz kullanıcıda. Kota alınamazsa
+                // (ör. 401) kart gösterilmez; kritik değil.
+                quotaAsync.when(
+                  data: (quota) => isPro || quota.isPro
+                      ? const SizedBox.shrink()
+                      : Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: _QuotaCard(
+                              l10n: l10n, theme: theme, quota: quota),
+                        ),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.only(bottom: 16),
+                    child: _LoadingCard(),
+                  ),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+                _UsageStatsCard(l10n: l10n, theme: theme),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final confirm = await _showSignOutDialog(context, l10n);
+                    if (confirm == true && context.mounted) {
+                      // Ekran authState'i izler; çıkıştan sonra kendiliğinden
+                      // giriş görünümüne döner (bulunduğu yerde kalır).
+                      await ref.read(authControllerProvider.notifier).signOut();
+                    }
+                  },
+                  icon: const Icon(Icons.logout_rounded),
+                  label: Text(l10n.translate('sign_out')),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    foregroundColor: Colors.red,
+                    side: BorderSide(color: Colors.red.shade300),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _changePassword(
+      BuildContext context, WidgetRef ref, String email) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.lock_reset_rounded, color: numPrimary),
+        title: Text(l10n.translate('change_password')),
+        content: Text(l10n
+            .translate('change_password_confirm', params: {'email': email})),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.translate('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: numPrimary),
+            child: Text(l10n.translate('send')),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final sent = await ref
+        .read(authControllerProvider.notifier)
+        .requestPasswordReset(email);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(sent
+          ? l10n.translate('change_password_sent', params: {'email': email})
+          : l10n.translate('password_reset_failed')),
+    ));
   }
 
   Future<bool?> _showSignOutDialog(
@@ -190,6 +280,234 @@ class _AuthenticatedView extends ConsumerWidget {
             child: Text(l10n.translate('sign_out')),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Profil bandı: altın zemin, solda ad ve e-posta, sağda avatar + abonelik rozeti.
+class _ProfileHeader extends StatelessWidget {
+  final String? name;
+  final String email;
+  final String badge;
+  final bool isPro;
+
+  const _ProfileHeader({
+    required this.name,
+    required this.email,
+    required this.badge,
+    required this.isPro,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasName = name != null && name!.isNotEmpty;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
+      decoration: const BoxDecoration(
+        color: numPrimary,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasName ? name! : email,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: hasName ? 22 : 17,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
+                ),
+                if (hasName) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 14),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          _AvatarWithBadge(badge: badge, isPro: isPro),
+        ],
+      ),
+    );
+  }
+}
+
+class _AvatarWithBadge extends StatelessWidget {
+  final String badge;
+  final bool isPro;
+
+  const _AvatarWithBadge({required this.badge, required this.isPro});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.bottomCenter,
+      children: [
+        Container(
+          width: 72,
+          height: 72,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Icon(Icons.person_rounded,
+              size: 44, color: numPrimary.withValues(alpha: 0.55)),
+        ),
+        // Rozet avatarın alt kenarına biner (Pro: koyu altın; Ücretsiz: beyaz)
+        Positioned(
+          bottom: -10,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: isPro ? numPrimaryDark : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                  color: isPro ? Colors.white : numPrimary, width: 1.2),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isPro) ...[
+                  const Icon(Icons.star_rounded, size: 12, color: Colors.white),
+                  const SizedBox(width: 3),
+                ],
+                Text(
+                  badge,
+                  style: TextStyle(
+                    color: isPro ? Colors.white : numPrimary,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: context.numColors.textMuted,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+}
+
+/// Bağlantı grubu: ana sayfa kartlarıyla aynı kabuk (ince altın çerçeve),
+/// satırlar arasında girintili ayraç.
+class _MenuGroup extends StatelessWidget {
+  final List<Widget> children;
+  const _MenuGroup({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.numColors;
+    final rows = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      if (i > 0) {
+        rows.add(Divider(height: 1, indent: 56, color: c.divider));
+      }
+      rows.add(children[i]);
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        color: c.card,
+        shape: _cardShape,
+        clipBehavior: Clip.antiAlias,
+        child: Column(children: rows),
+      ),
+    );
+  }
+}
+
+class _MenuItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final bool emphasize;
+  final IconData trailingIcon;
+
+  const _MenuItem({
+    required this.icon,
+    required this.title,
+    required this.onTap,
+    this.subtitle,
+    this.emphasize = false,
+    this.trailingIcon = Icons.chevron_right_rounded,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.numColors;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, color: numPrimary, size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: emphasize ? c.accent : c.text,
+                      fontSize: 15.5,
+                      fontWeight: emphasize ? FontWeight.w700 : FontWeight.w600,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(color: c.textMuted, fontSize: 12.5),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(trailingIcon, color: c.hint, size: 22),
+          ],
+        ),
       ),
     );
   }
@@ -263,187 +581,6 @@ final _cardShape = RoundedRectangleBorder(
   borderRadius: BorderRadius.circular(14),
   side: BorderSide(color: numPrimary.withAlpha(70)),
 );
-
-/// Profile Card
-class _ProfileCard extends StatelessWidget {
-  final AppLocalizations l10n;
-  final ThemeData theme;
-  final String email;
-
-  const _ProfileCard({
-    required this.l10n,
-    required this.theme,
-    required this.email,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: _cardShape,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 32,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              child: Icon(
-                Icons.person_rounded,
-                size: 36,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.translate('profile'),
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    email,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Subscription Card
-class _SubscriptionCard extends StatelessWidget {
-  final AppLocalizations l10n;
-  final ThemeData theme;
-  final SubscriptionState subscription;
-  final bool joomlaIsPro;
-
-  const _SubscriptionCard({
-    required this.l10n,
-    required this.theme,
-    required this.subscription,
-    this.joomlaIsPro = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // Pro if a RevenueCat entitlement is active OR the user is Pro via Joomla
-    // group membership (admin-granted, university, comped) reported by the
-    // scan-quota endpoint.
-    final isPro = subscription.tier == SubscriptionTier.pro || joomlaIsPro;
-    final isDarkTint = Theme.of(context).brightness == Brightness.dark;
-    final c = context.numColors;
-
-    return Card(
-      elevation: 0,
-      shape: _cardShape,
-      child: InkWell(
-        onTap: () => context.push('/subscription'),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            // Pastel vurgu: koyu temada c.surface (S26 P2 istisnası).
-            color: isPro && isDarkTint ? c.surface : null,
-            gradient: isPro && !isDarkTint
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      numPrimary.withAlpha(40),
-                      numPrimary.withAlpha(12),
-                    ],
-                  )
-                : null,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    isPro ? Icons.star_rounded : Icons.account_circle_outlined,
-                    color: numPrimary,
-                    size: 28,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.translate('subscription'),
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isPro
-                              ? l10n.translate('pro_tier')
-                              : l10n.translate('free_tier'),
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isPro ? numPrimaryDark : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 18,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-              if (!isPro) ...[
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 12),
-                Text(
-                  l10n.translate('upgrade_benefits'),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _BenefitItem(
-                  icon: Icons.camera_alt_rounded,
-                  text: l10n.translate('unlimited_scans'),
-                  theme: theme,
-                ),
-                _BenefitItem(
-                  icon: Icons.cloud_download_rounded,
-                  text: l10n.translate('offline_access'),
-                  theme: theme,
-                ),
-                _BenefitItem(
-                  icon: Icons.high_quality_rounded,
-                  text: l10n.translate('high_res_images'),
-                  theme: theme,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// Quota Card (Free Users Only)
 class _QuotaCard extends StatelessWidget {
@@ -627,7 +764,7 @@ class _UsageStatsCard extends ConsumerWidget {
             const SizedBox(height: 16),
             _StatRow(
               icon: Icons.history_rounded,
-              label: l10n.translate('total_scans'),
+              label: l10n.translate('scans_this_month'),
               value: scansUsed.toString(),
               theme: theme,
             ),
@@ -694,42 +831,6 @@ class _StatRow extends StatelessWidget {
   }
 }
 
-/// Benefit Item Widget
-class _BenefitItem extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final ThemeData theme;
-
-  const _BenefitItem({
-    required this.icon,
-    required this.text,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Loading Card
 class _LoadingCard extends StatelessWidget {
   const _LoadingCard();
@@ -743,54 +844,6 @@ class _LoadingCard extends StatelessWidget {
         padding: EdgeInsets.all(40),
         child: Center(
           child: CircularProgressIndicator(),
-        ),
-      ),
-    );
-  }
-}
-
-/// Error Card
-class _ErrorCard extends StatelessWidget {
-  final AppLocalizations l10n;
-  final ThemeData theme;
-  final String error;
-
-  const _ErrorCard({
-    required this.l10n,
-    required this.theme,
-    required this.error,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: _cardShape,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: 48,
-              color: Colors.red.shade300,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.translate('error_loading_data'),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ),
       ),
     );

@@ -79,10 +79,54 @@ class AuthTokens {
   /// Extract Auth0 sub (stable user id) from JWT token payload
   static String? extractSubFromJwt(String jwt) =>
       decodeJwtClaims(jwt)?['sub'] as String?;
+
+  /// Görünen ad (Hesabım başlığı). Google girişinde `name` gerçek ad-soyaddır;
+  /// şifreli (veritabanı) hesaplarda Auth0 `name`'e e-postayı yazar — o zaman
+  /// null döner ve başlık yalnız e-postayı gösterir.
+  String? get displayName {
+    final claims = idToken == null ? null : decodeJwtClaims(idToken!);
+    if (claims == null) return null;
+    final name = (claims['name'] as String?)?.trim();
+    if (name != null && name.isNotEmpty && !name.contains('@')) return name;
+    final parts = [claims['given_name'], claims['family_name']]
+        .whereType<String>()
+        .where((p) => p.trim().isNotEmpty);
+    return parts.isEmpty ? null : parts.join(' ');
+  }
 }
 
 class AuthRepository {
   static const _k = 'auth_tokens';
+
+  /// Şifre değiştirme / sıfırlama bağlantısını e-postaya gönderir (Auth0
+  /// `dbconnections/change_password`). Yalnız şifreli hesaplar içindir; Google
+  /// girişli hesapta Auth0 "User does not exist" döner ve e-posta gitmez.
+  Future<bool> requestPasswordReset(String email) async {
+    try {
+      final response = await Dio().post(
+        '${_cfg.issuer}/dbconnections/change_password',
+        data: {
+          'client_id': _cfg.clientId,
+          'email': email,
+          'connection': 'Username-Password-Authentication',
+        },
+        options: Options(
+          contentType: Headers.jsonContentType,
+          // Auth0 düz metin döner; hata durumlarını kendimiz değerlendirelim
+          responseType: ResponseType.plain,
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+      final ok = (response.statusCode ?? 500) < 300;
+      if (!ok) {
+        debugPrint('! Password reset failed (${response.statusCode}): ${response.data}');
+      }
+      return ok;
+    } catch (e) {
+      debugPrint('! Password reset error: $e');
+      return false;
+    }
+  }
 
   /// `LocaleNotifier`'in dili sakladigi anahtar (core/locale_provider.dart).
   /// Ayni depo okunur ki Auth0'a gonderilen dil ile uygulamanin dili ayrismasin.

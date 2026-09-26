@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -55,36 +54,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   ///
   /// Auth0'ın `/dbconnections/change_password` ucu bir API'dir (tarayıcıda
   /// açılmaz); tenant ve client_id Env'den gelir, sabit yazılmaz.
-  Future<bool> _requestPasswordReset(String email) async {
-    try {
-      final response = await Dio().post(
-        '${Env.oidcIssuer}/dbconnections/change_password',
-        data: {
-          'client_id': Env.oidcClientId,
-          'email': email,
-          'connection': 'Username-Password-Authentication',
-        },
-        options: Options(
-          contentType: Headers.jsonContentType,
-          // Auth0 düz metin döner; hata durumlarını kendimiz değerlendirelim
-          responseType: ResponseType.plain,
-          validateStatus: (status) => status != null && status < 500,
-        ),
-      );
-
-      final ok = (response.statusCode ?? 500) < 300;
-
-      if (!ok) {
-        debugPrint(
-            '! Password reset failed (${response.statusCode}): ${response.data}');
-      }
-
-      return ok;
-    } catch (e) {
-      debugPrint('! Password reset error: $e');
-      return false;
-    }
-  }
+  Future<bool> _requestPasswordReset(String email) =>
+      ref.read(authControllerProvider.notifier).requestPasswordReset(email);
 
   Future<void> _handleSocialLogin(String connection) async {
     setState(() => _errorMessage = null);

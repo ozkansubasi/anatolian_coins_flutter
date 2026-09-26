@@ -10,3 +10,8 @@ Uri coinWebUrl(int articleId, String languageCode) => Uri.https('www.numistr.org
       'id': '$articleId',
       'lang': languageCode,
     });
+
+/// Sıkça Sorulan Sorular (sitede; iki dilde ayrı adres, ikisi de 2026-09-09'da 200).
+Uri faqWebUrl(String languageCode) => languageCode == 'en'
+    ? Uri.https('numistr.org', '/en/faq')
+    : Uri.https('numistr.org', '/tr/sikca-sorulan-sorular');

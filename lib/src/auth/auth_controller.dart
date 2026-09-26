@@ -11,21 +11,30 @@ class AuthState {
   /// Auth0 `sub` claim — kalıcı kullanıcı kimliği (RevenueCat appUserID için)
   final String? userId;
 
+  /// Görünen ad (Google girişinde ad-soyad; şifreli hesapta null)
+  final String? name;
+
   const AuthState({
     required this.loading,
     required this.authenticated,
     this.accessToken,
     this.email,
     this.userId,
+    this.name,
   });
 
-  AuthState copyWith({bool? loading, bool? authenticated, String? accessToken, String? email, String? userId}) =>
+  /// Şifreyle açılmış (Auth0 veritabanı) hesap mı? Şifre değiştirme yalnız
+  /// bunlarda anlamlı; Google girişli hesabın şifresi yoktur.
+  bool get isPasswordAccount => userId?.startsWith('auth0|') ?? false;
+
+  AuthState copyWith({bool? loading, bool? authenticated, String? accessToken, String? email, String? userId, String? name}) =>
       AuthState(
         loading: loading ?? this.loading,
         authenticated: authenticated ?? this.authenticated,
         accessToken: accessToken ?? this.accessToken,
         email: email ?? this.email,
         userId: userId ?? this.userId,
+        name: name ?? this.name,
       );
 }
 
@@ -42,6 +51,7 @@ class AuthController extends StateNotifier<AuthState> {
         accessToken: t?.accessToken,
         email: t?.email,
         userId: t?.sub,
+        name: t?.displayName,
       );
 
   Future<void> _init() async {
@@ -133,6 +143,9 @@ class AuthController extends StateNotifier<AuthState> {
     await _repo.save(null);
     state = const AuthState(loading: false, authenticated: false, accessToken: null);
   }
+
+  /// Şifre değiştirme bağlantısını e-postaya gönderir (bkz. AuthRepository).
+  Future<bool> requestPasswordReset(String email) => _repo.requestPasswordReset(email);
 
   Future<String?> getValidAccessToken() async {
     final t = await _repo.load();
