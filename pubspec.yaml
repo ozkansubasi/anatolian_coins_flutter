@@ -79,6 +79,10 @@ flutter:
     - assets/data/
     # Arayuz metinleri: dil basina bir dosya (lib/src/l10n/app_localizations.dart).
     - assets/l10n/
+    # Uygulama adı + slogan yazı tipi (Cinzel Bold, SIL OFL 1.1). google_fonts
+    # önce bu klasöre bakar; ilk açılış çevrimdışı olsa da doğru yazı tipi çıkar.
+    # Dosya google_fonts'un kendi adresinden, SHA-256 paketteki değerle eş.
+    - assets/google_fonts/
 
 flutter_launcher_icons:
   android: true

@@ -233,16 +233,11 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
     );
   }
 
-  /// Region Categories - Horizontal Scroll with navigation arrows
+  /// Antik Bölgeler: yatay kaydırılan bölge kartları
   Widget _buildRegionCategories(BuildContext context, AppLocalizations l10n) {
-    final allRegions = RegionData.getAllRegions(l10n);
-    // "Diğer Bölgeler" (other-ancient-regions-coins) en sona taşı
-    final regions = [...allRegions];
-    final otherIndex = regions.indexWhere((r) => r.key.contains('other'));
-    if (otherIndex != -1) {
-      final other = regions.removeAt(otherIndex);
-      regions.add(other);
-    }
+    // Bölgeler sayfasıyla aynı sıra (öne çıkanlar başta). "Diğer"in puanı 0,
+    // listede zaten en sonda kalır.
+    final regions = RegionData.getRegionsByPopularity(l10n);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

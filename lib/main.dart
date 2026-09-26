@@ -29,6 +29,12 @@ void main() async {
     return true;
   };
 
+  // Uygulamaya gömülü Cinzel yazı tipinin lisansı (OFL) Lisanslar sayfasında.
+  LicenseRegistry.addLicense(() async* {
+    final license = await rootBundle.loadString('assets/google_fonts/OFL.txt');
+    yield LicenseEntryWithLineBreaks(['google_fonts'], license);
+  });
+
   // Tipografi seti: nb_utils (ProKit) stil varsayılanlarını tek kaynağa bağlar
   initNumistrTypography();
 
