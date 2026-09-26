@@ -105,8 +105,10 @@ class _AuthenticatedView extends ConsumerWidget {
             // Note: If quota fetch fails (e.g., 401), show a simplified info instead
             quotaAsync.when(
               data: (quota) {
-                // Only show quota card for free users
-                if (quota.isPro) {
+                // Only show quota card for free users. The store reports Pro
+                // right after purchase; Joomla learns it ~1 min later via the
+                // RevenueCat webhook, so either source hides the card.
+                if (quota.isPro || subscription.isPro) {
                   return const SizedBox.shrink();
                 }
                 return Column(

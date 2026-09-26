@@ -7,6 +7,7 @@ import '../../core/env.dart';
 import '../../core/network_utils.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/region_data.dart';
+import '../../core/subscription_provider.dart';
 
 /// Recognition service for coin identification
 /// Communicates with Joomla API (which proxies to AI service)
@@ -490,8 +491,14 @@ final recognitionControllerProvider =
   (ref) => RecognitionController(ref.watch(recognitionServiceProvider)),
 );
 
+/// Kota, oturumdaki kullanıcıya ve abonelik katmanına bağlıdır; ikisi değişince
+/// yeniden çekilir (M2). Aksi halde çıkış yapıp başka hesapla girince önceki
+/// hesabın kotası/Pro'su, satın almadan sonra da eski 10/10 kartı görünürdü.
 final scanQuotaProvider = FutureProvider<ScanQuota>((ref) async {
-  // Check if authenticated first
+  ref.watch(authControllerProvider
+      .select((s) => s.authenticated ? (s.userId ?? s.email) : null));
+  ref.watch(subscriptionProvider.select((s) => s.isPro));
+
   final authController = ref.watch(authControllerProvider.notifier);
   final token = await authController.getValidAccessToken();
 

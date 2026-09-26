@@ -149,8 +149,11 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
   }
 
   /// Kullanıcı çıkışı
+  ///
+  /// `_lastLoginId`'ye bakmadan her çıkışta durumu sıfırlar (M2): kimlik hiç
+  /// bağlanmamışsa (ör. token'da `sub`/e-posta yoktu) bile önceki hesabın
+  /// backend Pro'su ve RevenueCat oturumu bir sonraki kullanıcıya kalmamalı.
   Future<void> logoutUser() async {
-    if (_lastLoginId == null) return;
     _lastLoginId = null;
     _backendPro = false;
     _backendExpiry = null;
