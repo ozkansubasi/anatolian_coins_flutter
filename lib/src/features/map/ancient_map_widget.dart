@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:nb_utils/nb_utils.dart';
+import '../../core/coin_format.dart';
 import '../../core/region_data.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../core/num_colors.dart';
@@ -140,6 +141,10 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
   bool _showRegionLabels = true;
   bool _showMintMarkers = true;
 
+  /// Lejant varsayılan kapalı; açıkken bilgi kartıyla çakışmasın diye kart
+  /// açılınca gizlenir (2026-09-26 cihaz testi: lejant kartın üstüne biniyordu).
+  bool _showLegend = false;
+
   // Seçili marker
   AncientMapMint? _selectedMint;
 
@@ -239,30 +244,40 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
           ],
         ),
 
-        // Kontrol paneli (tam ekran modunda)
+        // Kontrol paneli (tam ekran modunda). Yatayda yükseklik az: sığmazsa kayar.
         if (widget.isFullScreen)
-          Positioned(
-            top: 8,
-            right: 8,
-            child: _buildControlPanel(l10n),
+          Positioned.fill(
+            child: SafeArea(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: SingleChildScrollView(child: _buildControlPanel(l10n)),
+                ),
+              ),
+            ),
           ),
 
-        // Seçili darphane bilgi kartı
-        // Bilgi kartı yalnız tam ekranda: önizlemede 'Haritada göster' katmanıyla çakışıyordu.
+        // Seçili darphane bilgi kartı (yalnız tam ekran; önizlemede 'Haritada
+        // göster' katmanıyla çakışıyordu). Yatayda tüm genişliği kaplamasın.
         if (widget.isFullScreen && _selectedMint != null)
           Positioned(
-            bottom: 16,
-            left: 16,
-            right: 16,
-            child: _buildMintInfoCard(l10n),
+            bottom: 12,
+            left: 12,
+            child: SafeArea(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 380),
+                child: _buildMintInfoCard(l10n),
+              ),
+            ),
           ),
 
-        // Lejant
-        if (widget.isFullScreen)
+        // Lejant: istek üzerine, kart açık değilken
+        if (widget.isFullScreen && _showLegend && _selectedMint == null)
           Positioned(
-            bottom: _selectedMint != null ? 140 : 16,
-            left: 16,
-            child: _buildLegend(l10n),
+            bottom: 12,
+            left: 12,
+            child: SafeArea(child: _buildLegend(l10n)),
           ),
       ],
     );
@@ -422,6 +437,16 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
             onPressed: () => setState(() => _showMintMarkers = !_showMintMarkers),
             tooltip: l10n.translate('show_mints'),
           ),
+          4.height,
+          _buildToggleButton(
+            icon: Icons.info_outline,
+            isActive: _showLegend,
+            onPressed: () => setState(() {
+              _showLegend = !_showLegend;
+              if (_showLegend) _selectedMint = null;
+            }),
+            tooltip: l10n.translate('legend'),
+          ),
           const Divider(height: 16),
           _buildControlButton(
             icon: Icons.center_focus_strong,
@@ -499,10 +524,10 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
     final c = context.numColors;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -515,16 +540,16 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
         children: [
           // Bölge rengi göstergesi
           Container(
-            width: 48,
-            height: 48,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
-              border: Border.all(color: color, width: 2),
+              border: Border.all(color: color, width: 1.5),
             ),
-            child: Icon(Icons.account_balance, color: color, size: 24),
+            child: Icon(Icons.account_balance, color: color, size: 18),
           ),
-          16.width,
+          12.width,
           // Darphane bilgileri
           Expanded(
             child: Column(
@@ -533,7 +558,7 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
               children: [
                 Text(
                   mint.displayName(l10n),
-                  style: boldTextStyle(size: 16, color: c.text),
+                  style: boldTextStyle(size: 15, color: c.text),
                 ),
                 4.height,
                 Text(
@@ -541,17 +566,6 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
                   style: secondaryTextStyle(size: 12, color: c.textMuted),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                ),
-                4.height,
-                Row(
-                  children: [
-                    Icon(Icons.location_on, size: 12, color: c.hint),
-                    4.width,
-                    Text(
-                      '${mint.lat.toStringAsFixed(3)}, ${mint.lng.toStringAsFixed(3)}',
-                      style: secondaryTextStyle(size: 10, color: c.textMuted),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -638,11 +652,12 @@ class _FullScreenAncientMapPageState extends State<FullScreenAncientMapPage> {
   @override
   void initState() {
     super.initState();
-    // Yatay moda zorla
+    // Yatay moda zorla; durum çubuğu gizlenir (harita tüm ekranı kullanır).
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     // Koordinatları parse et
     if (widget.coordinates != null) {
@@ -661,44 +676,102 @@ class _FullScreenAncientMapPageState extends State<FullScreenAncientMapPage> {
 
   @override
   void dispose() {
-    // Normal oryantasyona geri dön
+    // Normal oryantasyona ve sistem çubuklarına geri dön
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final c = context.numColors;
+    final title = widget.mintName != null && widget.mintName!.trim().isNotEmpty
+        ? CoinFormat.titleCase(widget.mintName!.trim())
+        : l10n.translate('ancient_map');
 
+    // Başlık çubuğu yok: yatayda ekranın ~%20'sini kaplıyordu (2026-09-26
+    // cihaz testi). Geri + başlık + konum haritanın üstünde yüzer.
     return Scaffold(
       backgroundColor: const Color(0xFFF5E6D3), // Antik kağıt rengi
-      appBar: AppBar(
-        backgroundColor: Colors.brown.shade700,
-        foregroundColor: Colors.white,
-        title: Text(
-          widget.mintName ?? l10n.translate('ancient_map'),
-          style: boldTextStyle(size: 16, color: Colors.white),
-        ),
-        actions: [
-          if (_focusPoint != null)
-            IconButton(
-              icon: const Icon(Icons.my_location),
-              onPressed: () => _mapController.move(_focusPoint!, 9.0),
-              tooltip: l10n.translate('go_to_location'),
+      body: Stack(
+        children: [
+          AncientMapWidget(
+            controller: _mapController,
+            focusPoint: _focusPoint,
+            highlightMint: widget.mintName,
+            filterRegion: widget.regionCode,
+            isFullScreen: true,
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _FloatingIconButton(
+                    icon: Icons.arrow_back,
+                    tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+                  8.width,
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 260),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: c.card.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 6)],
+                    ),
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: boldTextStyle(size: 14, color: c.text),
+                    ),
+                  ),
+                  if (_focusPoint != null) ...[
+                    8.width,
+                    _FloatingIconButton(
+                      icon: Icons.my_location,
+                      tooltip: l10n.translate('go_to_location'),
+                      onPressed: () => _mapController.move(_focusPoint!, 9.0),
+                    ),
+                  ],
+                ],
+              ),
             ),
+          ),
         ],
       ),
-      body: AncientMapWidget(
-        controller: _mapController,
-        focusPoint: _focusPoint,
-        highlightMint: widget.mintName,
-        filterRegion: widget.regionCode,
-        isFullScreen: true,
+    );
+  }
+}
+
+/// Harita üstünde yüzen yuvarlak düğme (geri, konum).
+class _FloatingIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  const _FloatingIconButton({required this.icon, required this.tooltip, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.numColors;
+    return Material(
+      color: c.card.withValues(alpha: 0.92),
+      shape: const CircleBorder(),
+      elevation: 2,
+      child: IconButton(
+        icon: Icon(icon, color: c.text),
+        tooltip: tooltip,
+        onPressed: onPressed,
       ),
     );
   }

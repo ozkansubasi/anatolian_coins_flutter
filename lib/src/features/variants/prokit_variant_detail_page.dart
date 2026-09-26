@@ -743,7 +743,8 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
   }
 
   void _openFullScreenMap(String coordinates) {
-    Navigator.of(context).push(
+    // Kök navigatörde: alt çubuklu kabuğun üstünde, gerçekten tam ekran.
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) => FullScreenAncientMapPage(
           coordinates: coordinates,
