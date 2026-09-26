@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/num_colors.dart';
+import '../../core/free_trial.dart';
 import '../../core/subscription_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
@@ -380,6 +381,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
     final product = package.storeProduct;
     final title = _getPackageTitle(package, l10n);
     final period = _getPackagePeriod(package, l10n);
+    final trial = freeTrialLabel(product, l10n);
     final c = context.numColors;
 
     return GestureDetector(
@@ -433,6 +435,20 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                             color: isPopular ? white : c.text,
                           ),
                         ),
+                        if (trial != null) ...[
+                          4.height,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: boxDecorationWithRoundedCorners(
+                              backgroundColor: isPopular ? white.withAlpha(50) : numSuccess.withAlpha(30),
+                              borderRadius: radius(6),
+                            ),
+                            child: Text(
+                              trial,
+                              style: boldTextStyle(size: 12, color: isPopular ? white : numSuccess),
+                            ),
+                          ),
+                        ],
                         4.height,
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
@@ -457,6 +473,17 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                             ),
                           ],
                         ),
+                        // Deneme koşulu: süre sonunda ne ödeneceği + iptal (mağaza kuralı)
+                        if (trial != null) ...[
+                          4.height,
+                          Text(
+                            l10n.translate('trial_terms', params: {'price': product.priceString, 'period': period}),
+                            style: secondaryTextStyle(
+                              size: 11,
+                              color: isPopular ? white.withAlpha(200) : c.textMuted,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
