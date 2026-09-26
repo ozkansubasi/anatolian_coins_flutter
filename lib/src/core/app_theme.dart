@@ -55,10 +55,10 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: colorScheme.onSurface,
         ),
-        iconTheme: IconThemeData(
-          color: colorScheme.onSurfaceVariant,
-          size: 24,
-        ),
+        // iconTheme BİLEREK yok: tanımlıysa (renksiz bile) AppBar onu kullanır ve
+        // foregroundColor'ı yok sayar. Sabit onSurfaceVariant, altın çubuklarda
+        // (foregroundColor: white) geri/paylaş ikonlarını koyu bırakıyordu
+        // (2026-09-26 cihaz incelemesi). Varsayılan: ikon = foregroundColor, 24 px.
       ),
 
       // Card Theme
@@ -532,10 +532,10 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           color: colorScheme.onSurface,
         ),
-        iconTheme: IconThemeData(
-          color: colorScheme.onSurfaceVariant,
-          size: 24,
-        ),
+        // iconTheme BİLEREK yok: tanımlıysa (renksiz bile) AppBar onu kullanır ve
+        // foregroundColor'ı yok sayar. Sabit onSurfaceVariant, altın çubuklarda
+        // (foregroundColor: white) geri/paylaş ikonlarını koyu bırakıyordu
+        // (2026-09-26 cihaz incelemesi). Varsayılan: ikon = foregroundColor, 24 px.
       ),
 
       // Card Theme

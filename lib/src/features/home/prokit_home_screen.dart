@@ -54,29 +54,40 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, AppLocalizations l10n, bool isDark) {
+  PreferredSizeWidget _buildAppBar(
+      BuildContext context, AppLocalizations l10n, bool isDark) {
+    // Marka bandı: Sikke Ara / Bölgeler / Blog'daki altın-kahve başlıkla aynı
+    // dil (2026-09-26 kullanıcı önerisi: ana sayfa kimliksiz kalıyordu).
     return AppBar(
-      backgroundColor: isDark ? numCardDark : numCardLight,
+      backgroundColor: numPrimary,
+      foregroundColor: Colors.white,
       elevation: 0,
       scrolledUnderElevation: 1,
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.asset(
-              'assets/icon/app_icon.png',
-              height: 32,
-              width: 32,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Container(
-                height: 32,
-                width: 32,
-                decoration: BoxDecoration(
-                  color: numPrimary.withAlpha(30),
-                  shape: BoxShape.circle,
+          // Altın bantta altın logo seçilmiyordu: beyaz çerçeve
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(9)),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                height: 30,
+                width: 30,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Container(
+                  height: 32,
+                  width: 32,
+                  decoration: BoxDecoration(
+                    color: numPrimary.withAlpha(30),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.monetization_on,
+                      color: numPrimary, size: 20),
                 ),
-                child: const Icon(Icons.monetization_on, color: numPrimary, size: 20),
               ),
             ),
           ),
@@ -84,7 +95,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           Text(
             l10n.translate('app_name'),
             // Sayfa başlığı standardı: NumTypo.title (18), Inter w600
-            style: boldTextStyle(size: 18, color: isDark ? Colors.white : numTextPrimary),
+            style: boldTextStyle(size: 18, color: Colors.white),
           ),
         ],
       ),
@@ -98,8 +109,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
           icon: Stack(
             clipBehavior: Clip.none,
             children: [
-              Icon(Icons.account_circle_outlined,
-                  color: isDark ? Colors.white : numTextPrimary),
+              const Icon(Icons.account_circle_outlined, color: Colors.white),
               if (ref.watch(bildirimVarProvider))
                 Positioned(
                   right: -1,
@@ -110,10 +120,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
                     decoration: BoxDecoration(
                       color: numSecondary,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isDark ? numCardDark : numCardLight,
-                        width: 1.5,
-                      ),
+                      border: Border.all(color: numPrimary, width: 1.5),
                     ),
                   ),
                 ),
@@ -131,8 +138,26 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Hero Banner Carousel
-          _buildBannerCarousel(context, l10n),
+          // Hero Banner Carousel — üst yarısı altın bandın içinden başlar
+          // (Sikke Ara'da arama kutusunun banda oturması gibi).
+          Stack(
+            children: [
+              Container(
+                height: 110,
+                decoration: BoxDecoration(
+                  color: numPrimary,
+                  boxShadow: [
+                    BoxShadow(
+                      color: numPrimary.withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+              ),
+              _buildBannerCarousel(context, l10n),
+            ],
+          ),
 
           // Region Categories (Horizontal)
           _buildRegionCategories(context, l10n),
@@ -173,8 +198,10 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         // Isaretler: sikkenin okunan kisimlarina dikkat ceker. Konumlar bu
         // fotografa gore ayarlandi; gorsel degisirse yeniden hizalanmali.
         markers: [
-          BannerMarker(const Alignment(-0.10, -0.55), l10n.translate('marker_portrait')),
-          BannerMarker(const Alignment(0.22, 0.10), l10n.translate('marker_legend')),
+          BannerMarker(
+              const Alignment(-0.10, -0.55), l10n.translate('marker_portrait')),
+          BannerMarker(
+              const Alignment(0.22, 0.10), l10n.translate('marker_legend')),
         ],
       ),
       HomeBanner(
@@ -242,7 +269,8 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
               Container(
                 width: 28,
                 alignment: Alignment.center,
-                child: Icon(Icons.chevron_left, color: numPrimary.withAlpha(150), size: 28),
+                child: Icon(Icons.chevron_left,
+                    color: numPrimary.withAlpha(150), size: 28),
               ),
               // Region list
               Expanded(
@@ -255,8 +283,10 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
                     return _RegionChip(
                       regionCode: region.key,
                       regionName: region.value,
-                      color: getRegionColor(region.key.replaceAll('-coins', '')),
-                      onTap: () => context.openRoute('/browse?region=${region.key}'),
+                      color:
+                          getRegionColor(region.key.replaceAll('-coins', '')),
+                      onTap: () =>
+                          context.openRoute('/browse?region=${region.key}'),
                     );
                   },
                 ),
@@ -265,7 +295,8 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
               Container(
                 width: 28,
                 alignment: Alignment.center,
-                child: Icon(Icons.chevron_right, color: numPrimary.withAlpha(150), size: 28),
+                child: Icon(Icons.chevron_right,
+                    color: numPrimary.withAlpha(150), size: 28),
               ),
             ],
           ),
@@ -371,7 +402,6 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       ],
     );
   }
-
 }
 
 // =============================================================================
@@ -423,7 +453,8 @@ class _RegionChip extends StatelessWidget {
                 child: Image.asset(
                   _getRegionIconPath(),
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Icon(Icons.location_on, color: color, size: 24),
+                  errorBuilder: (_, __, ___) =>
+                      Icon(Icons.location_on, color: color, size: 24),
                 ),
               ),
             ),
@@ -436,7 +467,11 @@ class _RegionChip extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 child: Text(
                   regionName,
-                  style: secondaryTextStyle(size: 10, color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : numTextPrimary),
+                  style: secondaryTextStyle(
+                      size: 10,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white70
+                          : numTextPrimary),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                 ),
@@ -536,7 +571,8 @@ class _QuickAction extends StatelessWidget {
                         top: -2,
                         right: -2,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
                             color: theme.colorScheme.error,
                             borderRadius: BorderRadius.circular(10),
@@ -567,7 +603,8 @@ class _QuickAction extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Icon(Icons.chevron_right, size: 16, color: numPrimary.withAlpha(160)),
+                Icon(Icons.chevron_right,
+                    size: 16, color: numPrimary.withAlpha(160)),
               ],
             ),
           ),
@@ -576,4 +613,3 @@ class _QuickAction extends StatelessWidget {
     );
   }
 }
-
