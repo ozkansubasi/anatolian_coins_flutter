@@ -13,11 +13,29 @@ import '../../core/api_client.dart';
 class AssistantSource {
   final String title;
   final String url;
-  const AssistantSource({required this.title, required this.url});
+
+  /// Cevap metninde bu kaynağı gösteren [n] numaraları (plugin 1.16.1+).
+  /// Sıradan TÜRETİLMEZ: terim parçaları tek sözlük bağlantısında birleştiği
+  /// için ilk makale metinde [3] iken listede ikinci olabilir.
+  final List<int> refs;
+
+  const AssistantSource({
+    required this.title,
+    required this.url,
+    this.refs = const [],
+  });
+
+  /// Metindeki biçimle aynı etiket: "[1]", "[1, 2]"; numarasız kaynakta null.
+  String? get refLabel => refs.isEmpty ? null : '[${refs.join(', ')}]';
 
   factory AssistantSource.fromJson(Map<String, dynamic> j) => AssistantSource(
         title: (j['title'] ?? '').toString(),
         url: (j['url'] ?? '').toString(),
+        refs: [
+          if (j['refs'] is List)
+            for (final r in j['refs'] as List)
+              if (r is num) r.toInt(),
+        ],
       );
 }
 
@@ -26,7 +44,8 @@ class AssistantReply {
   final int? conversationId;
   final List<AssistantSource> sources;
   final int? remainingToday;
-  final String route; // coin_search | explain | site | quota | rate_limit | other ...
+  final String
+      route; // coin_search | explain | site | quota | rate_limit | other ...
 
   const AssistantReply({
     required this.answer,
@@ -57,7 +76,9 @@ class AssistantReply {
     }
     return AssistantReply(
       answer: (j['answer'] ?? '').toString(),
-      conversationId: j['conversation_id'] is num ? (j['conversation_id'] as num).toInt() : int.tryParse('${j['conversation_id'] ?? ''}'),
+      conversationId: j['conversation_id'] is num
+          ? (j['conversation_id'] as num).toInt()
+          : int.tryParse('${j['conversation_id'] ?? ''}'),
       sources: sources,
       remainingToday: remaining,
       route: (j['route'] ?? '').toString(),

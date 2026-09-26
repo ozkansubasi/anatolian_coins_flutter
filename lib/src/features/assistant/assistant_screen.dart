@@ -275,18 +275,30 @@ class _MessageBubble extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 4,
                   children: message.sources.take(5).map((s) {
+                    final linkStyle = theme.textTheme.labelLarge?.copyWith(
+                      color: context.numColors.accent,
+                      decoration: TextDecoration.underline,
+                      decorationColor: context.numColors.accent,
+                    );
                     return ActionChip(
-                      label: Text(
-                        s.title.isEmpty ? s.url : s.title,
+                      // Metindeki [n] atfıyla eşleşen numara başta, altı çizisiz.
+                      label: Text.rich(
+                        TextSpan(children: [
+                          if (s.refLabel != null)
+                            TextSpan(
+                              text: '${s.refLabel} ',
+                              style: linkStyle?.copyWith(
+                                decoration: TextDecoration.none,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          TextSpan(text: s.title.isEmpty ? s.url : s.title),
+                        ]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         // Baglanti gibi okunsun: accent (acikta #8B6914, fildisi
                         // zeminde 5,04:1; koyuda #E8C766) -> WCAG AA gecer; alti cizili.
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: context.numColors.accent,
-                          decoration: TextDecoration.underline,
-                          decorationColor: context.numColors.accent,
-                        ),
+                        style: linkStyle,
                       ),
                       avatar: Icon(Icons.open_in_new,
                           size: 14, color: context.numColors.accent),
