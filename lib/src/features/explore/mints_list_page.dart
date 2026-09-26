@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart';
 import '../../core/region_data.dart';
+import '../../core/navigation.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../core/num_colors.dart';
 import '../../core/num_text.dart';
@@ -83,6 +84,7 @@ class _MintsListPageState extends State<MintsListPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
+        leading: context.returnLeading,
         title: Text(
           l10n.translate('mints'),
           style: boldTextStyle(size: 18, color: Colors.white),

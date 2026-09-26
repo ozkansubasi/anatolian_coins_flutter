@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:anatolian_coins/src/core/navigation.dart';
 import 'package:anatolian_coins/src/l10n/app_localizations.dart';
 import 'package:anatolian_coins/src/prokit_ui/widgets/num_bottom_nav.dart';
 
@@ -23,6 +24,8 @@ class _CounterPageState extends State<_CounterPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+        // Gerçek ekranlardaki gibi: sekme kökünde başka yerden gelinmişse geri oku.
+        appBar: AppBar(leading: context.returnLeading),
         body: TextButton(
           onPressed: () => setState(() => _n++),
           child: Text('${widget.name}:$_n'),
@@ -186,6 +189,28 @@ void main() {
     router.pop();
     await tester.pumpAndSettle();
     expect(find.text('home:0'), findsOneWidget);
+  });
+
+  testWidgets('başka sekmede açılan ekranın geri oku geldiği yere döner', (tester) async {
+    final router = await _pumpApp(tester);
+
+    // Ana Sayfa → Menü'ye ait ekran (go): kökte açılır ama geri oku olmalı.
+    tester.element(find.text('home:0')).openRoute('/account');
+    await tester.pumpAndSettle();
+    expect(find.text('account:0'), findsOneWidget);
+    expect(router.state.uri.queryParameters['from'], '/');
+    expect(find.byType(BackButton), findsOneWidget);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('home:0'), findsOneWidget);
+    expect(router.state.uri.path, '/');
+
+    // Sekmeye alt çubuktan gelinince (from yok) geri oku YOK.
+    await tester.tap(find.text('Browse'));
+    await tester.pumpAndSettle();
+    expect(find.text('browse:0'), findsOneWidget);
+    expect(find.byType(BackButton), findsNothing);
   });
 
   testWidgets('bulunulan sekmeye tekrar basmak köke döner', (tester) async {

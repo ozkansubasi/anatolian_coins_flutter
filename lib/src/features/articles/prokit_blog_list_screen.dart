@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart' hide ContextExtensions;
 import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
+import '../../core/navigation.dart';
 import '../../models/article.dart';
 import '../../models/article_category.dart';
 import '../../core/num_colors.dart';
@@ -99,6 +100,7 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
 
   Widget _buildAppBar(AppLocalizations l10n) {
     return SliverAppBar(
+      leading: context.returnLeading,
       expandedHeight: 140,
       floating: false,
       pinned: true,
@@ -247,29 +249,24 @@ class _ProkitBlogListScreenState extends ConsumerState<ProkitBlogListScreen> {
     );
   }
 
+  /// Kategoriler alt satırlara taşar. Eskiden yatay kaydırılan tek satırdı;
+  /// ekrana sığmayanların varlığı belli olmuyordu (2026-09-26 cihaz testi).
   Widget _buildCategoryChips(AppLocalizations l10n) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          // "All" chip
-          _CategoryChip(
-            label: l10n.translate('all'),
-            isSelected: _selectedCategoryId == null,
-            onTap: () => _onCategorySelected(null),
-          ),
-          8.width,
-          // Category chips
-          ..._categories.map((cat) => Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: _CategoryChip(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _CategoryChip(
+          label: l10n.translate('all'),
+          isSelected: _selectedCategoryId == null,
+          onTap: () => _onCategorySelected(null),
+        ),
+        ..._categories.map((cat) => _CategoryChip(
               label: cat.name,
               isSelected: _selectedCategoryId == cat.id,
               onTap: () => _onCategorySelected(cat.id),
-            ),
-          )),
-        ],
-      ),
+            )),
+      ],
     );
   }
 

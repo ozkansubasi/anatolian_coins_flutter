@@ -5,6 +5,7 @@ import 'package:nb_utils/nb_utils.dart' hide ContextExtensions;
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../l10n/app_localizations.dart';
+import '../../core/navigation.dart';
 import '../../models/article.dart';
 import '../../core/num_colors.dart';
 import '../../core/num_text.dart';
@@ -62,6 +63,7 @@ class ProkitArticleDetailScreen extends ConsumerWidget {
     final c = context.numColors;
     return Scaffold(
       appBar: AppBar(
+        leading: context.returnLeading,
         backgroundColor: numPrimary,
         foregroundColor: Colors.white,
       ),
@@ -105,6 +107,7 @@ class _ArticleContent extends StatelessWidget {
         // Kompakt üst çubuk: eski 220 px "hero" alanında yalnız dekoratif ikonlar
         // ve aşağıda zaten yazan başlığın kopyası vardı (gereksiz ekran kullanımı).
         SliverAppBar(
+          leading: context.returnLeading,
           pinned: true,
           backgroundColor: numPrimary,
           foregroundColor: Colors.white,

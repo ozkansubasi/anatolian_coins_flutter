@@ -64,7 +64,16 @@ extension NumOpenRoute on BuildContext {
     if (home.index == active) {
       push(location);
     } else {
-      go(location);
+      // Başka sekmede kök olarak açılır; geri oku için geldiği yer taşınır
+      // (bkz. NumNavigation.returnLeading).
+      final here = GoRouter.of(this).routerDelegate.currentConfiguration.uri;
+      final hereQuery = Map<String, String>.of(here.queryParameters)..remove('from');
+      final from = hereQuery.isEmpty ? here.path : '${here.path}?${Uri(queryParameters: hereQuery).query}';
+      final target = Uri.parse(location);
+      go(Uri(
+        path: target.path,
+        queryParameters: {...target.queryParameters, 'from': from},
+      ).toString());
     }
   }
 }

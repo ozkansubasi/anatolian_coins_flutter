@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 import 'package:nb_utils/nb_utils.dart';
+import '../../core/coin_format.dart';
+import '../../core/navigation.dart';
 import '../../models/variant.dart';
 import '../../core/region_data.dart';
 import '../../prokit_ui/numistr_colors.dart';
@@ -108,8 +111,31 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     super.dispose();
   }
 
+  /// Sunucu geniş sorguları reddeder (filtresiz → 422, yalnız materyal → 400;
+  /// ADR-005 kopyalama koruması). Bölge, darphane ya da arama metni olmadan
+  /// istek atılmaz; kullanıcıya ne seçmesi gerektiği gösterilir.
+  bool get _hasNarrowingFilter =>
+      _selectedRegion != null ||
+      (_selectedMint?.isNotEmpty ?? false) ||
+      _searchCtrl.text.trim().isNotEmpty;
+
+  void _showNeedsFilter() {
+    setState(() {
+      _items.clear();
+      _thumbnailCache.clear();
+      _page = 1;
+      _hasMore = false;
+      _errorMessage = null;
+      _initialLoad = false;
+    });
+  }
+
   Future<void> _load({bool reset = false}) async {
     if (_loading) return;
+    if (!_hasNarrowingFilter) {
+      _showNeedsFilter();
+      return;
+    }
 
     setState(() {
       _loading = true;
@@ -149,6 +175,12 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
         _loadThumbnails(list);
       }
     } catch (e) {
+      final status = e is DioException ? e.response?.statusCode : null;
+      if (mounted && (status == 400 || status == 422)) {
+        // Sunucu sorguyu fazla geniş buldu: hata değil, yönlendirme.
+        _showNeedsFilter();
+        return;
+      }
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         final String errorMsg;
@@ -323,6 +355,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
 
   PreferredSizeWidget _buildAppBar(AppLocalizations l10n) {
     return AppBar(
+      leading: context.returnLeading,
       title: Text(
         l10n.translate('browse_coins'),
         style: boldTextStyle(size: 18, color: Colors.white),
@@ -391,7 +424,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     if (_selectedRegion != null) {
       chips.add(_FilterChipIcon(
         icon: Icons.location_on,
-        tooltip: RegionData.getRegionName(_selectedRegion, l10n),
+        label: RegionData.getRegionName(_selectedRegion, l10n),
         onRemove: () {
           setState(() => _selectedRegion = null);
           _load(reset: true);
@@ -402,7 +435,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     if (_selectedMaterial != null) {
       chips.add(_FilterChipIcon(
         icon: Icons.circle,
-        tooltip: _selectedMaterial!,
+        label: CoinFormat.material(_selectedMaterial, l10n) ?? _selectedMaterial!,
         color: _getMaterialColorStatic(_selectedMaterial!),
         onRemove: () {
           setState(() => _selectedMaterial = null);
@@ -414,7 +447,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     if (_onlyImages) {
       chips.add(_FilterChipIcon(
         icon: Icons.image,
-        tooltip: l10n.translate('with_images_only'),
+        label: l10n.translate('filter_images_only'),
         onRemove: () {
           setState(() => _onlyImages = false);
         },
@@ -423,28 +456,11 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
 
     if (chips.isEmpty) return const SizedBox.shrink();
 
+    // Wrap: çipler taşarsa alt satıra iner (yatay kaydırma gizli kalıyordu).
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          ...chips.map((chip) => Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: chip,
-          )),
-          // Aktif filtre sayısı göstergesi
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: numPrimary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '${chips.length} ${l10n.translate('filter')}',
-              style: secondaryTextStyle(size: 10, color: context.numColors.accent),
-            ),
-          ),
-        ],
-      ),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Wrap(spacing: 8, runSpacing: 4, children: chips),
     );
   }
 
@@ -556,7 +572,8 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
           Text(
             _initialLoad
                 ? l10n.translate('try_different_filters')
-                : l10n.translate('select_region_or_mint'),
+                : l10n.translate(_selectedMaterial != null ? 'material_needs_region' : 'select_region_or_mint'),
+            textAlign: TextAlign.center,
             style: secondaryTextStyle(size: 14, color: context.numColors.textMuted),
           ),
         ],
@@ -864,16 +881,19 @@ class _CoinListCard extends StatelessWidget {
   }
 }
 
-// ==================== FILTER CHIP ICON (Compact) ====================
+// ==================== FILTER CHIP ====================
+/// Etkin filtre: ikon + ad + kaldır. InputChip dokunma alanını 48 dp'ye tamamlar;
+/// eski ikon-yalnız çipte kaldırma düğmesi ~16 px'ti ve hangi filtrenin seçili
+/// olduğu yalnız uzun basınca görünüyordu.
 class _FilterChipIcon extends StatelessWidget {
   final IconData icon;
-  final String tooltip;
+  final String label;
   final Color? color;
   final VoidCallback onRemove;
 
   const _FilterChipIcon({
     required this.icon,
-    required this.tooltip,
+    required this.label,
     this.color,
     required this.onRemove,
   });
@@ -881,34 +901,16 @@ class _FilterChipIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.numColors;
-    return Tooltip(
-      message: tooltip,
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: numPrimary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: numPrimary.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color ?? c.accent),
-            4.width,
-            GestureDetector(
-              onTap: onRemove,
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: numPrimary.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.close, size: 12, color: c.accent),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return InputChip(
+      avatar: Icon(icon, size: 16, color: color ?? c.accent),
+      label: Text(label, style: secondaryTextStyle(size: 13, color: c.text)),
+      onDeleted: onRemove,
+      deleteIcon: Icon(Icons.close, size: 18, color: c.accent),
+      deleteButtonTooltipMessage: MaterialLocalizations.of(context).deleteButtonTooltip,
+      backgroundColor: numPrimary.withValues(alpha: 0.1),
+      side: BorderSide(color: numPrimary.withValues(alpha: 0.3)),
+      shape: const StadiumBorder(),
+      materialTapTargetSize: MaterialTapTargetSize.padded,
     );
   }
 }

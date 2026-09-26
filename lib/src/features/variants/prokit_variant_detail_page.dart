@@ -14,6 +14,7 @@ import 'image_gallery_viewer.dart';
 import '../../core/subscription_provider.dart';
 import '../../core/locale_provider.dart';
 import '../../core/region_data.dart';
+import '../../core/web_links.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../core/num_colors.dart';
@@ -139,7 +140,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     final text = 'NumisTR - ${_variant!.title}\n'
         '${l10n.translate('region_prefix', params: {'region': region})}\n'
         '${l10n.translate('material_prefix', params: {'material': material})}\n'
-        'https://www.numistr.org/sikke/${_variant!.slug}';
+        '${coinWebUrl(_variant!.articleId, l10n.locale.languageCode)}';
     Share.share(text, subject: _variant!.title);
   }
 
@@ -931,7 +932,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
   Future<void> _openCoinOnWebsite(int? articleId) async {
     if (articleId == null) return;
     try {
-      final url = Uri.parse('https://www.numistr.org/sikke/$articleId');
+      final url = coinWebUrl(articleId, AppLocalizations.of(context).locale.languageCode);
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);
       }

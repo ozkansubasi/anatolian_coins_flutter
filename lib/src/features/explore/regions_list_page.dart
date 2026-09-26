@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nb_utils/nb_utils.dart';
 import '../../core/region_data.dart';
+import '../../core/navigation.dart';
 import '../../core/num_colors.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../l10n/app_localizations.dart';
@@ -32,6 +33,7 @@ class RegionsListPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
+        leading: context.returnLeading,
         title: Text(
           l10n.translate('regions'),
           style: boldTextStyle(size: 18, color: Colors.white),

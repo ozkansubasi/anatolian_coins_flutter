@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
+import '../../core/app_version.dart';
 import '../../core/locale_provider.dart';
 import '../../core/subscription_provider.dart';
 import '../../core/region_data.dart';
@@ -76,7 +77,7 @@ class SettingsScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.code),
             title: Text(l10n.translate('version')),
-            subtitle: const Text('0.4.0'),
+            subtitle: Text(ref.watch(appVersionProvider).valueOrNull ?? '…'),
           ),
           const Divider(),
 
