@@ -30,7 +30,7 @@ class CollectionsPage extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            tooltip: 'Yeni Koleksiyon',
+            tooltip: l10n.translate('new_collection'),
             onPressed: () => _showCreateDialog(context, ref),
           ),
         ],
@@ -61,13 +61,13 @@ class CollectionsPage extends ConsumerWidget {
             children: [
               Icon(Icons.error_outline, size: 48, color: c.hint),
               const SizedBox(height: 16),
-              Text('Hata: $error'),
+              Text(l10n.translate('error_prefix', params: {'error': '$error'})),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () {
                   ref.read(collectionsControllerProvider.notifier).loadCollections();
                 },
-                child: const Text('Tekrar Dene'),
+                child: Text(l10n.translate('retry')),
               ),
             ],
           ),
@@ -89,7 +89,7 @@ class CollectionsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Henüz koleksiyon yok',
+            l10n.translate('no_collections_yet'),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
@@ -98,7 +98,7 @@ class CollectionsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Sikkelerinizi organize etmek için koleksiyon oluşturun',
+            l10n.translate('no_collections_hint'),
             style: TextStyle(
               fontSize: 14,
               color: c.hint,
@@ -167,15 +167,15 @@ class CollectionsPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Yeni Koleksiyon'),
+        title: Text(l10n.translate('new_collection')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Koleksiyon Adı',
-                hintText: 'Örn: Roma İmparatorluğu',
+              decoration: InputDecoration(
+                labelText: l10n.translate('collection_name'),
+                hintText: l10n.translate('collection_name_hint'),
               ),
               autofocus: true,
               textCapitalization: TextCapitalization.words,
@@ -183,9 +183,9 @@ class CollectionsPage extends ConsumerWidget {
             const SizedBox(height: 16),
             TextField(
               controller: descController,
-              decoration: const InputDecoration(
-                labelText: 'Açıklama (Opsiyonel)',
-                hintText: 'Koleksiyon hakkında notlar...',
+              decoration: InputDecoration(
+                labelText: l10n.translate('collection_description_optional'),
+                hintText: l10n.translate('collection_description_hint'),
               ),
               maxLines: 3,
               textCapitalization: TextCapitalization.sentences,
@@ -195,14 +195,14 @@ class CollectionsPage extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
+            child: Text(l10n.translate('cancel')),
           ),
           FilledButton(
             onPressed: () async {
               final name = nameController.text.trim();
               if (name.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Lütfen bir ad girin')),
+                  SnackBar(content: Text(l10n.translate('enter_name'))),
                 );
                 return;
               }
@@ -219,14 +219,14 @@ class CollectionsPage extends ConsumerWidget {
                 Navigator.pop(context);
                 if (collectionId != null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('$name oluşturuldu')),
+                    SnackBar(content: Text(l10n.translate('collection_created', params: {'name': name}))),
                   );
                   // Navigate to the new collection
                   context.push('/collection/$collectionId');
                 }
               }
             },
-            child: const Text('Oluştur'),
+            child: Text(l10n.translate('create')),
           ),
         ],
       ),
@@ -304,6 +304,7 @@ class _CollectionListItem extends ConsumerWidget {
   }
 
   void _showOptionsMenu(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -312,7 +313,7 @@ class _CollectionListItem extends ConsumerWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.edit),
-              title: const Text('Düzenle'),
+              title: Text(l10n.translate('edit')),
               onTap: () {
                 Navigator.pop(context);
                 _showEditDialog(context, ref);
@@ -320,7 +321,7 @@ class _CollectionListItem extends ConsumerWidget {
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Sil', style: TextStyle(color: Colors.red)),
+              title: Text(l10n.translate('delete'), style: const TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
                 _showDeleteDialog(context, ref);
@@ -333,20 +334,21 @@ class _CollectionListItem extends ConsumerWidget {
   }
 
   void _showEditDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final nameController = TextEditingController(text: collection.name);
     final descController = TextEditingController(text: collection.description);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Koleksiyonu Düzenle'),
+        title: Text(l10n.translate('edit_collection')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Koleksiyon Adı',
+              decoration: InputDecoration(
+                labelText: l10n.translate('collection_name'),
               ),
               autofocus: true,
               textCapitalization: TextCapitalization.words,
@@ -354,8 +356,8 @@ class _CollectionListItem extends ConsumerWidget {
             const SizedBox(height: 16),
             TextField(
               controller: descController,
-              decoration: const InputDecoration(
-                labelText: 'Açıklama',
+              decoration: InputDecoration(
+                labelText: l10n.translate('collection_description'),
               ),
               maxLines: 3,
               textCapitalization: TextCapitalization.sentences,
@@ -365,14 +367,14 @@ class _CollectionListItem extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
+            child: Text(l10n.translate('cancel')),
           ),
           FilledButton(
             onPressed: () async {
               final name = nameController.text.trim();
               if (name.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Lütfen bir ad girin')),
+                  SnackBar(content: Text(l10n.translate('enter_name'))),
                 );
                 return;
               }
@@ -390,12 +392,12 @@ class _CollectionListItem extends ConsumerWidget {
                 Navigator.pop(context);
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Koleksiyon güncellendi')),
+                    SnackBar(content: Text(l10n.translate('collection_updated'))),
                   );
                 }
               }
             },
-            child: const Text('Kaydet'),
+            child: Text(l10n.translate('save')),
           ),
         ],
       ),
@@ -403,18 +405,19 @@ class _CollectionListItem extends ConsumerWidget {
   }
 
   void _showDeleteDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.warning_amber_rounded, size: 48, color: Colors.orange),
-        title: const Text('Koleksiyonu Sil?'),
+        title: Text(l10n.translate('delete_collection_title')),
         content: Text(
-          '${collection.name} koleksiyonu ve içindeki ${collection.itemCount} sikke silinecek. Bu işlem geri alınamaz.',
+          l10n.translate('delete_collection_body', params: {'name': collection.name, 'count': '${collection.itemCount}'}),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('İptal'),
+            child: Text(l10n.translate('cancel')),
           ),
           FilledButton(
             onPressed: () async {
@@ -426,13 +429,13 @@ class _CollectionListItem extends ConsumerWidget {
                 Navigator.pop(context);
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Koleksiyon silindi')),
+                    SnackBar(content: Text(l10n.translate('collection_deleted'))),
                   );
                 }
               }
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Sil'),
+            child: Text(l10n.translate('delete')),
           ),
         ],
       ),

@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/variant_image.dart';
 
 class ImageGalleryViewer extends StatefulWidget {
@@ -112,15 +113,15 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer> {
             ),
             errorWidget: (context, url, error) => (image.urlHd != null && url != image.url)
                 ? CachedNetworkImage(imageUrl: image.url, fit: BoxFit.contain)
-                : const Center(
+                : Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error, color: Colors.red, size: 48),
-                  SizedBox(height: 8),
+                  const Icon(Icons.error, color: Colors.red, size: 48),
+                  const SizedBox(height: 8),
                   Text(
-                    'Görsel yüklenemedi',
-                    style: TextStyle(color: Colors.white),
+                    AppLocalizations.of(context).translate('image_load_failed'),
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ],
               ),
@@ -154,11 +155,14 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer> {
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close, color: Colors.white),
-            tooltip: 'Kapat',
+            tooltip: AppLocalizations.of(context).translate('close'),
           ),
           Expanded(
             child: Text(
-              'Görsel ${_currentIndex + 1} / ${widget.images.length}',
+              AppLocalizations.of(context).translate('image_counter', params: {
+                'current': '${_currentIndex + 1}',
+                'total': '${widget.images.length}',
+              }),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 16,

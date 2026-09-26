@@ -24,8 +24,8 @@ import 'articles_api.dart';
 /// Başlıktan çıkarılan hedef: (bölge kodu, darphane kodu, görünen ad).
 typedef CoinTarget = ({String region, String? mint, String name});
 
-/// Bölge kodu → başlıkta aranacak ek yazımlar (TR ad ve kodun Latince kökü
-/// otomatik eklenir).
+/// Bölge kodu → başlıkta aranacak ek yazımlar (arayüz dilindeki ad ve kodun
+/// Latince kökü otomatik eklenir).
 const _regionAliases = <String, List<String>>{
   'pisidia-coins': ['pisidya'],
   'ionia-coins': ['iyonya', 'ionya'],
@@ -45,21 +45,24 @@ Set<String> _words(String s) =>
     s.toLowerCase().split(_nonLetter).where((w) => w.isNotEmpty).toSet();
 
 /// Başlıkta tam kelime olarak geçen ilk bölge; yoksa darphane (kök ≥ 5 harf).
-CoinTarget? detectCoinTarget(String title) {
+///
+/// Makale listesi arayüz diline göre süzüldüğü için başlık o dildedir; bölge
+/// adı [l10n]'dan gelir.
+CoinTarget? detectCoinTarget(String title, AppLocalizations l10n) {
   final words = _words(title);
-  for (final entry in RegionData.regionNames.entries) {
-    final code = entry.key;
+  for (final code in RegionData.regionCodes) {
     if (code == 'other-ancient-regions-coins') continue;
+    final name = RegionData.getRegionName(code, l10n);
     final names = {
-      entry.value.toLowerCase(),
+      name.toLowerCase(),
       code.replaceAll('-coins', ''),
       ...?_regionAliases[code],
     };
     if (names.any(words.contains)) {
-      return (region: code, mint: null, name: entry.value);
+      return (region: code, mint: null, name: name);
     }
   }
-  for (final code in RegionData.regionNames.keys) {
+  for (final code in RegionData.regionCodes) {
     for (final mint in RegionData.getMintsForRegion(code)) {
       final root = mint.split('_').first;
       if (root.length >= 5 && words.contains(root)) {
@@ -107,7 +110,7 @@ class ArticleRelatedSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final target = detectCoinTarget(article.title);
+    final target = detectCoinTarget(article.title, AppLocalizations.of(context));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

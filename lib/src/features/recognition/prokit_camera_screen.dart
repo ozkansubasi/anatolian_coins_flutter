@@ -334,7 +334,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       }
     } catch (e) {
       setState(() {
-        _error = 'Failed to switch camera: $e';
+        debugPrint('Failed to switch camera: $e');
+        _error = 'camera_error';
         _isInitializing = false;
       });
     }

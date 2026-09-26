@@ -249,7 +249,8 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
       return result;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
-      return PurchaseOutcome(success: false, error: e.toString());
+      return PurchaseOutcome(
+          success: false, errorKey: 'purchase_error_generic', error: e.toString());
     }
   }
 
@@ -277,7 +278,8 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
       return result;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
-      return PurchaseOutcome(success: false, error: e.toString());
+      return PurchaseOutcome(
+          success: false, errorKey: 'restore_failed', error: e.toString());
     }
   }
 

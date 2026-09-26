@@ -213,7 +213,7 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
 
   /// Region Categories - Horizontal Scroll with navigation arrows
   Widget _buildRegionCategories(BuildContext context, AppLocalizations l10n) {
-    final allRegions = RegionData.getAllRegions();
+    final allRegions = RegionData.getAllRegions(l10n);
     // "Diğer Bölgeler" (other-ancient-regions-coins) en sona taşı
     final regions = [...allRegions];
     final otherIndex = regions.indexWhere((r) => r.key.contains('other'));

@@ -6,7 +6,6 @@ import '../../core/api_client.dart';
 import '../../core/env.dart';
 import '../../core/network_utils.dart';
 import '../../auth/auth_controller.dart';
-import '../../core/region_data.dart';
 import '../../core/subscription_provider.dart';
 
 /// Recognition service for coin identification
@@ -335,7 +334,6 @@ class CoinMatch {
   final String title;
   final double confidence;
   final String? region;
-  final String? regionName; // Category name instead of alias
   final String? mintName; // Mint name
   final String? dateRange;
 
@@ -355,7 +353,6 @@ class CoinMatch {
     required this.title,
     required this.confidence,
     this.region,
-    this.regionName,
     this.mintName,
     this.dateRange,
     this.dateFrom,
@@ -384,7 +381,6 @@ class CoinMatch {
       title: json['title'] as String? ?? 'Unknown Coin',
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
       region: regionAlias, // Alias (for compatibility)
-      regionName: RegionData.getRegionName(regionAlias), // Client-side mapping
       mintName: json['mint_name'] as String?,
       dateRange: dateRange ?? json['date_range'] as String?, // Fallback to direct field
       dateFrom: _toInt(dateFrom),

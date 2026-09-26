@@ -94,7 +94,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _errorMessage = e.toString());
+        debugPrint('Social login failed: $e');
+        setState(() => _errorMessage = 'login_failed');
       }
     }
   }
@@ -234,7 +235,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           12.width,
           Expanded(
             child: Text(
-              _errorMessage!,
+              AppLocalizations.of(context).translate(_errorMessage!),
               style: primaryTextStyle(color: Colors.red.shade700),
             ),
           ),

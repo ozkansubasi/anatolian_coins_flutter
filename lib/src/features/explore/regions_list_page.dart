@@ -27,7 +27,7 @@ class RegionsListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final regions = RegionData.getRegionsByPopularity();
+    final regions = RegionData.getRegionsByPopularity(l10n);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,

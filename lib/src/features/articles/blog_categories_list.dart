@@ -122,7 +122,8 @@ class _CategoryChip extends StatelessWidget {
         // This can be implemented in a future version
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${category.name} - Coming Soon'),
+            content: Text(AppLocalizations.of(context)
+                .translate('coming_soon_feature', params: {'feature': category.name})),
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
           ),

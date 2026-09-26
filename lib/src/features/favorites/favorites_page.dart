@@ -48,7 +48,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       if (mounted) {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Favoriler yüklenemedi: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context).translate('favorites_load_failed', params: {'error': '$e'}))),
         );
       }
     }
@@ -97,7 +97,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
           if (_favorites.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.refresh),
-              tooltip: 'Yenile',
+              tooltip: l10n.translate('refresh'),
               onPressed: _loadFavorites,
             ),
         ],
@@ -177,7 +177,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
-                            '${RegionData.getRegionName(variant.regionCode)} • ${variant.material ?? '-'}',
+                            '${RegionData.getRegionName(variant.regionCode, l10n)} • ${variant.material ?? '-'}',
                             style: TextStyle(
                               color: c.textMuted,
                               fontSize: 12,
@@ -203,9 +203,9 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
 
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Favorilerden kaldırıldı'),
-                                  duration: Duration(seconds: 1),
+                                SnackBar(
+                                  content: Text(l10n.translate('removed_from_favorites')),
+                                  duration: const Duration(seconds: 1),
                                 ),
                               );
                             }
@@ -232,7 +232,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Henüz favori sikkeniz yok',
+            l10n.translate('no_favorites_yet'),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
@@ -241,7 +241,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Sikke detay sayfasından favorilere ekleyebilirsiniz',
+            l10n.translate('no_favorites_hint'),
             style: TextStyle(
               fontSize: 14,
               color: c.hint,
@@ -252,7 +252,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
           FilledButton.icon(
             onPressed: () => context.go('/browse'),
             icon: const Icon(Icons.search),
-            label: const Text('Sikke Ara'),
+            label: Text(l10n.translate('browse_coins')),
           ),
         ],
       ),

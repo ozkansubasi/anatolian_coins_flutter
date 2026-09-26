@@ -1,23 +1,27 @@
+import '../l10n/app_localizations.dart';
+
 class RegionData {
-  static const Map<String, String> regionNames = {
-    'pisidia-coins': 'Pisidia',
-    'lydia-coins': 'Lidya',
-    'ionia-coins': 'İonia',
-    'caria-coins': 'Karya',
-    'lycia-coins': 'Likya',
-    'phrygia-coins': 'Frigya',
-    'mysia-coins': 'Misia',
-    'bithynia-coins': 'Bitinya',
-    'pamphylia-coins': 'Pamfilya',
-    'cilicia-coins': 'Kilikya',
-    'cappadocia-coins': 'Kapadokya',
-    'galatia-coins': 'Galatya',
-    'aeolis-coins': 'Ailios',
-    'troas-coins': 'Troya',
-    'paphlagonia-coins': 'Paflagonya',
-    'pontus-coins': 'Pontus',
-    'other-ancient-regions-coins': 'Diğer',
-  };
+  /// Bölge kodları (kategori alias'ı). Görünen ad kodda değil, çeviri
+  /// dosyasında: `region_<kod>` anahtarı → [name].
+  static const List<String> regionCodes = [
+    'pisidia-coins',
+    'lydia-coins',
+    'ionia-coins',
+    'caria-coins',
+    'lycia-coins',
+    'phrygia-coins',
+    'mysia-coins',
+    'bithynia-coins',
+    'pamphylia-coins',
+    'cilicia-coins',
+    'cappadocia-coins',
+    'galatia-coins',
+    'aeolis-coins',
+    'troas-coins',
+    'paphlagonia-coins',
+    'pontus-coins',
+    'other-ancient-regions-coins',
+  ];
 
   /// Popularity order for regions (based on coin count and user interest)
   /// Higher number = more popular, shows first
@@ -258,9 +262,11 @@ class RegionData {
     ],
   };
 
-  static String getRegionName(String? regionCode) {
+  /// Bölgenin arayüz dilindeki adı; bilinmeyen kod olduğu gibi döner.
+  static String getRegionName(String? regionCode, AppLocalizations l10n) {
     if (regionCode == null || regionCode.isEmpty) return '-';
-    return regionNames[regionCode] ?? regionCode;
+    if (!regionCodes.contains(regionCode)) return regionCode;
+    return l10n.translate('region_$regionCode');
   }
 
   static List<String> getMintsForRegion(String? regionCode) {
@@ -268,23 +274,20 @@ class RegionData {
     return mints[regionCode] ?? [];
   }
 
-  static List<MapEntry<String, String>> getAllRegions() {
-    return regionNames.entries.toList()
+  /// (kod, ad) çiftleri, ada göre alfabetik.
+  static List<MapEntry<String, String>> getAllRegions(AppLocalizations l10n) {
+    return [for (final c in regionCodes) MapEntry(c, getRegionName(c, l10n))]
       ..sort((a, b) => a.value.compareTo(b.value));
   }
 
-  /// Get regions sorted by popularity (most popular first)
-  /// "Diğer Antik Bölgeler" is always last
-  static List<MapEntry<String, String>> getRegionsByPopularity() {
-    final entries = regionNames.entries.toList();
-
-    // Sort by popularity (descending), "other" always last
+  /// (kod, ad) çiftleri, popülerliğe göre ("diğer" her zaman sonda).
+  static List<MapEntry<String, String>> getRegionsByPopularity(AppLocalizations l10n) {
+    final entries = [for (final c in regionCodes) MapEntry(c, getRegionName(c, l10n))];
     entries.sort((a, b) {
       final popA = regionPopularity[a.key] ?? 0;
       final popB = regionPopularity[b.key] ?? 0;
       return popB.compareTo(popA); // Descending order
     });
-
     return entries;
   }
 

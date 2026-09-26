@@ -165,7 +165,8 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
       }
     } catch (e) {
       if (mounted) {
-        toast('Error: $e', bgColor: numError);
+        toast(AppLocalizations.of(context).translate('error_prefix', params: {'error': '$e'}),
+            bgColor: numError);
       }
     } finally {
       if (mounted) {
@@ -389,7 +390,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
                                 const Icon(Icons.broken_image, size: 64, color: Colors.grey),
                                 16.height,
                                 Text(
-                                  'Image not found',
+                                  AppLocalizations.of(context).translate('image_not_found'),
                                   style: secondaryTextStyle(color: Colors.grey),
                                 ),
                               ],

@@ -322,14 +322,17 @@ class AuthRepository {
     } on DioException catch (e) {
       debugPrint('❌ Password login failed: ${e.response?.data}');
       final errorData = e.response?.data;
-      if (errorData is Map<String, dynamic>) {
-        final errorDesc = errorData['error_description'] ?? errorData['error'] ?? 'Login failed';
-        throw AuthException(errorDesc.toString());
-      }
-      throw AuthException('Login failed: ${e.message}');
+      // Auth0 hata kodu → l10n anahtarı; sunucunun İngilizce
+      // `error_description` metni kullanıcıya gösterilmez.
+      final code = errorData is Map<String, dynamic> ? errorData['error'] : null;
+      throw AuthException(switch (code) {
+        'invalid_grant' => 'login_invalid_credentials',
+        'too_many_attempts' => 'login_too_many_attempts',
+        _ => 'login_failed',
+      });
     } catch (e) {
       debugPrint('❌ Password login exception: $e');
-      throw AuthException('Login failed: $e');
+      throw AuthException('login_failed');
     }
   }
 
@@ -503,6 +506,7 @@ class AuthRepository {
 
 /// Custom exception for auth errors
 class AuthException implements Exception {
+  /// l10n anahtarı (arayüz çevirir).
   final String message;
   AuthException(this.message);
 

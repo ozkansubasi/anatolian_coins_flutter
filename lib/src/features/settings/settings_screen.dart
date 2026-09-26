@@ -277,7 +277,7 @@ class SettingsScreen extends ConsumerWidget {
             min: 0.4,
             max: 0.95,
             divisions: 11,
-            label: '%${(threshold * 100).toInt()}',
+            label: l10n.translate('percent_value', params: {'value': '${(threshold * 100).toInt()}'}),
             onChanged: (value) {
               ref.read(recognitionConfidenceThresholdProvider.notifier).set(value);
             },
@@ -319,7 +319,7 @@ class SettingsScreen extends ConsumerWidget {
       subtitle: Text(
         filterRegion == null
             ? l10n.translate('all_regions')
-            : RegionData.getRegionName(filterRegion) ?? filterRegion,
+            : RegionData.getRegionName(filterRegion, l10n),
       ),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _showRegionFilterDialog(context, ref, l10n, filterRegion),
@@ -364,7 +364,7 @@ class SettingsScreen extends ConsumerWidget {
                   Navigator.of(context).pop();
                 },
               ),
-              ...RegionData.getAllRegions().map(
+              ...RegionData.getAllRegions(l10n).map(
                 (region) => RadioListTile<String>(
                   title: Text(region.value),
                   value: region.key,

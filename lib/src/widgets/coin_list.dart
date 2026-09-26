@@ -39,7 +39,7 @@ Future<List<Variant>> loadVariantsInOrder(VariantsApi api, List<int> ids) async 
 
 /// "Frigya · Bronz · MÖ 133 – MÖ 50" — boş parçalar atlanır.
 String coinMetaLine(Variant v, AppLocalizations l10n) {
-  final region = RegionData.getRegionName(v.regionCode);
+  final region = RegionData.getRegionName(v.regionCode, l10n);
   return [
     if (region != '-') region,
     if (CoinFormat.material(v.material, l10n) case final m?) m,

@@ -72,10 +72,11 @@ class AuthController extends StateNotifier<AuthState> {
       return null; // Success, no error
     } on AuthException catch (e) {
       state = state.copyWith(loading: false);
-      return e.message; // Return error message
+      return e.message; // l10n anahtarı
     } catch (e) {
+      debugPrint('signInWithPassword failed: $e');
       state = state.copyWith(loading: false);
-      return e.toString();
+      return 'login_failed';
     }
   }
 

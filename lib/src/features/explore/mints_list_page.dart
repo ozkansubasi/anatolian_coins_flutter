@@ -34,7 +34,7 @@ class _MintsListPageState extends State<MintsListPage> {
   }
 
   List<MapEntry<String, String>> _getFilteredRegions() {
-    final regions = RegionData.getRegionsByPopularity();
+    final regions = RegionData.getRegionsByPopularity(AppLocalizations.of(context));
     if (_searchQuery.isEmpty) return regions;
 
     // Filter regions that have mints matching the search query

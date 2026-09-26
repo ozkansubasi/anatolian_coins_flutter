@@ -35,7 +35,10 @@ class AppLocalizations {
   static Future<Map<String, String>> loadTable(String languageCode) async {
     final cached = _cache[languageCode];
     if (cached != null) return cached;
-    final raw = await rootBundle.loadString('assets/l10n/$languageCode.json');
+    // loadString 50 KB üstünü compute() ile ayrı isolate'te çözer; widget
+    // testlerinin sahte zamanında bu hiç tamamlanmaz. Bayt okuyup burada çözülür.
+    final data = await rootBundle.load('assets/l10n/$languageCode.json');
+    final raw = utf8.decode(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));
     final table = (jsonDecode(raw) as Map<String, dynamic>).cast<String, String>();
     return _cache[languageCode] = table;
   }

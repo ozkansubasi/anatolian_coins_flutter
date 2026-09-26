@@ -150,13 +150,14 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
       }
     } catch (e) {
       if (mounted) {
-        String errorMsg;
+        final l10n = AppLocalizations.of(context);
+        final String errorMsg;
         if (e.toString().contains('timeout') || e.toString().contains('SocketException')) {
-          errorMsg = 'Connection timed out. Please try again.';
+          errorMsg = l10n.translate('error_network');
         } else if (e.toString().contains('404')) {
-          errorMsg = 'No results found.';
+          errorMsg = l10n.translate('no_results');
         } else {
-          errorMsg = 'An error occurred. Please try again.';
+          errorMsg = l10n.translate('error_generic');
         }
         setState(() => _errorMessage = errorMsg);
       }
@@ -248,7 +249,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
       bannerPath = 'assets/images/regions/${baseName}_banner.jpg';
     }
     
-    final regionName = RegionData.getRegionName(_selectedRegion) ?? _selectedRegion!;
+    final regionName = RegionData.getRegionName(_selectedRegion, AppLocalizations.of(context));
     
     return Container(
       width: double.infinity,
@@ -309,7 +310,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
                 ),
                 4.height,
                 Text(
-                  'Ancient Anatolia',
+                  AppLocalizations.of(context).translate('ancient_anatolia'),
                   style: secondaryTextStyle(size: 12, color: Colors.white70),
                 ),
               ],
@@ -390,7 +391,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     if (_selectedRegion != null) {
       chips.add(_FilterChipIcon(
         icon: Icons.location_on,
-        tooltip: RegionData.getRegionName(_selectedRegion) ?? _selectedRegion!,
+        tooltip: RegionData.getRegionName(_selectedRegion, l10n),
         onRemove: () {
           setState(() => _selectedRegion = null);
           _load(reset: true);
@@ -719,7 +720,7 @@ class _CoinGridCard extends StatelessWidget {
                         2.width,
                         Expanded(
                           child: Text(
-                            RegionData.getRegionName(variant.regionCode) ?? '-',
+                            RegionData.getRegionName(variant.regionCode, AppLocalizations.of(context)),
                             style: secondaryTextStyle(size: 8, color: c.textMuted),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -751,14 +752,6 @@ class _CoinGridCard extends StatelessWidget {
       default:
         return numTextSecondary;
     }
-  }
-
-  String _formatDateRange(int? from, int? to) {
-    if (from == null && to == null) return '-';
-    final fromStr = from != null ? '${from.abs()} ${from < 0 ? 'BC' : 'AD'}' : '';
-    final toStr = to != null ? '${to.abs()} ${to < 0 ? 'BC' : 'AD'}' : '';
-    if (from == to) return fromStr;
-    return '$fromStr - $toStr'.trim();
   }
 }
 
@@ -851,7 +844,7 @@ class _CoinListCard extends StatelessWidget {
                       4.width,
                       Expanded(
                         child: Text(
-                          RegionData.getRegionName(variant.regionCode) ?? '-',
+                          RegionData.getRegionName(variant.regionCode, AppLocalizations.of(context)),
                           style: secondaryTextStyle(size: 12, color: c.textMuted),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -961,7 +954,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final c = context.numColors;
-    final regions = RegionData.getRegionsByPopularity();
+    final regions = RegionData.getRegionsByPopularity(l10n);
 
     return Container(
       decoration: BoxDecoration(

@@ -132,9 +132,12 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
 
   void _handleShare() {
     if (_variant == null) return;
+    final l10n = AppLocalizations.of(context);
+    final region = RegionData.getRegionName(_variant!.regionCode, l10n);
+    final material = CoinFormat.material(_variant!.material, l10n) ?? '-';
     final text = 'NumisTR - ${_variant!.title}\n'
-        'Region: ${_variant!.regionCode ?? '-'}\n'
-        'Material: ${_variant!.material ?? '-'}\n'
+        '${l10n.translate('region_prefix', params: {'region': region})}\n'
+        '${l10n.translate('material_prefix', params: {'material': material})}\n'
         'https://www.numistr.org/sikke/${_variant!.slug}';
     Share.share(text, subject: _variant!.title);
   }
@@ -460,7 +463,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
     final period = CoinFormat.dateRange(v.dateFrom, v.dateTo, l10n);
     final material = CoinFormat.material(v.material, l10n);
     final region = v.regionCode != null && v.regionCode!.isNotEmpty
-        ? RegionData.getRegionName(v.regionCode)
+        ? RegionData.getRegionName(v.regionCode, l10n)
         : null;
 
     return SingleChildScrollView(

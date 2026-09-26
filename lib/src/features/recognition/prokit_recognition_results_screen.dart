@@ -8,6 +8,7 @@ import '../../core/coin_format.dart';
 import '../../core/navigation.dart';
 import '../../core/num_colors.dart';
 import '../../core/num_text.dart';
+import '../../core/region_data.dart';
 import 'recognition_service.dart';
 import '../history/scan_history_service.dart';
 import '../../widgets/coin_list.dart';
@@ -447,7 +448,7 @@ class _ScannedCoinStrip extends StatelessWidget {
 /// Konum satırı: "Pamfilya · Aspendos · MÖ 400 – MÖ 350".
 String _metaLine(CoinMatch m, AppLocalizations l10n) {
   final parts = <String>[
-    if (m.regionName != null && m.regionName != '-') m.regionName!,
+    if (RegionData.getRegionName(m.region, l10n) case final r when r != '-') r,
     if (m.mintName != null && m.mintName!.isNotEmpty) CoinFormat.titleCase(m.mintName!),
     if (CoinFormat.dateRange(m.dateFrom, m.dateTo, l10n) case final d?) d,
   ];

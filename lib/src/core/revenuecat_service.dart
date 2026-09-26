@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import 'env.dart';
 
@@ -70,8 +71,8 @@ class RevenueCatService {
       // Anahtar tanımlı değilse (örn. iOS henüz eklenmedi) sessizce atla
       if (apiKey.isEmpty) {
         debugPrint(
-          'RevenueCat: Bu platform için API anahtarı tanımlı değil, '
-          'satın alma devre dışı (${Platform.operatingSystem})',
+          'RevenueCat: no API key for this platform, '
+          'purchases disabled (${Platform.operatingSystem})',
         );
         return;
       }
@@ -174,7 +175,8 @@ class RevenueCatService {
     if (!await _ensureConfigured()) {
       return PurchaseOutcome(
         success: false,
-        error: 'Satın alma bu cihazda şu anda kullanılamıyor',
+        errorKey: 'purchase_unavailable',
+        error: 'SDK not configured',
       );
     }
 
@@ -196,20 +198,27 @@ class RevenueCatService {
         debugPrint('RevenueCat purchase completed but Pro not active');
         return PurchaseOutcome(
           success: false,
-          error: 'Satın alma tamamlandı ancak Pro aktif değil',
+          errorKey: 'purchase_not_activated',
+          error: 'Purchase completed but entitlement not active',
         );
       }
-    } on PurchasesErrorCode catch (e) {
-      debugPrint('RevenueCat purchase error: $e');
+    } on PlatformException catch (e) {
+      // SDK hatayı PlatformException olarak fırlatır; kod PurchasesErrorHelper
+      // ile çözülür. (Eskiden `on PurchasesErrorCode` yakalanıyordu — hiç
+      // eşleşmediği için iptal bile ham istisna metniyle gösteriliyordu.)
+      final code = PurchasesErrorHelper.getErrorCode(e);
+      debugPrint('RevenueCat purchase error: $code ${e.message}');
       return PurchaseOutcome(
         success: false,
-        error: _getErrorMessage(e),
-        isCancelled: e == PurchasesErrorCode.purchaseCancelledError,
+        errorKey: _errorKey(code),
+        error: '${code.name}: ${e.message}',
+        isCancelled: code == PurchasesErrorCode.purchaseCancelledError,
       );
     } catch (e) {
       debugPrint('RevenueCat purchase failed: $e');
       return PurchaseOutcome(
         success: false,
+        errorKey: 'purchase_error_generic',
         error: e.toString(),
       );
     }
@@ -220,7 +229,8 @@ class RevenueCatService {
     if (!await _ensureConfigured()) {
       return PurchaseOutcome(
         success: false,
-        error: 'Satın alma bu cihazda şu anda kullanılamıyor',
+        errorKey: 'purchase_unavailable',
+        error: 'SDK not configured',
       );
     }
 
@@ -233,11 +243,20 @@ class RevenueCatService {
         isPro: isPro,
         expirationDate: isPro ? _getExpirationFromCustomerInfo(customerInfo) : null,
       );
+    } on PlatformException catch (e) {
+      final code = PurchasesErrorHelper.getErrorCode(e);
+      debugPrint('RevenueCat restore failed: $code ${e.message}');
+      return PurchaseOutcome(
+        success: false,
+        errorKey: code == PurchasesErrorCode.networkError ? 'error_network' : 'restore_failed',
+        error: '${code.name}: ${e.message}',
+      );
     } catch (e) {
       debugPrint('RevenueCat restore failed: $e');
       return PurchaseOutcome(
         success: false,
-        error: 'Satın almalar geri yüklenemedi: $e',
+        errorKey: 'restore_failed',
+        error: e.toString(),
       );
     }
   }
@@ -251,27 +270,27 @@ class RevenueCatService {
     return null;
   }
 
-  /// Hata mesajlarını Türkçeleştir
-  String _getErrorMessage(PurchasesErrorCode errorCode) {
-    switch (errorCode) {
+  /// Mağaza hata kodu → l10n anahtarı (metin arayüzde çevrilir).
+  String _errorKey(PurchasesErrorCode code) {
+    switch (code) {
       case PurchasesErrorCode.purchaseCancelledError:
-        return 'Satın alma iptal edildi';
+        return 'purchase_cancelled';
       case PurchasesErrorCode.purchaseNotAllowedError:
-        return 'Satın alma bu cihazda izin verilmiyor';
+        return 'purchase_not_allowed';
       case PurchasesErrorCode.purchaseInvalidError:
-        return 'Geçersiz satın alma';
+        return 'purchase_invalid';
       case PurchasesErrorCode.productNotAvailableForPurchaseError:
-        return 'Ürün satın alınamıyor';
+        return 'product_not_available';
       case PurchasesErrorCode.productAlreadyPurchasedError:
-        return 'Bu ürün zaten satın alınmış';
+        return 'product_already_purchased';
       case PurchasesErrorCode.networkError:
-        return 'Ağ hatası. İnternet bağlantınızı kontrol edin';
+        return 'error_network';
       case PurchasesErrorCode.receiptAlreadyInUseError:
-        return 'Bu makbuz zaten başka bir hesapta kullanılıyor';
+        return 'receipt_in_use';
       case PurchasesErrorCode.storeProblemError:
-        return 'Mağaza hatası. Lütfen daha sonra tekrar deneyin';
+        return 'store_problem';
       default:
-        return 'Satın alma hatası: $errorCode';
+        return 'purchase_error_generic';
     }
   }
 
@@ -296,6 +315,11 @@ class PurchaseOutcome {
   final bool success;
   final bool isPro;
   final DateTime? expirationDate;
+
+  /// Kullanıcıya gösterilecek metnin l10n anahtarı.
+  final String? errorKey;
+
+  /// Tanılama metni (log için; kullanıcıya gösterilmez).
   final String? error;
   final bool isCancelled;
 
@@ -303,6 +327,7 @@ class PurchaseOutcome {
     required this.success,
     this.isPro = false,
     this.expirationDate,
+    this.errorKey,
     this.error,
     this.isCancelled = false,
   });

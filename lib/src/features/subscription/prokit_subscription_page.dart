@@ -921,9 +921,9 @@ class ProkitSubscriptionPage extends ConsumerWidget {
         }
       } else if (result.isCancelled) {
         // User cancelled - no message
-      } else if (result.error != null) {
+      } else if (result.errorKey != null) {
         if (context.mounted) {
-          toast(result.error!, bgColor: numError);
+          toast(l10n.translate(result.errorKey!), bgColor: numError);
         }
       }
     } catch (e) {
@@ -954,9 +954,9 @@ class ProkitSubscriptionPage extends ConsumerWidget {
         if (context.mounted) {
           toast(l10n.translate('no_purchases_to_restore'));
         }
-      } else if (result.error != null) {
+      } else if (result.errorKey != null) {
         if (context.mounted) {
-          toast(result.error!, bgColor: numError);
+          toast(l10n.translate(result.errorKey!), bgColor: numError);
         }
       }
     } catch (e) {

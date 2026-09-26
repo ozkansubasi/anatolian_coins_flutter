@@ -189,7 +189,7 @@ class _AncientMapWidgetState extends State<AncientMapWidget> {
             ),
             8.height,
             Text(
-              _error ?? 'Unknown error',
+              l10n.translate('error_generic'),
               style: secondaryTextStyle(size: 12),
               textAlign: TextAlign.center,
             ),
