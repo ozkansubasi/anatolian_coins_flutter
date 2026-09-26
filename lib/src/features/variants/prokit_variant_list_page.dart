@@ -265,7 +265,9 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
           // Ticker for region facts
           // Kısa bant: başlık bölümü sonuçlara yer bırakmalı (2026-09-26 cihaz
           // incelemesi: görsel + bant + arama + çipler ekranın ~%65'iydi).
-          if (_selectedRegion != null) RegionTicker(region: _selectedRegion!, height: 60, maxLines: 3),
+          // 66: üç satır (14 pt başlık + 12 pt metin) + 2x4 dolgu. 60'ta üçüncü
+          // satır kutudan taşıyor, altındaki arama bloğunun altında kalıyordu.
+          if (_selectedRegion != null) RegionTicker(region: _selectedRegion!, height: 66, maxLines: 3),
           _buildSearchBar(l10n),
           _buildFilterChips(l10n),
           Expanded(child: _buildContent(l10n)),
@@ -379,9 +381,11 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     );
   }
 
+  /// Arama bloğu: alçak (dikey 10) ve alan %80 genişlikte, ortalı
+  /// (kullanıcı kararı 2026-09-26: bant metnine yer açmak için).
   Widget _buildSearchBar(AppLocalizations l10n) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: numPrimary,
         boxShadow: [
@@ -392,7 +396,10 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
           ),
         ],
       ),
-      child: Container(
+      alignment: Alignment.center,
+      child: FractionallySizedBox(
+        widthFactor: 0.8,
+        child: Container(
         decoration: BoxDecoration(
           color: context.numColors.card,
           borderRadius: BorderRadius.circular(12),
@@ -414,10 +421,12 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
                   )
                 : null,
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           ),
           onSubmitted: (_) => _load(reset: true),
         ),
+      ),
       ),
     );
   }
