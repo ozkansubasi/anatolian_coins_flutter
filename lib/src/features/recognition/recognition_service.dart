@@ -17,24 +17,6 @@ class RecognitionService {
 
   RecognitionService(this._client);
 
-  /// Check if recognition service is available
-  /// Returns null if available, or an error message if not
-  Future<String?> checkServiceAvailability() async {
-    // Check internet connectivity first
-    final hasInternet = await NetworkUtils.hasInternetConnection();
-    if (!hasInternet) {
-      return 'İnternet bağlantısı yok';
-    }
-
-    // Check AI service health
-    final health = await NetworkUtils.checkAiServiceHealth();
-    if (!health.isHealthy) {
-      return health.statusMessage;
-    }
-
-    return null; // Service is available
-  }
-
   /// Pre-flight check before recognition
   /// Throws RecognitionException if service is not available
   Future<void> _preFlightCheck() async {
@@ -45,7 +27,7 @@ class RecognitionService {
     if (!hasInternet) {
       debugPrint('❌ [RecognitionService] No internet connection');
       throw RecognitionException(
-        'İnternet bağlantısı yok',
+        'No internet connection',
         isServiceUnavailable: true,
       );
     }
@@ -143,7 +125,7 @@ class RecognitionService {
       }
       if (e.response?.statusCode == 401) {
         throw RecognitionException(
-          'Giriş yapmadan tanıma özelliği çalışmaz, lütfen giriş yapın',
+          'Authentication required for recognition',
           isAuthRequired: true,
         );
       }
@@ -234,7 +216,7 @@ class RecognitionService {
       }
       if (e.response?.statusCode == 401) {
         throw RecognitionException(
-          'Giriş yapmadan tanıma özelliği çalışmaz, lütfen giriş yapın',
+          'Authentication required for recognition',
           isAuthRequired: true,
         );
       }
