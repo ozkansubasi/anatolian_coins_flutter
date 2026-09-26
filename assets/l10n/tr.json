@@ -243,6 +243,8 @@
   "image_not_found": "Görsel bulunamadı",
   "image_load_failed": "Görsel yüklenemedi",
   "image_counter": "Görsel {current} / {total}",
+  "image_credit": "Görsel: {credit} · {license}",
+  "image_credit_no_license": "Görsel: {credit}",
   "tips_title": "Daha iyi sonuçlar için:",
   "tip_background": "Sikkeyi düz bir zemin üzerine yerleştirin",
   "tip_lighting": "İyi aydınlatma sağlayın",

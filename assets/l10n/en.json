@@ -243,6 +243,8 @@
   "image_not_found": "Image not found",
   "image_load_failed": "Could not load image",
   "image_counter": "Image {current} / {total}",
+  "image_credit": "Image: {credit} · {license}",
+  "image_credit_no_license": "Image: {credit}",
   "tips_title": "Tips for better results:",
   "tip_background": "Place coin on plain background",
   "tip_lighting": "Ensure good lighting",

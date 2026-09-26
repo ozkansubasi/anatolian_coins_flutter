@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../l10n/app_localizations.dart';
+import '../../widgets/image_credit.dart';
 import '../../models/variant_image.dart';
 
 class ImageGalleryViewer extends StatefulWidget {
@@ -247,6 +248,12 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer> {
                 ],
               ),
             ),
+
+          // Görsel atfı (kurum · lisans)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: ImageCredit(image: currentImage, fontSize: 12),
+          ),
 
           const SizedBox(height: 16),
 

@@ -11,6 +11,10 @@ class VariantImage {
   final String? urlHd;
   final String? remoteUrl;
 
+  /// Görselin kaynağı (kurum) ve lisansı — atıf için (ADR-008). Yoksa null.
+  final String? credit;
+  final String? license;
+
   VariantImage({
     required this.imageId,
     required this.variantId,
@@ -22,6 +26,8 @@ class VariantImage {
     required this.urlRaw,
     this.urlHd,
     this.remoteUrl,
+    this.credit,
+    this.license,
   });
 
   factory VariantImage.fromJson(Map<String, dynamic> j) {
@@ -52,6 +58,13 @@ class VariantImage {
       urlRaw: urlRaw,
       urlHd: (urlHd == null || urlHd.isEmpty) ? null : urlHd,
       remoteUrl: remoteUrl,
+      credit: _nonEmpty(j['credit']),
+      license: _nonEmpty(j['license']),
     );
+  }
+
+  static String? _nonEmpty(Object? v) {
+    final s = v?.toString().trim();
+    return (s == null || s.isEmpty) ? null : s;
   }
 }

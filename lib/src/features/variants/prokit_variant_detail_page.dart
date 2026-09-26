@@ -23,6 +23,7 @@ import '../../core/navigation.dart';
 import '../favorites/favorites_service.dart';
 import '../offline/offline_service.dart';
 import '../../widgets/fallback_image.dart';
+import '../../widgets/image_credit.dart';
 import '../map/ancient_map_widget.dart';
 
 class ProkitVariantDetailPage extends ConsumerStatefulWidget {
@@ -427,9 +428,16 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
             );
           },
         ),
+        // Görsel atfı: o an görünen görselin kurumu ve lisansı (ADR-008)
+        Positioned(
+          left: 12,
+          right: 12,
+          bottom: 6,
+          child: ImageCredit(image: _images[_currentImageIndex.clamp(0, _images.length - 1)], fontSize: 10),
+        ),
         if (_images.length > 1)
           Positioned(
-            bottom: 16,
+            bottom: 26,
             left: 0,
             right: 0,
             child: Center(

@@ -8,7 +8,7 @@ import '../../models/variant_image.dart';
 class OfflineDatabase {
   static Database? _database;
   static const String _dbName = 'anatolian_coins_offline.db';
-  static const int _dbVersion = 4; // Tarama geçmişi (scan_history) eklendi
+  static const int _dbVersion = 5; // images: credit + license (görsel atfı)
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -70,6 +70,8 @@ class OfflineDatabase {
         ordering INTEGER,
         url TEXT NOT NULL,
         url_raw TEXT NOT NULL,
+        credit TEXT,
+        license TEXT,
         local_path TEXT,
         downloaded_at INTEGER,
         FOREIGN KEY (variant_id) REFERENCES variants (article_id)
@@ -235,6 +237,12 @@ class OfflineDatabase {
       ''');
       await db.execute('CREATE INDEX idx_scan_history_scanned ON scan_history(scanned_at DESC)');
     }
+    if (oldVersion < 5) {
+      // Görsel atfı (ADR-008): indirilen görsellerin kaynağı ve lisansı.
+      // Eski satırlarda boş kalır; sikke yeniden indirilince dolar.
+      await db.execute('ALTER TABLE images ADD COLUMN credit TEXT');
+      await db.execute('ALTER TABLE images ADD COLUMN license TEXT');
+    }
   }
 
   // ========== VARIANT İŞLEMLERİ ==========
@@ -312,6 +320,8 @@ class OfflineDatabase {
         'ordering': image.ordering,
         'url': image.url,
         'url_raw': image.urlRaw,
+        'credit': image.credit,
+        'license': image.license,
         'local_path': localPath,
         'downloaded_at': localPath != null 
             ? DateTime.now().millisecondsSinceEpoch 
