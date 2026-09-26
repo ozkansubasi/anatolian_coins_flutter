@@ -351,7 +351,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
     final monthly = offerings.current!.monthly?.storeProduct.price;
     final annual = offerings.current!.annual?.storeProduct.price;
     final savePct = (monthly != null && annual != null && monthly > 0)
-        ? ((1 - annual / (monthly * 12)) * 100).floor()
+        // round: 839,99 / (99,99 × 12) = %29,99 indirim; floor %29 gösteriyordu.
+        ? ((1 - annual / (monthly * 12)) * 100).round()
         : 0;
     final annualBadge = savePct > 0
         ? l10n.translate('save_percent', params: {'percent': '$savePct'})
