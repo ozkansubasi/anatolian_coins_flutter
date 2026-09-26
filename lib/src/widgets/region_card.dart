@@ -5,21 +5,17 @@ import '../prokit_ui/numistr_colors.dart';
 
 /// Bölge kartı: bölge banner görseli + koyu geçiş + ikon ve ad.
 ///
-/// Bölgeler sayfası (ızgara) ve ana sayfa (yatay şerit) aynı kartı kullanır;
-/// ana sayfadaki eski yuvarlak ikonlar sayfalar arası bütünlüğü bozuyordu
-/// (kullanıcı kararı 2026-09-26). [compact] ana sayfanın dar kartı içindir.
+/// Bölgeler sayfasının ızgara kartı.
 class RegionCard extends StatelessWidget {
   final String regionCode;
   final String regionName;
   final VoidCallback onTap;
-  final bool compact;
 
   const RegionCard({
     super.key,
     required this.regionCode,
     required this.regionName,
     required this.onTap,
-    this.compact = false,
   });
 
   String get _baseName =>
@@ -32,9 +28,9 @@ class RegionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = getRegionColor(regionCode.replaceAll('-coins', ''));
-    final radius = BorderRadius.circular(compact ? 12 : 16);
-    final iconSize = compact ? 26.0 : 36.0;
-    final inset = compact ? 8.0 : 12.0;
+    final radius = BorderRadius.circular(16);
+    const iconSize = 36.0;
+    const inset = 12.0;
 
     return GestureDetector(
       onTap: onTap,
@@ -96,7 +92,7 @@ class RegionCard extends StatelessWidget {
                         child: Image.asset(
                           _assetPath('ikon.png'),
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Icon(
+                          errorBuilder: (_, __, ___) => const Icon(
                             Icons.location_on,
                             color: Colors.white,
                             size: iconSize * 0.55,
@@ -104,22 +100,20 @@ class RegionCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    (compact ? 6 : 8).width,
+                    8.width,
                     Expanded(
                       child: Text(
                         regionName,
-                        style: boldTextStyle(
-                            size: compact ? 12 : 14, color: Colors.white),
+                        style: boldTextStyle(size: 14, color: Colors.white),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (!compact)
-                      const Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.white70,
-                        size: 14,
-                      ),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white70,
+                      size: 14,
+                    ),
                   ],
                 ),
               ),

@@ -13,7 +13,6 @@ import '../../prokit_ui/widgets/num_bottom_nav.dart';
 import '../favorites/favorites_service.dart';
 import '../articles/editors_pick_card.dart';
 import 'widgets/home_banner.dart';
-import '../../widgets/region_card.dart';
 
 /// Profil ikonundaki bildirim noktasi.
 ///
@@ -233,46 +232,85 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
     );
   }
 
-  /// Antik Bölgeler: yatay kaydırılan bölge kartları
+  /// Antik Bölgeler bloğu: başlık + yuvarlak bölge ikonları, TEK kart içinde.
+  ///
+  /// Kart dili aşağıdaki kısayol kartlarıyla aynı (ince altın çerçeve, 14
+  /// yarıçap); blok sayfada başıboş bir şerit gibi durmuyor
+  /// (kullanıcı kararı 2026-09-26). İkonlar ve boyutları eskisi gibi.
   Widget _buildRegionCategories(BuildContext context, AppLocalizations l10n) {
     // Bölgeler sayfasıyla aynı sıra (öne çıkanlar başta). "Diğer"in puanı 0,
     // listede zaten en sonda kalır.
     final regions = RegionData.getRegionsByPopularity(l10n);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        numSectionHeader(
-          title: l10n.translate('ancient_regions'),
-          actionText: l10n.translate('see_all'),
-          // Tümü → bölge dizini (sikke arama değil)
-          onAction: () => context.openRoute('/regions'),
-        ),
-        // Bölgeler sayfasındaki kartın dar hâli; sağda bir sonraki kartın
-        // görünen kenarı kaydırılabildiğini gösterir (eski ok ikonları kalktı).
-        SizedBox(
-          height: 96,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            itemCount: regions.length,
-            separatorBuilder: (_, __) => 10.width,
-            itemBuilder: (context, index) {
-              final region = regions[index];
-              return SizedBox(
-                width: 140,
-                child: RegionCard(
-                  regionCode: region.key,
-                  regionName: region.value,
-                  compact: true,
-                  onTap: () =>
-                      context.openRoute('/browse?region=${region.key}'),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Material(
+        color: isDark
+            ? theme.colorScheme.surfaceContainerLow
+            : const Color(0xFFFDF8EE),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: numPrimary.withAlpha(70)),
+          ),
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              numSectionHeader(
+                title: l10n.translate('ancient_regions'),
+                actionText: l10n.translate('see_all'),
+                // Tümü → bölge dizini (sikke arama değil)
+                onAction: () => context.openRoute('/regions'),
+                padding: const EdgeInsets.fromLTRB(14, 4, 4, 0),
+              ),
+              SizedBox(
+                height: 100,
+                child: Row(
+                  children: [
+                    // Left arrow
+                    Container(
+                      width: 28,
+                      alignment: Alignment.center,
+                      child: Icon(Icons.chevron_left,
+                          color: numPrimary.withAlpha(150), size: 28),
+                    ),
+                    // Region list
+                    Expanded(
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        itemCount: regions.length,
+                        itemBuilder: (context, index) {
+                          final region = regions[index];
+                          return _RegionChip(
+                            regionCode: region.key,
+                            regionName: region.value,
+                            color: getRegionColor(
+                                region.key.replaceAll('-coins', '')),
+                            onTap: () => context
+                                .openRoute('/browse?region=${region.key}'),
+                          );
+                        },
+                      ),
+                    ),
+                    // Right arrow
+                    Container(
+                      width: 28,
+                      alignment: Alignment.center,
+                      child: Icon(Icons.chevron_right,
+                          color: numPrimary.withAlpha(150), size: 28),
+                    ),
+                  ],
                 ),
-              );
-            },
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -378,6 +416,82 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
 // =============================================================================
 // HELPER WIDGETS
 // =============================================================================
+
+class _RegionChip extends StatelessWidget {
+  final String regionCode;
+  final String regionName;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _RegionChip({
+    required this.regionCode,
+    required this.regionName,
+    required this.color,
+    required this.onTap,
+  });
+
+  String _getRegionIconPath() {
+    // regionCode örn: "pisidia-coins" -> "pisidia_ikon.png"
+    final baseName = regionCode.replaceAll('-coins', '').replaceAll('-', '_');
+    // Özel durumlar
+    if (baseName.contains('other')) {
+      return 'assets/images/regions/other_ancient_regions_ikon.png';
+    }
+    return 'assets/images/regions/${baseName}_ikon.png';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: color.withAlpha(25),
+                shape: BoxShape.circle,
+                border: Border.all(color: color.withAlpha(60), width: 2),
+              ),
+              child: ClipOval(
+                child: Image.asset(
+                  _getRegionIconPath(),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      Icon(Icons.location_on, color: color, size: 24),
+                ),
+              ),
+            ),
+            6.height,
+            // Uzun adlar ("Kapadokya", "Paflagonya") kesilmek yerine hafifçe
+            // küçülür (2026-09-26 cihaz incelemesi: "Kapadok…").
+            SizedBox(
+              width: 68,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  regionName,
+                  style: secondaryTextStyle(
+                      size: 10,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white70
+                          : numTextPrimary),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _QuickFeature {
   final String title;
