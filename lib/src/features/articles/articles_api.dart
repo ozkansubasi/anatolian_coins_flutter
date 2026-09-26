@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart';
+import '../../core/locale_provider.dart';
 import '../../models/article.dart';
 import '../../models/article_category.dart';
 
@@ -7,11 +8,15 @@ import '../../models/article_category.dart';
 class ArticlesApi {
   final ApiClient _apiClient;
 
-  ArticlesApi(this._apiClient);
+  /// Arayüz dili (`tr`, `en`…): sunucu o dildeki blog ağacını döner
+  /// (plugin 1.16.0 `?lang=`; o dilde blog yoksa TR).
+  final String _lang;
+
+  ArticlesApi(this._apiClient, this._lang);
 
   /// Get daily featured article
   Future<Article> getFeaturedArticle() async {
-    final response = await _apiClient.dio.get('/articles/featured');
+    final response = await _apiClient.dio.get('/articles/featured', queryParameters: {'lang': _lang});
     final data = response.data['data'] as Map<String, dynamic>;
     return Article.fromJson(data);
   }
@@ -21,6 +26,7 @@ class ArticlesApi {
     final queryParams = <String, dynamic>{
       'page': page,
       'limit': limit,
+      'lang': _lang,
     };
     if (categoryId != null) {
       queryParams['category_id'] = categoryId;
@@ -33,7 +39,7 @@ class ArticlesApi {
 
   /// Get list of blog categories
   Future<List<ArticleCategory>> getCategories() async {
-    final response = await _apiClient.dio.get('/articles/categories');
+    final response = await _apiClient.dio.get('/articles/categories', queryParameters: {'lang': _lang});
     final data = response.data['data'] as List;
     return data.map((json) => ArticleCategory.fromJson(json as Map<String, dynamic>)).toList();
   }
@@ -47,9 +53,11 @@ class ArticlesApi {
 }
 
 /// Provider for ArticlesApi
+/// Dil değişince yeniden kurulur; onu izleyen sağlayıcılar (öne çıkan yazı)
+/// yeni dilde yeniden çeker.
 final articlesApiProvider = Provider<ArticlesApi>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  return ArticlesApi(apiClient);
+  return ArticlesApi(apiClient, ref.watch(localeProvider).languageCode);
 });
 
 /// Gunun one cikan yazisi.
