@@ -677,7 +677,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
     );
   }
 
-  /// Bilgi kartı: sitedeki açılır kartla aynı içerik — ad, özet, "Makaleyi aç".
+  /// Bilgi kartı: sitedeki açılır kartla aynı içerik — ad, özet, "Ayrıntılı bilgi" (makale).
   Widget _buildInfoCard(AppLocalizations l10n) {
     final sel = _selected;
     if (sel == null) return const SizedBox.shrink();
