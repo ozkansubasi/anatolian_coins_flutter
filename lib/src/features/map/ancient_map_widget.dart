@@ -17,6 +17,7 @@ import '../../l10n/app_localizations.dart';
 import 'map_label_layout.dart';
 import 'map_locations_api.dart';
 import 'map_marker_icons.dart';
+import '../../widgets/pro_feature.dart';
 
 /// Antik Anadolu haritası için veri modelleri
 ///
@@ -161,12 +162,17 @@ class AncientMapWidget extends ConsumerStatefulWidget {
 
   final AncientMapController? controller;
 
+  /// Pro üyede seçilen noktanın kartında "Güncel haritada göster" doğrudan açılır;
+  /// ücretsizde PRO rozetiyle görünür ve abonelik penceresi açar (2026-09-27).
+  final bool isPro;
+
   const AncientMapWidget({
     super.key,
     this.focusPoint,
     this.highlightMint,
     this.isFullScreen = false,
     this.controller,
+    this.isPro = false,
   });
 
   @override
@@ -181,12 +187,16 @@ class _Selection {
   final String? summary;
   final bool loadingSummary;
 
+  /// Haritadaki nokta: güncel harita bağlantısı buraya açılır.
+  final LatLng? position;
+
   const _Selection({
     required this.title,
     this.location,
     this.isHighlight = false,
     this.summary,
     this.loadingSummary = false,
+    this.position,
   });
 
   _Selection copyWith({MapLocation? location, String? summary, bool? loadingSummary}) => _Selection(
@@ -195,6 +205,7 @@ class _Selection {
         isHighlight: isHighlight,
         summary: summary ?? this.summary,
         loadingSummary: loadingSummary ?? this.loadingSummary,
+        position: position,
       );
 }
 
@@ -248,7 +259,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
     _zoom = widget.focusPoint != null ? 8.0 : 6.0;
     final mint = widget.highlightMint?.trim();
     if (widget.isFullScreen && widget.focusPoint != null && mint != null && mint.isNotEmpty) {
-      _selected = _Selection(title: CoinFormat.titleCase(mint), isHighlight: true);
+      _selected = _Selection(title: CoinFormat.titleCase(mint), isHighlight: true, position: widget.focusPoint);
     }
     _loadMapData();
   }
@@ -416,16 +427,16 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
   Future<void> _selectCity(AncientMapCity city) async {
     final seq = ++_selectSeq;
     setState(() {
-      _selected = _Selection(title: city.name, loadingSummary: true);
+      _selected = _Selection(title: city.name, loadingSummary: true, position: city.position);
       _showLegend = false;
     });
     final loc = await _nearestLocation(city.position, _cityMatchKm);
     if (!mounted || seq != _selectSeq) return;
     if (loc == null) {
-      setState(() => _selected = _Selection(title: city.name));
+      setState(() => _selected = _Selection(title: city.name, position: city.position));
       return;
     }
-    _loadSummary(_Selection(title: city.name, location: loc));
+    _loadSummary(_Selection(title: city.name, location: loc, position: city.position));
   }
 
   static double _km(LatLng a, LatLng b) {
@@ -459,7 +470,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
     final title = (mint != null && mint.isNotEmpty)
         ? CoinFormat.titleCase(mint)
         : (_highlightLocation?.name ?? AppLocalizations.of(context).translate('highlighted_mint'));
-    _loadSummary(_Selection(title: title, location: _highlightLocation, isHighlight: true));
+    _loadSummary(_Selection(title: title, location: _highlightLocation, isHighlight: true, position: widget.focusPoint));
   }
 
   Future<void> _moveTo(LatLng target, double zoom) async {
@@ -798,20 +809,48 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
-                if (articleId != null)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-                        foregroundColor: c.accent,
-                        visualDensity: VisualDensity.compact,
+                Wrap(
+                  spacing: 16,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (articleId != null)
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                          foregroundColor: c.accent,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: () => _openArticle(articleId),
+                        icon: const Icon(Icons.article_outlined, size: 16),
+                        label: Text(l10n.translate('open_article')),
                       ),
-                      onPressed: () => _openArticle(articleId),
-                      icon: const Icon(Icons.article_outlined, size: 16),
-                      label: Text(l10n.translate('open_article')),
-                    ),
-                  ),
+                    if (sel.position != null)
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                          foregroundColor: c.accent,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        onPressed: () => _openModernMap(sel.position!),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.public, size: 16),
+                            6.width,
+                            Flexible(
+                              child: Text(
+                                l10n.translate('show_on_modern_map'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            6.width,
+                            const ProBadge(),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -832,6 +871,25 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
     final router = GoRouter.of(context);
     Navigator.of(context, rootNavigator: true).maybePop();
     router.push('/article/$articleId');
+  }
+
+  /// Güncel harita Pro ayrıcalığı (sikke sayfasındaki düğmeyle aynı kural). Ücretsizde
+  /// abonelik penceresi; "Pro'yu al" önce tam ekran haritayı kapatır (abonelik sayfası
+  /// haritanın altında açılmasın), sonra abonelik sayfasına gider.
+  void _openModernMap(LatLng p) {
+    if (widget.isPro) {
+      openInModernMap(p.latitude, p.longitude);
+      return;
+    }
+    final router = GoRouter.maybeOf(context);
+    showProFeatureDialog(
+      context,
+      featureName: AppLocalizations.of(context).translate('feature_modern_map'),
+      onBuy: () {
+        Navigator.of(context, rootNavigator: true).maybePop();
+        router?.push('/subscription');
+      },
+    );
   }
 
   /// Lejant
@@ -885,11 +943,13 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
 class FullScreenAncientMapPage extends StatefulWidget {
   final String? coordinates;
   final String? mintName;
+  final bool isPro;
 
   const FullScreenAncientMapPage({
     super.key,
     this.coordinates,
     this.mintName,
+    this.isPro = false,
   });
 
   @override
@@ -962,6 +1022,7 @@ class _FullScreenAncientMapPageState extends State<FullScreenAncientMapPage> {
             focusPoint: _focusPoint,
             highlightMint: widget.mintName,
             isFullScreen: true,
+            isPro: widget.isPro,
           ),
           SafeArea(
             child: Padding(
