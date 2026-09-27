@@ -393,28 +393,38 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
         widthFactor: 0.8,
         child: Container(
         decoration: BoxDecoration(
-          color: context.numColors.card.withValues(alpha: 0.9),
+          color: context.numColors.card.withValues(alpha: 0.78),
           borderRadius: BorderRadius.circular(12),
         ),
+        // Temanın alan dolgusu (filled) ve çerçevesi kapalı: yarı saydam kutuyu
+        // örtüyor, alan beyaz görünüyordu. Simge kısıtları 48 dp alt sınırını
+        // kaldırır; alan ~37 dp (48 idi; cihaz 2026-09-27).
         child: TextField(
           controller: _searchCtrl,
           style: primaryTextStyle(size: 14, color: context.numColors.text),
           decoration: InputDecoration(
             hintText: l10n.translate('search_hint'),
             hintStyle: secondaryTextStyle(size: 14, color: context.numColors.textMuted),
-            prefixIcon: Icon(Icons.search, color: context.numColors.textMuted),
+            prefixIcon: Icon(Icons.search, size: 20, color: context.numColors.textMuted),
+            prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 36),
             suffixIcon: _searchCtrl.text.isNotEmpty
                 ? IconButton(
-                    icon: Icon(Icons.clear, color: context.numColors.textMuted),
+                    icon: Icon(Icons.clear, size: 20, color: context.numColors.textMuted),
+                    constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
+                    padding: EdgeInsets.zero,
                     onPressed: () {
                       _searchCtrl.clear();
                       _load(reset: true);
                     },
                   )
                 : null,
+            suffixIconConstraints: const BoxConstraints(minWidth: 40, minHeight: 36),
+            filled: false,
             border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+            contentPadding: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
           ),
           onSubmitted: (_) => _load(reset: true),
         ),
