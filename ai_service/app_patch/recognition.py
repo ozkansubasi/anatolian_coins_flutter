@@ -14,6 +14,17 @@ Also new in Faz A:
   low_detail_surface | below_confidence) + ambiguous_match flag, with per-side
   quality metrics in the response (heavy patina / worn surface UX in the app).
 
+Faz C (2026-09-28) — exact two-side scoring:
+- Faz A fused an article from BOTH sides only when it appeared in both sides' top
+  SEARCH_K hits; otherwise the single side it did appear in was used as-is. A type whose
+  obverse is close but whose reverse is a different design (often outside the reverse
+  top-K) therefore beat the true type that matched both sides (user report + measured).
+- Now every candidate from either side is scored on BOTH sides exactly, against that
+  article's own vectors of the matching face (obverse query vs 'on', reverse vs 'arka';
+  both faces if the article lacks that face). The swapped assignment (photos taken the
+  other way round) is scored too and the better one is kept. Single-side queries are
+  unchanged. FUSION_MODE = 'legacy' restores Faz A behaviour (eval / rollback).
+
 Interface (constructor, recognize(), response dict) stays backward compatible;
 new response keys are additive. Index paths hardcoded so a simple `docker
 restart` (no recreate) preserves pip installs + model caches.
@@ -37,7 +48,8 @@ INDEX_PATH = "/app/index/coins_dinov3_base.index"
 META_PATH = "/app/index/metadata_dinov3.json"
 
 DIST_LO, DIST_HI = 0.85, 0.98   # cosine -> confidence rescale (unchanged from Faz 2)
-SEARCH_K = 60                   # raw FAISS hits per side before article dedup
+SEARCH_K = 200                  # raw FAISS hits per side before article dedup (Faz C: 60 -> 200)
+FUSION_MODE = 'exact'           # 'exact' (Faz C) | 'legacy' (Faz A: missing side skipped)
 TOP_N = 5                       # max results returned (fewer is fine)
 MIN_CONF = 0.30                 # below this a match is dropped
 W_OBV, W_REV = 0.45, 0.55       # side weights when both sides matched an article
@@ -97,7 +109,9 @@ class RecognitionService:
         self.metadata = None
         self.sam = None
         self.art = []
+        self.face = []
         self.by_art = {}
+        self.rows_by_face = {}
         try:
             torch.set_num_threads(4)
             import timm
@@ -114,6 +128,10 @@ class RecognitionService:
             self.faiss_index = faiss.read_index(INDEX_PATH)
             self.metadata = json.load(open(META_PATH))
             self.art = [m["article_id"] for m in self.metadata]
+            self.face = [str(m.get("image_type") or "") for m in self.metadata]
+            for i, (a, f) in enumerate(zip(self.art, self.face)):
+                self.rows_by_face.setdefault((a, f), []).append(i)
+                self.rows_by_face.setdefault((a, '*'), []).append(i)
             self.attrs = {}
             for m in self.metadata:
                 a = m["article_id"]
@@ -205,18 +223,74 @@ class RecognitionService:
             'sharpness': round(self._sharpness(crop if detected else bgr), 1),
         }
 
-    def _search_side(self, embs) -> Dict[int, float]:
-        """Search with every embedding variant of one side -> best cosine per article."""
+    def _search_side(self, embs, exclude=frozenset()) -> Dict[int, float]:
+        """Search with every embedding variant of one side -> best cosine per article.
+        `exclude`: index rows to ignore (evaluation: held-out query photos)."""
         best: Dict[int, float] = {}
         for emb in embs:
             D, I = self.faiss_index.search(emb.reshape(1, -1).astype(np.float32), SEARCH_K)
             for d, i in zip(D[0], I[0]):
-                if i < 0:
+                if i < 0 or int(i) in exclude:
                     continue
                 a = self.art[i]
                 if a not in best or d > best[a]:
                     best[a] = float(d)
         return best
+
+    def _face_score(self, embs, a, face, exclude, cache) -> Optional[float]:
+        """Exact best cosine between a query side and article `a`'s vectors of `face`
+        ('on' / 'arka'); falls back to all of the article's vectors if it has none of
+        that face. None if the article has no usable vector."""
+        rows = self.rows_by_face.get((a, face)) or self.rows_by_face.get((a, '*')) or []
+        best = None
+        for r in rows:
+            if r in exclude:
+                continue
+            v = cache.get(r)
+            if v is None:
+                v = self.faiss_index.reconstruct(int(r))
+                cache[r] = v
+            for e in embs:
+                d = float(np.dot(e, v))
+                if best is None or d > best:
+                    best = d
+        return best
+
+    def _fuse(self, obv, rev, exclude=frozenset(), mode=None):
+        """-> (fused {article: score}, obv_scores {article: cos}, rev_scores {article: cos})."""
+        mode = mode or FUSION_MODE
+        obv_best = self._search_side(obv['embs'], exclude) if obv else {}
+        rev_best = self._search_side(rev['embs'], exclude) if rev else {}
+        fused: Dict[int, float] = {}
+        if not (obv and rev) or mode == 'legacy':
+            # single side, or Faz A: weighted when both sides hit, single side as-is
+            for a in set(obv_best) | set(rev_best):
+                do, dr = obv_best.get(a), rev_best.get(a)
+                if do is not None and dr is not None:
+                    fused[a] = W_OBV * do + W_REV * dr
+                else:
+                    fused[a] = do if do is not None else dr
+            return fused, obv_best, rev_best
+
+        # Faz C: score every candidate on both sides against its own vectors
+        cache: Dict[int, np.ndarray] = {}
+        o_sc: Dict[int, float] = {}
+        r_sc: Dict[int, float] = {}
+        for a in set(obv_best) | set(rev_best):
+            o_on = self._face_score(obv['embs'], a, 'on', exclude, cache)
+            r_ar = self._face_score(rev['embs'], a, 'arka', exclude, cache)
+            if o_on is None or r_ar is None:
+                continue
+            normal = W_OBV * o_on + W_REV * r_ar
+            # photos taken the other way round: "obverse" photo shows the reverse
+            o_ar = self._face_score(obv['embs'], a, 'arka', exclude, cache)
+            r_on = self._face_score(rev['embs'], a, 'on', exclude, cache)
+            swapped = W_OBV * r_on + W_REV * o_ar
+            if swapped > normal:
+                fused[a], o_sc[a], r_sc[a] = swapped, o_ar, r_on
+            else:
+                fused[a], o_sc[a], r_sc[a] = normal, o_on, r_ar
+        return fused, o_sc, r_sc
 
     def _attr_adjust(self, article_id, metal, weight_g, diameter_mm) -> float:
         """Faz B: cosine adjustment from optional collector attributes. 0 when unknown."""
@@ -261,17 +335,7 @@ class RecognitionService:
             if obv is None and rev is None:
                 return self._stub_response()
 
-            obv_best = self._search_side(obv['embs']) if obv else {}
-            rev_best = self._search_side(rev['embs']) if rev else {}
-
-            # article-level fusion (Faz A): weighted when both sides hit, single side as-is
-            fused: Dict[int, float] = {}
-            for a in set(obv_best) | set(rev_best):
-                do, dr = obv_best.get(a), rev_best.get(a)
-                if do is not None and dr is not None:
-                    fused[a] = W_OBV * do + W_REV * dr
-                else:
-                    fused[a] = do if do is not None else dr
+            fused, obv_best, rev_best = self._fuse(obv, rev)
 
             if metal or weight_g or diameter_mm:
                 fused = {a: d + self._attr_adjust(a, metal, weight_g, diameter_mm)
@@ -370,8 +434,9 @@ class RecognitionService:
                 quality['reverse'] = {'coin_detected': rev['detected'], 'sharpness': rev['sharpness']}
 
             end = datetime.utcnow()
-            logger.info("recognize(fazA): sides=%d top art=%s conf=%.3f reason=%s tie=%d" %
-                        (len(sides), matches[0]['article_id'] if matches else None, top, reason,
+            logger.info("recognize(faz%s): sides=%d top art=%s conf=%.3f reason=%s tie=%d" %
+                        ('C' if (obv and rev and FUSION_MODE == 'exact') else 'A',
+                         len(sides), matches[0]['article_id'] if matches else None, top, reason,
                          len(tied_ids) if is_tied else 0))
             return {
                 'matches': matches,
@@ -379,7 +444,7 @@ class RecognitionService:
                 'ambiguous': is_tied,
                 'tie_size': len(tied_ids) if is_tied else 0,
                 'tied_articles': [int(a) for a in tied_ids] if is_tied else [],
-                'method': 'dinov3_sam2_fazAB',
+                'method': 'dinov3_sam2_fazABC' if FUSION_MODE == 'exact' else 'dinov3_sam2_fazAB',
                 'processing_time_ms': int((end - start).total_seconds() * 1000),
                 'ocr_extracted': None,
                 'no_match': no_match,
