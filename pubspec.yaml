@@ -66,6 +66,13 @@ dev_dependencies:
   google_maps_flutter_platform_interface: ^2.15.0
   plugin_platform_interface: ^2.1.8
 
+
+# google_maps_flutter_android 2.19.x play-services-maps 20 + maps-utils 4.1 üzerinden androidx.core 1.17
+# getiriyor → Android Gradle eklentisi 8.9.1+ ister (bizde 8.7.3). 2.18.3: maps 19.2.0 + utils 3.6.0.
+# AGP yükseltilince kaldırılır (2026-09-27).
+dependency_overrides:
+  google_maps_flutter_android: 2.18.3
+
 flutter:
   uses-material-design: true
 
