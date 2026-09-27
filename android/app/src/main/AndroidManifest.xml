@@ -42,6 +42,11 @@
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="false">
 
+        <!-- Antik harita: Google Maps SDK anahtarı (build.gradle.kts → key.properties `mapsApiKey`) -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${mapsApiKey}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -494,6 +494,9 @@ class ProkitSubscriptionPage extends ConsumerWidget {
       _Feature(Icons.camera_enhance_outlined, 'feature_unlimited_recognition',
           numPrimary),
       _Feature(Icons.all_inclusive, 'feature_unlimited_favorites', numPrimary),
+      // Güncel harita yalnız Pro'da: uygulama ve sitedeki harita antik (etiketsiz);
+      // sikkenin yerini Google Haritalar'da açmak Pro ayrıcalığı (3. sıra, 2026-09-27).
+      _Feature(Icons.public, 'feature_modern_map', numPrimary),
       _Feature(Icons.collections_bookmark_outlined,
           'feature_unlimited_collections', numPrimary),
       _Feature(Icons.smart_toy_outlined, 'feature_ai_assistant', numPrimary),
@@ -725,6 +728,8 @@ class ProkitSubscriptionPage extends ConsumerWidget {
               l10n.translate('high_capacity')),
           _buildComparisonRow(c, l10n.translate('favorites'), '10',
               l10n.translate('unlimited')),
+          _buildComparisonRow(
+              c, l10n.translate('comparison_modern_map'), false, true),
           _buildComparisonRow(c, l10n.translate('collections'), '1',
               l10n.translate('unlimited')),
           _buildComparisonRow(

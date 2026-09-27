@@ -45,7 +45,10 @@ android {
         // com.anatoliancoins.app://callback -> scheme: com.anatoliancoins.app
         manifestPlaceholders += mapOf(
             "appAuthRedirectScheme" to "com.anatoliancoins.app",
-            "appLabel" to "Anatolian Coins"
+            "appLabel" to "Anatolian Coins",
+            // Antik harita (Google Maps SDK). Anahtar git dışında: android/key.properties
+            // `mapsApiKey`; Cloud'da paket adı + imza SHA-1'ine kısıtlı (proje numistr-auth).
+            "mapsApiKey" to (keystoreProperties.getProperty("mapsApiKey") ?: "")
         )
     }
 

@@ -53,16 +53,18 @@ dependencies:
   flutter_rating_bar: ^4.0.1       # Rating stars
 
   # Maps
-  flutter_map: ^6.1.0              # OpenStreetMap based map widget
-  latlong2: ^0.9.1                 # Latitude/Longitude support
   flutter_markdown_plus: ^1.0.12
   package_info_plus: ^9.0.1
+  google_maps_flutter: ^2.14.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
   flutter_launcher_icons: ^0.13.1
+  # Harita testleri: Google haritasının yerel görünümü testte yok, sahte platform takılır
+  google_maps_flutter_platform_interface: ^2.15.0
+  plugin_platform_interface: ^2.1.8
 
 flutter:
   uses-material-design: true

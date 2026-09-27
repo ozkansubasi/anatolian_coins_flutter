@@ -3,18 +3,23 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:anatolian_coins/src/features/map/ancient_map_widget.dart';
 import 'package:anatolian_coins/src/l10n/app_localizations.dart';
 
+import 'helpers/fake_google_maps.dart';
+
 void main() {
+  setUp(FakeGoogleMapsPlatform.install);
+
   testWidgets('yatay 844x390: taşma yok, başlık darphane adı, lejant kapalı', (tester) async {
     tester.view.physicalSize = const Size(844, 390);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const MaterialApp(
+    await tester.pumpWidget(const ProviderScope(child: MaterialApp(
       locale: Locale('tr'),
       localizationsDelegates: [
         AppLocalizations.delegate,
@@ -24,7 +29,7 @@ void main() {
       ],
       supportedLocales: [Locale('tr'), Locale('en')],
       home: FullScreenAncientMapPage(coordinates: '39.49, 26.336', mintName: 'assos'),
-    ));
+    )));
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
 

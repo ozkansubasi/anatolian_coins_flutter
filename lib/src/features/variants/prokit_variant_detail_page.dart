@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
 import 'package:nb_utils/nb_utils.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -715,23 +715,53 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                   ),
                 ),
               ),
-              // Pro kullanıcılar için Google Maps
-              if (ref.watch(subscriptionProvider).isPro) ...[
-                12.height,
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _openInMaps,
-                    icon: const Icon(Icons.public),
-                    label: Text(l10n.translate('show_on_modern_map')),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: c.accent,
-                      side: BorderSide(color: c.accent),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
+              // Güncel harita (Google Maps) Pro ayrıcalığı: düğme herkese PRO rozetiyle
+              // görünür, ücretsiz kullanıcıya abonelik penceresi açar. Uygulamadaki
+              // harita antik (etiketsiz); güncel yer adları yalnız buradan (2026-09-27).
+              12.height,
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: ref.watch(subscriptionProvider).isPro
+                      ? _openInMaps
+                      : () => _showProDialog(l10n.translate('feature_modern_map')),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: c.accent,
+                    side: BorderSide(color: c.accent),
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.public, size: 18),
+                      8.width,
+                      Flexible(
+                        child: Text(
+                          l10n.translate('show_on_modern_map'),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      8.width,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: numPrimary,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          l10n.translate('plan_badge_pro'),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -760,7 +790,6 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
         builder: (context) => FullScreenAncientMapPage(
           coordinates: coordinates,
           mintName: _variant?.mintName,
-          regionCode: _variant?.regionCode,
         ),
       ),
     );
