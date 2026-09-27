@@ -255,12 +255,10 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
         children: [
           // Region header image when region is selected
           if (_selectedRegion != null) _buildRegionHeader(),
-          // Ticker for region facts
-          // Kısa bant: başlık bölümü sonuçlara yer bırakmalı (2026-09-26 cihaz
-          // incelemesi: görsel + bant + arama + çipler ekranın ~%65'iydi).
-          // 66: üç satır (14 pt başlık + 12 pt metin) + 2x4 dolgu. 60'ta üçüncü
-          // satır kutudan taşıyor, altındaki arama bloğunun altında kalıyordu.
-          if (_selectedRegion != null) RegionTicker(region: _selectedRegion!, height: 66, maxLines: 3),
+          // Bölge bilgi bandı: 4 satır (2026-09-27 kullanıcı: 3 satır bazı metinlere
+          // yetmiyordu); yükseklik satır sayısından hesaplanır. Yer, arama bloğu
+          // alçaltılarak açıldı.
+          if (_selectedRegion != null) RegionTicker(region: _selectedRegion!, maxLines: 4),
           _buildSearchBar(l10n),
           _buildFilterChips(l10n),
           Expanded(child: _buildContent(l10n)),
@@ -282,9 +280,9 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     
     final regionName = RegionData.getRegionName(_selectedRegion, AppLocalizations.of(context));
     
-    return Container(
+    return SizedBox(
       width: double.infinity,
-      height: 96,
+      height: 120, // 96 → 120 (%25, kullanıcı 2026-09-27)
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -374,11 +372,12 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     );
   }
 
-  /// Arama bloğu: alçak (dikey 10) ve alan %80 genişlikte, ortalı
-  /// (kullanıcı kararı 2026-09-26: bant metnine yer açmak için).
+  /// Arama bloğu: alçak (dikey 6) ve alan %80 genişlikte, ortalı (kullanıcı
+  /// kararları 2026-09-26/27: bant metnine yer açmak için). Alan hafif saydam:
+  /// zemin çok az görünür, bant + arama tek blok gibi durur.
   Widget _buildSearchBar(AppLocalizations l10n) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: numPrimary,
         boxShadow: [
@@ -394,7 +393,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
         widthFactor: 0.8,
         child: Container(
         decoration: BoxDecoration(
-          color: context.numColors.card,
+          color: context.numColors.card.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(12),
         ),
         child: TextField(
@@ -415,7 +414,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
                 : null,
             border: InputBorder.none,
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
           ),
           onSubmitted: (_) => _load(reset: true),
         ),
@@ -464,10 +463,21 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     if (chips.isEmpty) return const SizedBox.shrink();
 
     // Wrap: çipler taşarsa alt satıra iner (yatay kaydırma gizli kalıyordu).
+    // En sağda başlıktaki filtre düğmesinin aynısı (kullanıcı 2026-09-27).
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Wrap(spacing: 8, runSpacing: 4, children: chips),
+      padding: const EdgeInsets.only(left: 16, right: 4, top: 4, bottom: 4),
+      child: Row(
+        children: [
+          Expanded(child: Wrap(spacing: 8, runSpacing: 4, children: chips)),
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            color: context.numColors.accent,
+            tooltip: l10n.translate('filter'),
+            onPressed: _showFilterBottomSheet,
+          ),
+        ],
+      ),
     );
   }
 

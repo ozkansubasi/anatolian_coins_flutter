@@ -69,7 +69,7 @@ class RegionsListPage extends StatelessWidget {
           // Tüm bölgelerden karışık ipuçları (region verilmez)
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: NumistrTicker(language: _joomlaLanguage(context)),
+            child: NumistrTicker(language: _joomlaLanguage(context), height: 88),
           ),
           16.height,
           _SearchField(l10n: l10n),

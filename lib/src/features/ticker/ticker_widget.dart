@@ -11,12 +11,17 @@ class NumistrTicker extends ConsumerStatefulWidget {
   final String? category;
   final String? language; // Language code: 'tr-TR', 'en-GB', or '*' for all
   final int itemCount;
-  final double height;
 
-  /// Olgu metninin en çok satırı (bölge listesinde 3, varsayılan 4).
+  /// Verilmezse [maxLines] satırın yüksekliği + dolgu (sistem yazı boyutuyla ölçeklenir).
+  final double? height;
+
+  /// Olgu metninin en çok satırı.
   final int maxLines;
   final Color? backgroundColor;
   final Color? textColor;
+
+  /// Altına gölge düşer; başlık bloğunun parçasıyken (bölge bandı) kapalı.
+  final bool shadow;
   final Duration fadeInterval;
   final Duration fadeDuration;
 
@@ -26,10 +31,11 @@ class NumistrTicker extends ConsumerStatefulWidget {
     this.category,
     this.language,
     this.itemCount = 20,
-    this.height = 88, // Height for 4 lines of text
+    this.height,
     this.maxLines = 4,
     this.backgroundColor,
     this.textColor,
+    this.shadow = true,
     this.fadeInterval = const Duration(seconds: 8), // Time between transitions
     this.fadeDuration = const Duration(milliseconds: 600), // Fade animation duration
   });
@@ -178,6 +184,11 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
     _fadeController.forward();
   }
 
+  /// Satır aralığı sabit (başlık 14 pt olsa da her satır aynı): kutu yüksekliği
+  /// satır sayısından hesaplanır, son satır kesilmez (2026-09-27: 3 satır yetmiyordu).
+  static const _strut = StrutStyle(fontSize: 12, height: 1.35, forceStrutHeight: true);
+  static const _vPad = 4.0;
+
   @override
   Widget build(BuildContext context) {
     final bgColor = widget.backgroundColor ?? numPrimary;
@@ -188,17 +199,20 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
       return const SizedBox.shrink();
     }
 
+    final line = MediaQuery.textScalerOf(context).scale(_strut.fontSize!) * _strut.height!;
     return Container(
-      height: widget.height,
+      height: widget.height ?? (line * widget.maxLines + _vPad * 2).ceilToDouble(),
       decoration: BoxDecoration(
         color: bgColor,
-        boxShadow: [
-          BoxShadow(
-            color: bgColor.withValues(alpha: 0.3),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: widget.shadow
+            ? [
+                BoxShadow(
+                  color: bgColor.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: _loading
           ? _buildLoadingState(txtColor)
@@ -227,11 +241,9 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
     }
 
     final currentItem = _items[_currentIndex];
-    // Debug: Print what ticker is showing
-    debugPrint('🎫 Ticker showing: ${currentItem.factTitle}: ${currentItem.factDescription}');
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: _vPad),
       child: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -268,6 +280,7 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
               ],
             ),
             textAlign: TextAlign.center,
+            strutStyle: _strut,
             maxLines: widget.maxLines,
             overflow: TextOverflow.ellipsis,
           ),
@@ -281,13 +294,11 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
 /// Filters ticker content by region code and app language
 class RegionTicker extends ConsumerWidget {
   final String region; // Region code (e.g., 'lydia-coins', 'pisidia-coins')
-  final double height;
   final int maxLines;
 
   const RegionTicker({
     super.key,
     required this.region,
-    this.height = 88, // Height for 4 lines of text
     this.maxLines = 4,
   });
 
@@ -301,9 +312,10 @@ class RegionTicker extends ConsumerWidget {
     return NumistrTicker(
       region: region,
       language: joomlaLanguage,
-      height: height,
       maxLines: maxLines,
-      backgroundColor: numPrimary.withValues(alpha: 0.95),
+      // Arama bloğuyla aynı zemin, aralarında gölge yok: bant + arama tek blok görünür.
+      backgroundColor: numPrimary,
+      shadow: false,
       fadeInterval: const Duration(seconds: 8),
       fadeDuration: const Duration(milliseconds: 600),
     );
