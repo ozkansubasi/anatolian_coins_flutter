@@ -24,6 +24,11 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="http" />
         </intent>
+        <!-- Hesabım → "Hesabımı sil": hazır silme talebi e-postası -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
         <!-- Explicit browser packages for Auth0 -->
         <package android:name="com.android.chrome" />
         <package android:name="com.android.browser" />

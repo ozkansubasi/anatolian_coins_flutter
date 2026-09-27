@@ -154,6 +154,13 @@ class _AuthenticatedView extends ConsumerWidget {
               title: l10n.translate('settings'),
               onTap: () => context.push('/settings'),
             ),
+            // Play politikası: hesap oluşturulabilen uygulamada silme yolu uygulama içinde de olmalı.
+            _MenuItem(
+              icon: Icons.person_remove_outlined,
+              title: l10n.translate('delete_account'),
+              subtitle: l10n.translate('delete_account_subtitle'),
+              onTap: () => _requestAccountDeletion(context, l10n, languageCode, authState.email),
+            ),
           ]),
           _SectionLabel(l10n.translate('help')),
           _MenuGroup(children: [
@@ -256,6 +263,54 @@ class _AuthenticatedView extends ConsumerWidget {
           ? l10n.translate('change_password_sent', params: {'email': email})
           : l10n.translate('password_reset_failed')),
     ));
+  }
+
+  /// Web Hesabım'daki "Hesabımı sil" ile aynı akış: hazır doldurulmuş silme talebi
+  /// e-postası. E-posta uygulaması yoksa Play'e kayıtlı hesap silme sayfası açılır.
+  Future<void> _requestAccountDeletion(
+    BuildContext context,
+    AppLocalizations l10n,
+    String languageCode,
+    String? email,
+  ) async {
+    final webUrl = accountDeletionWebUrl(languageCode);
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.person_remove_outlined),
+        title: Text(l10n.translate('delete_account')),
+        content: Text(l10n.translate('delete_account_confirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.translate('cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'details'),
+            child: Text(l10n.translate('delete_account_details')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'send'),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: Text(l10n.translate('delete_account_send')),
+          ),
+        ],
+      ),
+    );
+    if (choice == null) return;
+
+    if (choice == 'send') {
+      final mail = accountDeletionMailUrl(
+        subject: l10n.translate('delete_account_mail_subject'),
+        body: l10n.translate('delete_account_mail_body', params: {'email': email ?? ''}),
+      );
+      try {
+        if (await launchUrl(mail)) return;
+      } catch (_) {
+        // e-posta uygulaması yok: web sayfasına düş
+      }
+    }
+    await launchUrl(webUrl, mode: LaunchMode.externalApplication);
   }
 
   Future<bool?> _showSignOutDialog(
