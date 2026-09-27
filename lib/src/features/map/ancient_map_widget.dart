@@ -113,8 +113,9 @@ class AncientMapController {
 }
 
 /// Antik harita — sitedeki `/tr/antik-harita` ile aynı yöntem: Google haritası, aynı stil
-/// (`assets/data/ancient_map_style.json`: tüm etiketler kapalı, toprak/su renkleri) + arazi
-/// görünümü; üstünde antik bölge adları ve `/v1/locations` yerleşimleri. Güncel yer adları hiç
+/// (`assets/data/ancient_map_style.json`: tüm etiketler kapalı, toprak/su renkleri); üstünde
+/// antik bölge adları ve `/v1/locations` yerleşimleri. Site arazi türünü kullanır; Android'de
+/// stil yalnız normal türde çalıştığı için burada kabartma yok. Güncel yer adları hiç
 /// görünmez: güncel harita yalnız Pro'nun "Google Haritalar'da göster" bağlantısıyla açılır.
 ///
 /// Sitenin zoom'a göre katman değiştirmesi yok; harita sikkenin darphanesine odaklanır.
@@ -275,7 +276,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
       );
     }
     final mint = await MapMarkerIcons.mintDot(MapMarkerIcons.mintColor, dpr);
-    final highlight = await MapMarkerIcons.mintDot(numPrimary, dpr, highlighted: true);
+    final highlight = await MapMarkerIcons.coinMarker(dpr);
     final settlement = await MapMarkerIcons.settlementRing(dpr);
     if (!mounted || key != _iconsKey) return;
     setState(() {
@@ -423,6 +424,8 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
     if (showPoints && _mintIcon != null && _settlementIcon != null) {
       for (final l in _locations.values) {
         if (l.id == _highlightLocation?.id) continue;
+        // Önizleme sade: yalnız darphaneler (yerleşimler tam ekranda; cihazda kalabalıktı)
+        if (!widget.isFullScreen && !l.hasCoins) continue;
         markers.add(Marker(
           markerId: MarkerId('loc_${l.id}'),
           position: LatLng(l.lat, l.lng),
@@ -488,11 +491,13 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
 
     return Stack(
       children: [
-        // Harita: sitedeki antik harita stili (etiketsiz) + arazi görünümü
+        // Harita: sitedeki antik harita stili (etiketsiz, aynı renkler). Android'de JSON stil
+        // (bulut stili dahil) yalnız normal türde uygulanır; arazi türünde stil tümüyle
+        // yok sayılıyor, güncel adlar görünüyordu (2026-09-27 cihaz + Cloud önizleme).
         GoogleMap(
           initialCameraPosition: CameraPosition(target: initialCenter, zoom: initialZoom),
           style: _style,
-          mapType: MapType.terrain,
+          mapType: MapType.normal,
           liteModeEnabled: !widget.isFullScreen,
           zoomControlsEnabled: false,
           mapToolbarEnabled: false,
@@ -679,7 +684,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
 
     final isMint = sel.isHighlight || (sel.location?.hasCoins ?? false);
     final color = sel.isHighlight
-        ? numPrimary
+        ? MapMarkerIcons.coinHighlightColor
         : isMint
             ? MapMarkerIcons.mintColor
             : MapMarkerIcons.settlementColor;
@@ -789,7 +794,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
             style: boldTextStyle(size: 12, color: c.text),
           ),
           8.height,
-          _buildLegendItem(Icons.location_on, numPrimary, l10n.translate('highlighted_mint')),
+          _buildLegendItem(Icons.account_balance, MapMarkerIcons.coinHighlightColor, l10n.translate('highlighted_mint')),
           4.height,
           _buildLegendItem(Icons.location_on, MapMarkerIcons.mintColor, l10n.translate('mint_location')),
           4.height,

@@ -85,7 +85,7 @@ class MapMarkerIcons {
   /// Darphane noktası: dolu daire, beyaz kenar, içinde konum simgesi (eski
   /// `_buildMintMarkers`). [highlighted] = sikkenin kendi darphanesi (büyük, parlak).
   static Future<BitmapDescriptor> mintDot(Color color, double dpr, {bool highlighted = false}) {
-    final d = highlighted ? 40.0 : 28.0;
+    final d = highlighted ? 40.0 : 22.0; // 70+ darphanelik bölgede 28 kalabalıktı (cihaz)
     const margin = 8.0; // parıltı payı
     final size = Size(d + margin * 2, d + margin * 2);
     return _render('mint|${color.toARGB32()}|$highlighted|$dpr', size, dpr, (canvas) {
@@ -108,10 +108,80 @@ class MapMarkerIcons {
         text: TextSpan(
           text: String.fromCharCode(icon.codePoint),
           style: TextStyle(
-            fontSize: highlighted ? 24 : 16,
+            fontSize: highlighted ? 24 : 13,
             fontFamily: icon.fontFamily,
             package: icon.fontPackage,
             color: Colors.white,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
+    });
+  }
+
+  /// Sikkenin kendi darphanesi — diğer darphanelerden (altın nokta) ayrılsın diye sikke
+  /// biçiminde: altın disk + koyu kenar + iç halka + tapınak (darphane) simgesi, dışta
+  /// kırmızı vurgu halkası.
+  static const coinHighlightColor = Color(0xFFB03A2E);
+
+  static Future<BitmapDescriptor> coinMarker(double dpr) {
+    const d = 40.0;
+    const margin = 10.0;
+    const size = Size(d + margin * 2, d + margin * 2);
+    return _render('coin|$dpr', size, dpr, (canvas) {
+      final c = Offset(size.width / 2, size.height / 2);
+      const r = d / 2;
+      canvas.drawCircle(
+        c,
+        r + 4,
+        Paint()
+          ..color = coinHighlightColor.withValues(alpha: 0.45)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+      );
+      canvas.drawCircle(
+        c,
+        r + 2,
+        Paint()
+          ..color = coinHighlightColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3,
+      );
+      canvas.drawCircle(
+        c,
+        r,
+        Paint()
+          ..shader = const RadialGradient(
+            center: Alignment(-0.3, -0.35),
+            colors: [Color(0xFFF7E3A1), Color(0xFFD4A52A), Color(0xFF9C7412)],
+            stops: [0.0, 0.65, 1.0],
+          ).createShader(Rect.fromCircle(center: c, radius: r)),
+      );
+      canvas.drawCircle(
+        c,
+        r - 1,
+        Paint()
+          ..color = const Color(0xFF6B4A0A)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      canvas.drawCircle(
+        c,
+        r - 5,
+        Paint()
+          ..color = const Color(0xFF8A6A1C).withValues(alpha: 0.7)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1,
+      );
+      const icon = Icons.account_balance;
+      final tp = TextPainter(
+        text: TextSpan(
+          text: String.fromCharCode(icon.codePoint),
+          style: TextStyle(
+            fontSize: 18,
+            fontFamily: icon.fontFamily,
+            package: icon.fontPackage,
+            color: const Color(0xFF4A3205),
           ),
         ),
         textDirection: TextDirection.ltr,
