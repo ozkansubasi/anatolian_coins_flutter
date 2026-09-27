@@ -187,7 +187,8 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
   }
 
   /// Liste yanıtında görsel yok: her sikkenin ilk görseli ayrı istekle bulunur.
-  /// Eskiden 20 istek SIRAYLA gidiyordu (3–4 sn); şimdi 6 paralel işçi.
+  /// Eskiden 20 istek SIRAYLA gidiyordu (3–4 sn); şimdi 4 paralel işçi (6 ile paylaşımlı
+  /// hostta uzak görsel akışlarıyla çakışıp yavaşladı, 2026-09-27 cihaz ölçümü).
   /// Kartta `url_raw` = 480 px önizleme (~50 KB) — 1600 px filigranlı büyük
   /// görsel (~350 KB) yalnız detay sayfasında. Kart en çok ~300 px çizilir.
   Future<void> _loadThumbnails(List<Variant> variants) async {
@@ -216,7 +217,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
       }
     }
 
-    await Future.wait(List.generate(6, (_) => worker()));
+    await Future.wait(List.generate(4, (_) => worker()));
   }
 
   void _showFilterBottomSheet() {

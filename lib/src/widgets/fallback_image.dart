@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../core/image_cache.dart';
 import '../core/num_colors.dart';
 
 /// Görsel widget'ı - önce url'i dener, hata alırsa remoteUrl'e fallback yapar
@@ -57,6 +58,7 @@ class _FallbackImageState extends State<FallbackImage> {
   Widget _buildImage(String imageUrl) {
     debugPrint('🖼️ FallbackImage loading: $imageUrl');
     return CachedNetworkImage(
+      cacheManager: NumistrImageCache.instance,
       imageUrl: imageUrl,
       fit: widget.fit,
       placeholder: (context, url) =>

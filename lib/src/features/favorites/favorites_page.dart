@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/image_cache.dart';
 import '../../models/variant.dart';
 import '../../core/region_data.dart';
 import '../../core/num_colors.dart';
@@ -139,6 +140,7 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                               : ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
                                   child: CachedNetworkImage(
+                                    cacheManager: NumistrImageCache.instance,
                                     imageUrl: thumbnailUrl,
                                     fit: BoxFit.cover,
                                     placeholder: (context, url) => Container(

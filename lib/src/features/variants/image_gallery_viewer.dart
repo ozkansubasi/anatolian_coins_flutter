@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../core/image_cache.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../l10n/app_localizations.dart';
@@ -102,6 +103,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer> {
         child: Hero(
           tag: 'image_${image.imageId}',
           child: CachedNetworkImage(
+            cacheManager: NumistrImageCache.instance,
             // ADR-006 Faz 2: Pro'ya imzalı filigransız URL; sabit cacheKey imza
             // yenilense de önbelleği korur. İmza süresi dolduysa filigranlıya düşülür.
             imageUrl: image.urlHd ?? image.url,
@@ -113,7 +115,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer> {
               ),
             ),
             errorWidget: (context, url, error) => (image.urlHd != null && url != image.url)
-                ? CachedNetworkImage(imageUrl: image.url, fit: BoxFit.contain)
+                ? CachedNetworkImage(cacheManager: NumistrImageCache.instance, imageUrl: image.url, fit: BoxFit.contain)
                 : Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -295,6 +297,7 @@ class _ImageGalleryViewerState extends State<ImageGalleryViewer> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: CachedNetworkImage(
+                  cacheManager: NumistrImageCache.instance,
                   imageUrl: image.url,
                   fit: BoxFit.cover,
                 ),

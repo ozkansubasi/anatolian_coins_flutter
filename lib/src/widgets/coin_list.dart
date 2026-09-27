@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../core/image_cache.dart';
 
 import '../core/coin_format.dart';
 import '../core/num_colors.dart';
@@ -61,6 +62,7 @@ class CoinThumb extends ConsumerWidget {
       child: url == null
           ? Icon(Icons.monetization_on_outlined, color: numTextHint, size: size * 0.4)
           : CachedNetworkImage(
+              cacheManager: NumistrImageCache.instance,
               imageUrl: url,
               fit: BoxFit.contain,
               errorWidget: (_, __, ___) =>
