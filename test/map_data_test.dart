@@ -46,5 +46,21 @@ void main() {
       ];
       expect(missing, isEmpty);
     });
+
+    test('$lang: her alt bölgenin adı var', () {
+      final table = (jsonDecode(File('assets/l10n/$lang.json').readAsStringSync())
+              as Map<String, dynamic>)
+          .cast<String, String>();
+      final subregions = [for (final r in regions) if (r['subregion'] != null) r['subregion']];
+      expect(subregions, isNotEmpty);
+      expect([for (final k in subregions) if (!table.containsKey('map_subregion_$k')) k], isEmpty);
+    });
   }
+
+  test('"Diğer bölgeler" tek etiket değil, sitedeki 4 alt bölgesiyle gösterilir', () {
+    final other = regions.where((r) => r['regionCode'] == 'other-ancient-regions-coins').toList();
+    expect(other.map((r) => r['subregion']), unorderedEquals(['commagene', 'isauria', 'lycaonia', 'sophene']));
+    final keys = [for (final r in regions) r['subregion'] ?? r['regionCode']];
+    expect(keys.toSet().length, keys.length);
+  });
 }

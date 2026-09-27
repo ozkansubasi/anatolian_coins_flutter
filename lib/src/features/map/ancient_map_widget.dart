@@ -22,16 +22,22 @@ import 'map_marker_icons.dart';
 ///
 /// Veri dosyası (`assets/data/ancient_map_data.json`) yalnız kimlik ve
 /// koordinat taşır; görünen ad/açıklama çeviri dosyalarındadır: bölge adı
-/// `region_<kod>`, darphane adı `map_mint_<id>`, açıklaması `map_mint_<id>_desc`.
+/// `region_<kod>` (alt bölge `map_subregion_<ad>`), darphane adı `map_mint_<id>`,
+/// açıklaması `map_mint_<id>_desc`.
 class AncientMapRegion {
   final double lat;
   final double lng;
   final String regionCode;
 
+  /// "Diğer bölgeler" haritada tek etiket değil, sitedeki gibi alt bölgeleriyle
+  /// (Kommagene, İsaurya, Likaonya, Sofene) gösterilir.
+  final String? subregion;
+
   AncientMapRegion({
     required this.lat,
     required this.lng,
     required this.regionCode,
+    this.subregion,
   });
 
   factory AncientMapRegion.fromJson(Map<String, dynamic> json) {
@@ -39,10 +45,15 @@ class AncientMapRegion {
       lat: (json['lat'] ?? 0).toDouble(),
       lng: (json['lng'] ?? 0).toDouble(),
       regionCode: json['regionCode'] ?? '',
+      subregion: json['subregion'] as String?,
     );
   }
 
-  String displayName(AppLocalizations l10n) => RegionData.getRegionName(regionCode, l10n);
+  /// Etiket kimliği: aynı bölgenin alt bölgeleri ayrı etiketlerdir.
+  String get key => subregion ?? regionCode;
+
+  String displayName(AppLocalizations l10n) =>
+      subregion != null ? l10n.translate('map_subregion_$subregion') : RegionData.getRegionName(regionCode, l10n);
 }
 
 class AncientMapMint {
@@ -300,7 +311,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
 
     final labels = <String, MapIcon>{};
     for (final r in data.regions) {
-      labels[r.regionCode] = await MapMarkerIcons.regionLabel(
+      labels[r.key] = await MapMarkerIcons.regionLabel(
         r.displayName(l10n),
         getRegionColor(r.regionCode.replaceAll('-coins', '')),
         dpr,
@@ -341,7 +352,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
     final obstacles = <Rect>[
       if (_showRegionLabels)
         for (final r in data.regions)
-          if (_regionIcons[r.regionCode] case final icon?)
+          if (_regionIcons[r.key] case final icon?)
             // gölge payı (4 px) çakışmaya sayılmaz
             box(LatLng(r.lat, r.lng), icon).deflate(4),
       if (widget.focusPoint != null && _highlightIcon != null) box(widget.focusPoint!, _highlightIcon!).deflate(8),
@@ -460,10 +471,10 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
     final data = _mapData;
     if (data != null && _showRegionLabels) {
       for (final r in data.regions) {
-        final icon = _regionIcons[r.regionCode];
+        final icon = _regionIcons[r.key];
         if (icon == null) continue;
         markers.add(Marker(
-          markerId: MarkerId('region_${r.regionCode}'),
+          markerId: MarkerId('region_${r.key}'),
           position: LatLng(r.lat, r.lng),
           icon: icon.icon,
           anchor: icon.anchor,
