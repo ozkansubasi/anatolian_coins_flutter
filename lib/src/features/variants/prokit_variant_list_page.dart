@@ -45,6 +45,15 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
   void initState() {
     super.initState();
     _scroll.addListener(_onScroll);
+    _searchCtrl.addListener(_onSearchText);
+  }
+
+  /// Temizle (×) düğmesi yazı girildiği anda çıksın, silinince kalksın: yalnız
+  /// alanın boş/dolu durumu değişince yeniden çizilir.
+  bool _hasSearchText = false;
+  void _onSearchText() {
+    final has = _searchCtrl.text.isNotEmpty;
+    if (has != _hasSearchText) setState(() => _hasSearchText = has);
   }
 
   void _onScroll() {
@@ -322,27 +331,16 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
               ),
             ),
           ),
-          // Region name at bottom
+          // Bölge adı altta; "Antik Anadolu" alt satırı kaldırıldı (kullanıcı 2026-09-27).
           Positioned(
             left: 16,
             right: 16,
             bottom: 16,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  regionName,
-                  style: boldTextStyle(size: 18, color: Colors.white),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                4.height,
-                Text(
-                  AppLocalizations.of(context).translate('ancient_anatolia'),
-                  style: secondaryTextStyle(size: 12, color: Colors.white70),
-                ),
-              ],
+            child: Text(
+              regionName,
+              style: boldTextStyle(size: 18, color: Colors.white),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -373,8 +371,8 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
   }
 
   /// Arama bloğu: alçak (dikey 6) ve alan %80 genişlikte, ortalı (kullanıcı
-  /// kararları 2026-09-26/27: bant metnine yer açmak için). Alan hafif saydam:
-  /// zemin çok az görünür, bant + arama tek blok gibi durur.
+  /// kararları 2026-09-26/27: bant metnine yer açmak için). Alan %60 opak:
+  /// zemin görünür, bant + arama tek blok gibi durur.
   Widget _buildSearchBar(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -393,7 +391,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
         widthFactor: 0.8,
         child: Container(
         decoration: BoxDecoration(
-          color: context.numColors.card.withValues(alpha: 0.78),
+          color: context.numColors.card.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(12),
         ),
         // Temanın alan dolgusu (filled) ve çerçevesi kapalı: yarı saydam kutuyu
@@ -407,7 +405,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
             hintStyle: secondaryTextStyle(size: 14, color: context.numColors.textMuted),
             prefixIcon: Icon(Icons.search, size: 20, color: context.numColors.textMuted),
             prefixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 36),
-            suffixIcon: _searchCtrl.text.isNotEmpty
+            suffixIcon: _hasSearchText
                 ? IconButton(
                     icon: Icon(Icons.clear, size: 20, color: context.numColors.textMuted),
                     constraints: const BoxConstraints(minWidth: 40, minHeight: 36),
