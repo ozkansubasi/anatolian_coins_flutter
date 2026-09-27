@@ -1,28 +1,41 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-/// Harita işaretleri Google Maps'te resim olarak çizilir. Görünüm, eski flutter_map
-/// katmanındaki widget'larla aynı tutuldu (bölge etiketi kartı, darphane noktası);
-/// yerleşim halkası sitedeki `/tr/antik-harita` işaretinin aynısı.
+/// Çizilmiş işaret: resim + mantıksal boyut + konumun resimdeki yeri (Google Maps `anchor`).
+/// Boyut, kent adlarının üst üste binmesini önleyen yerleşimde kullanılır.
+class MapIcon {
+  final BitmapDescriptor icon;
+  final Size size;
+  final Offset anchor;
+
+  const MapIcon(this.icon, this.size, [this.anchor = const Offset(0.5, 0.5)]);
+}
+
+/// Harita işaretleri Google Maps'te resim olarak çizilir. Bölge etiketi eski flutter_map
+/// katmanındaki kartın aynısı; kent işareti sitedeki `/tr/antik-harita` yerleşim halkası +
+/// kent adı (`.map-city-label`).
 class MapMarkerIcons {
   MapMarkerIcons._();
 
-  static final _cache = <String, BitmapDescriptor>{};
-
-  /// Sitedeki darphane rengi (`mintIcon` fillColor).
-  static const mintColor = Color(0xFFB7791F);
+  static final _cache = <String, MapIcon>{};
 
   /// Sitedeki yerleşim halkası rengi (`locationIcon` strokeColor).
   static const settlementColor = Color(0xFFC0392B);
 
-  static Future<BitmapDescriptor> _render(
+  /// Sitedeki kent adı rengi (`.map-city-label`) ve kara zemin rengi (yazı halesi).
+  static const cityTextColor = Color(0xFF495057);
+  static const landColor = Color(0xFFF3E0C5);
+
+  static Future<MapIcon> _render(
     String key,
     Size size,
     double dpr,
-    void Function(Canvas canvas) paint,
-  ) async {
+    void Function(Canvas canvas) paint, {
+    Offset anchor = const Offset(0.5, 0.5),
+  }) async {
     final cached = _cache[key];
     if (cached != null) return cached;
     final recorder = ui.PictureRecorder();
@@ -33,14 +46,18 @@ class MapMarkerIcons {
         .toImage((size.width * dpr).ceil(), (size.height * dpr).ceil());
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();
-    final icon = BitmapDescriptor.bytes(bytes!.buffer.asUint8List(), imagePixelRatio: dpr);
+    final icon = MapIcon(
+      BitmapDescriptor.bytes(bytes!.buffer.asUint8List(), imagePixelRatio: dpr),
+      size,
+      anchor,
+    );
     _cache[key] = icon;
     return icon;
   }
 
   /// Bölge etiketi: beyaz %85 zemin, bölge renginde 2 px kenar, 8 px köşe, gölge,
   /// kalın 12 pt yazı (eski `_buildRegionLabels` kartı).
-  static Future<BitmapDescriptor> regionLabel(
+  static Future<MapIcon> regionLabel(
     String text,
     Color color,
     double dpr, {
@@ -82,50 +99,11 @@ class MapMarkerIcons {
     });
   }
 
-  /// Darphane noktası: dolu daire, beyaz kenar, içinde konum simgesi (eski
-  /// `_buildMintMarkers`). [highlighted] = sikkenin kendi darphanesi (büyük, parlak).
-  static Future<BitmapDescriptor> mintDot(Color color, double dpr, {bool highlighted = false}) {
-    final d = highlighted ? 40.0 : 22.0; // 70+ darphanelik bölgede 28 kalabalıktı (cihaz)
-    const margin = 8.0; // parıltı payı
-    final size = Size(d + margin * 2, d + margin * 2);
-    return _render('mint|${color.toARGB32()}|$highlighted|$dpr', size, dpr, (canvas) {
-      final c = Offset(size.width / 2, size.height / 2);
-      canvas.drawCircle(
-        c,
-        d / 2 + (highlighted ? 2 : 0),
-        Paint()
-          ..color = color.withValues(alpha: 0.4)
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, highlighted ? 8 : 4),
-      );
-      canvas.drawCircle(c, d / 2, Paint()..color = Colors.white);
-      canvas.drawCircle(
-        c,
-        d / 2 - (highlighted ? 3 : 2),
-        Paint()..color = highlighted ? color : color.withValues(alpha: 0.9),
-      );
-      const icon = Icons.location_on;
-      final tp = TextPainter(
-        text: TextSpan(
-          text: String.fromCharCode(icon.codePoint),
-          style: TextStyle(
-            fontSize: highlighted ? 24 : 13,
-            fontFamily: icon.fontFamily,
-            package: icon.fontPackage,
-            color: Colors.white,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, c - Offset(tp.width / 2, tp.height / 2));
-    });
-  }
-
-  /// Sikkenin kendi darphanesi — diğer darphanelerden (altın nokta) ayrılsın diye sikke
-  /// biçiminde: altın disk + koyu kenar + iç halka + tapınak (darphane) simgesi, dışta
-  /// kırmızı vurgu halkası.
+  /// Sikkenin kendi darphanesi — kentlerden ayrılsın diye sikke biçiminde: altın disk +
+  /// koyu kenar + iç halka + tapınak (darphane) simgesi, dışta kırmızı vurgu halkası.
   static const coinHighlightColor = Color(0xFFB03A2E);
 
-  static Future<BitmapDescriptor> coinMarker(double dpr) {
+  static Future<MapIcon> coinMarker(double dpr) {
     const d = 40.0;
     const margin = 10.0;
     const size = Size(d + margin * 2, d + margin * 2);
@@ -190,18 +168,53 @@ class MapMarkerIcons {
     });
   }
 
-  /// Yerleşim: sitedeki gibi içi boş kırmızı halka (yarıçap 4,5, kalınlık 1,5).
-  static Future<BitmapDescriptor> settlementRing(double dpr) {
-    const size = Size(14, 14);
-    return _render('settlement|$dpr', size, dpr, (canvas) {
-      canvas.drawCircle(
-        const Offset(7, 7),
-        4.5,
-        Paint()
-          ..color = settlementColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5,
-      );
-    });
+  /// Önemli kent: sitedeki yerleşim halkası (içi boş kırmızı, yarıçap 4,5, kalınlık 1,5) ve
+  /// sağında sitedeki kent adı (11 pt, #495057) kara rengi haleyle. Konum halkanın merkezi.
+  static Future<MapIcon> cityMarker(String name, double dpr, {String? fontFamily}) {
+    TextPainter painter(Paint? halo) => TextPainter(
+          text: TextSpan(
+            text: name,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              fontFamily: fontFamily,
+              color: halo == null ? cityTextColor : null,
+              foreground: halo,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+          maxLines: 1,
+        )..layout();
+    final text = painter(null);
+    final halo = painter(Paint()
+      ..color = landColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeJoin = StrokeJoin.round);
+    const ring = 14.0;
+    const pad = 2.0; // hale payı
+    final height = math.max(ring, text.height + pad * 2);
+    final size = Size(ring + text.width + pad * 2, height);
+    final center = Offset(ring / 2, height / 2);
+    return _render(
+      'city|$name|$dpr|$fontFamily',
+      size,
+      dpr,
+      (canvas) {
+        canvas.drawCircle(center, 5.5, Paint()..color = landColor.withValues(alpha: 0.7));
+        canvas.drawCircle(
+          center,
+          4.5,
+          Paint()
+            ..color = settlementColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5,
+        );
+        final at = Offset(ring + pad, (height - text.height) / 2);
+        halo.paint(canvas, at);
+        text.paint(canvas, at);
+      },
+      anchor: Offset(center.dx / size.width, 0.5),
+    );
   }
 }

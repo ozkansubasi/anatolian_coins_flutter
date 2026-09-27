@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,7 @@ import '../../core/region_data.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
+import 'map_label_layout.dart';
 import 'map_locations_api.dart';
 import 'map_marker_icons.dart';
 
@@ -105,6 +107,23 @@ class AncientMapData {
   }
 }
 
+/// Önemli antik kent (sitedeki `majorCities` listesi, `assets/data/ancient_major_cities.json`).
+class AncientMapCity {
+  final String name;
+  final double lat;
+  final double lng;
+
+  const AncientMapCity({required this.name, required this.lat, required this.lng});
+
+  factory AncientMapCity.fromJson(Map<String, dynamic> json) => AncientMapCity(
+        name: json['name'] as String,
+        lat: (json['lat'] as num).toDouble(),
+        lng: (json['lng'] as num).toDouble(),
+      );
+
+  LatLng get position => LatLng(lat, lng);
+}
+
 /// Tam ekrandaki "konuma git" gibi dış komutlar için (eski flutter_map `MapController` yerine).
 class AncientMapController {
   _AncientMapWidgetState? _state;
@@ -171,11 +190,12 @@ class _Selection {
 class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
   static const _anatolia = LatLng(38.5, 32.0);
 
-  /// Sitedeki `POINTS_MIN_ZOOM`: altında yalnız bölge etiketleri.
-  static const _pointsMinZoom = 6.0;
-
-  /// Sikkenin koordinatına bu kadar yakın darphane kaydı aynı yer sayılır (Cremna → LOC-0368).
+  /// Sikkenin koordinatına bu kadar yakın darphane kaydı aynı yer sayılır (Cremna → LOC-0368);
+  /// bu yakınlıktaki kent de ayrıca çizilmez (sikke işareti zaten orada).
   static const _sameMintKm = 8.0;
+
+  /// Kente tıklanınca ayrıntısı bu yarıçaptaki en yakın yerleşim kaydından gelir.
+  static const _cityMatchKm = 5.0;
 
   AncientMapData? _mapData;
   String? _style;
@@ -186,25 +206,27 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
 
   // Görüntüleme seçenekleri
   bool _showRegionLabels = true;
-  bool _showPoints = true;
+  bool _showCities = true;
 
   /// Lejant varsayılan kapalı; açıkken bilgi kartıyla çakışmasın diye kart
   /// açılınca gizlenir (2026-09-26 cihaz testi: lejant kartın üstüne biniyordu).
   bool _showLegend = false;
 
-  final Map<String, MapLocation> _locations = {};
-  final List<LatLngBounds> _loadedAreas = [];
+  /// Sade harita (2026-09-27 kullanıcı isteği): sitedeki 130 önemli kent; yalnız adı
+  /// sığanlar çizilir, sikkenin darphanesine yakın olan önce yerleşir.
+  List<AncientMapCity> _cities = const [];
+  List<int> _cityOrder = const [];
+  Set<int> _shownCities = const {};
+  double? _layoutZoom;
+
   MapLocation? _highlightLocation;
   _Selection? _selected;
+  int _selectSeq = 0;
 
-  Map<String, BitmapDescriptor> _regionIcons = const {};
-  BitmapDescriptor? _mintIcon;
-  BitmapDescriptor? _highlightIcon;
-  BitmapDescriptor? _settlementIcon;
+  Map<String, MapIcon> _regionIcons = const {};
+  Map<String, MapIcon> _cityIcons = const {};
+  MapIcon? _highlightIcon;
   String? _iconsKey;
-
-  Timer? _idleTimer;
-  int _fetchSeq = 0;
 
   String get _lang => Localizations.localeOf(context).languageCode == 'en' ? 'en' : 'tr';
 
@@ -228,7 +250,6 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
 
   @override
   void dispose() {
-    _idleTimer?.cancel();
     if (widget.controller?._state == this) widget.controller?._state = null;
     super.dispose();
   }
@@ -238,11 +259,22 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
       final results = await Future.wait([
         rootBundle.loadString('assets/data/ancient_map_data.json'),
         rootBundle.loadString('assets/data/ancient_map_style.json'),
+        rootBundle.loadString('assets/data/ancient_major_cities.json'),
       ]);
       if (!mounted) return;
+      final cities = [
+        for (final c in json.decode(results[2]) as List) AncientMapCity.fromJson(c as Map<String, dynamic>),
+      ];
+      final origin = widget.focusPoint ?? _anatolia;
+      final order = [
+        for (var i = 0; i < cities.length; i++)
+          if (widget.focusPoint == null || _km(origin, cities[i].position) > _sameMintKm) i,
+      ]..sort((a, b) => _km(origin, cities[a].position).compareTo(_km(origin, cities[b].position)));
       setState(() {
         _mapData = AncientMapData.fromJson(json.decode(results[0]));
         _style = results[1];
+        _cities = cities;
+        _cityOrder = order;
         _loading = false;
       });
       _buildIcons();
@@ -266,7 +298,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
     if (key == _iconsKey) return;
     _iconsKey = key;
 
-    final labels = <String, BitmapDescriptor>{};
+    final labels = <String, MapIcon>{};
     for (final r in data.regions) {
       labels[r.regionCode] = await MapMarkerIcons.regionLabel(
         r.displayName(l10n),
@@ -275,94 +307,114 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
         fontFamily: font,
       );
     }
-    final mint = await MapMarkerIcons.mintDot(MapMarkerIcons.mintColor, dpr);
+    final cities = <String, MapIcon>{};
+    for (final c in _cities) {
+      cities[c.name] = await MapMarkerIcons.cityMarker(c.name, dpr, fontFamily: font);
+    }
     final highlight = await MapMarkerIcons.coinMarker(dpr);
-    final settlement = await MapMarkerIcons.settlementRing(dpr);
     if (!mounted || key != _iconsKey) return;
     setState(() {
       _regionIcons = labels;
-      _mintIcon = mint;
+      _cityIcons = cities;
       _highlightIcon = highlight;
-      _settlementIcon = settlement;
+      _layoutZoom = null;
     });
+    _layoutCities();
+  }
+
+  /// Kentleri adlarıyla, birbirinin ve bölge etiketlerinin üstüne binmeden yerleştirir.
+  /// Yakınlaştıkça yer açılır, daha çok kent görünür.
+  void _layoutCities() {
+    final data = _mapData;
+    if (data == null || _cityIcons.isEmpty) return;
+    final zoom = _zoom;
+    if (_layoutZoom != null && (zoom - _layoutZoom!).abs() < 0.05) return;
+    _layoutZoom = zoom;
+
+    Rect box(LatLng p, MapIcon icon) {
+      final c = worldPixel(p.latitude, p.longitude, zoom);
+      final w = icon.size.width;
+      final h = icon.size.height;
+      return Rect.fromLTWH(c.dx - icon.anchor.dx * w, c.dy - icon.anchor.dy * h, w, h);
+    }
+
+    final obstacles = <Rect>[
+      if (_showRegionLabels)
+        for (final r in data.regions)
+          if (_regionIcons[r.regionCode] case final icon?)
+            // gölge payı (4 px) çakışmaya sayılmaz
+            box(LatLng(r.lat, r.lng), icon).deflate(4),
+      if (widget.focusPoint != null && _highlightIcon != null) box(widget.focusPoint!, _highlightIcon!).deflate(8),
+    ];
+    final shown = placeLabels<int>(
+      [
+        for (final i in _cityOrder)
+          if (_cityIcons[_cities[i].name] case final icon?) MapEntry(i, box(_cities[i].position, icon)),
+      ],
+      obstacles,
+    );
+    if (!setEquals(shown, _shownCities)) setState(() => _shownCities = shown);
   }
 
   void _onMapCreated(GoogleMapController controller) {
     _map = controller;
-    final f = widget.focusPoint;
-    if (!widget.isFullScreen) {
-      // Önizleme hareketsiz: darphanenin çevresi bir kez yüklenir.
-      if (f != null) {
-        _fetch(LatLngBounds(
-          southwest: LatLng(f.latitude - 1.2, f.longitude - 1.6),
-          northeast: LatLng(f.latitude + 1.2, f.longitude + 1.6),
-        ));
-      }
-      return;
-    }
-    _scheduleFetch();
+    // Önizlemede kart yok; darphane kaydı yalnız tam ekranda gerekir.
+    if (widget.isFullScreen) _matchHighlight();
   }
 
   void _onCameraIdle() {
-    if (!widget.isFullScreen) return;
-    setState(() {}); // zoom eşiği (_pointsMinZoom) geçildiyse işaretler güncellensin
-    _scheduleFetch();
+    if (widget.isFullScreen) _layoutCities();
   }
 
-  void _scheduleFetch() {
-    _idleTimer?.cancel();
-    _idleTimer = Timer(const Duration(milliseconds: 350), () async {
-      final map = _map;
-      if (map == null || !mounted || _zoom < _pointsMinZoom) return;
-      try {
-        _fetch(await map.getVisibleRegion());
-      } catch (_) {
-        // harita kapanırken çağrıldı
-      }
-    });
-  }
-
-  bool _covered(LatLngBounds b) => _loadedAreas.any((a) => a.contains(b.southwest) && a.contains(b.northeast));
-
-  Future<void> _fetch(LatLngBounds b) async {
-    if (_covered(b)) return;
-    final seq = ++_fetchSeq;
+  /// [p] çevresindeki en yakın yerleşim kaydı (site ile aynı `/v1/locations` ucu).
+  Future<MapLocation?> _nearestLocation(LatLng p, double maxKm, {bool mintsOnly = false}) async {
+    final dLat = maxKm / 111.0;
+    final dLng = dLat / math.cos(p.latitude * math.pi / 180);
     final list = await ref.read(mapLocationsApiProvider).inBounds(
-          swLat: b.southwest.latitude,
-          swLng: b.southwest.longitude,
-          neLat: b.northeast.latitude,
-          neLng: b.northeast.longitude,
+          swLat: p.latitude - dLat,
+          swLng: p.longitude - dLng,
+          neLat: p.latitude + dLat,
+          neLng: p.longitude + dLng,
           lang: _lang,
         );
-    if (!mounted || seq != _fetchSeq) return;
-    if (list.isNotEmpty) _loadedAreas.add(b);
-    setState(() {
-      for (final l in list) {
-        _locations[l.id] = l;
-      }
-    });
-    _matchHighlight();
-  }
-
-  /// Sikkenin koordinatına en yakın darphane kaydı: kartta onun özeti ve makalesi gösterilir,
-  /// haritada ayrıca çizilmez (vurgulu işaret zaten orada).
-  void _matchHighlight() {
-    final f = widget.focusPoint;
-    if (f == null || _highlightLocation != null) return;
     MapLocation? best;
-    var bestKm = _sameMintKm;
-    for (final l in _locations.values) {
-      if (!l.hasCoins) continue;
-      final km = _km(f, LatLng(l.lat, l.lng));
+    var bestKm = maxKm;
+    for (final l in list) {
+      if (mintsOnly && !l.hasCoins) continue;
+      final km = _km(p, LatLng(l.lat, l.lng));
       if (km <= bestKm) {
         best = l;
         bestKm = km;
       }
     }
-    if (best == null) return;
+    return best;
+  }
+
+  /// Sikkenin koordinatına en yakın darphane kaydı: kartta onun özeti ve makalesi gösterilir.
+  Future<void> _matchHighlight() async {
+    final f = widget.focusPoint;
+    if (f == null || _highlightLocation != null) return;
+    final best = await _nearestLocation(f, _sameMintKm, mintsOnly: true);
+    if (best == null || !mounted) return;
     setState(() => _highlightLocation = best);
     final sel = _selected;
     if (sel != null && sel.isHighlight && sel.location == null) _loadSummary(sel.copyWith(location: best));
+  }
+
+  /// Kent adı ANINDA gösterilir; ayrıntısı en yakın yerleşim kaydından gelir (sitedeki kartla aynı).
+  Future<void> _selectCity(AncientMapCity city) async {
+    final seq = ++_selectSeq;
+    setState(() {
+      _selected = _Selection(title: city.name, loadingSummary: true);
+      _showLegend = false;
+    });
+    final loc = await _nearestLocation(city.position, _cityMatchKm);
+    if (!mounted || seq != _selectSeq) return;
+    if (loc == null) {
+      setState(() => _selected = _Selection(title: city.name));
+      return;
+    }
+    _loadSummary(_Selection(title: city.name, location: loc));
   }
 
   static double _km(LatLng a, LatLng b) {
@@ -391,6 +443,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
   }
 
   void _selectHighlight() {
+    ++_selectSeq;
     final mint = widget.highlightMint?.trim();
     final title = (mint != null && mint.isNotEmpty)
         ? CoinFormat.titleCase(mint)
@@ -412,39 +465,39 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
         markers.add(Marker(
           markerId: MarkerId('region_${r.regionCode}'),
           position: LatLng(r.lat, r.lng),
-          icon: icon,
-          anchor: const Offset(0.5, 0.5),
+          icon: icon.icon,
+          anchor: icon.anchor,
           zIndexInt: 1,
           consumeTapEvents: true,
         ));
       }
     }
 
-    final showPoints = _showPoints && (!widget.isFullScreen || _zoom >= _pointsMinZoom);
-    if (showPoints && _mintIcon != null && _settlementIcon != null) {
-      for (final l in _locations.values) {
-        if (l.id == _highlightLocation?.id) continue;
-        // Önizleme sade: yalnız darphaneler (yerleşimler tam ekranda; cihazda kalabalıktı)
-        if (!widget.isFullScreen && !l.hasCoins) continue;
+    if (_showCities) {
+      for (final i in _shownCities) {
+        final city = _cities[i];
+        final icon = _cityIcons[city.name];
+        if (icon == null) continue;
         markers.add(Marker(
-          markerId: MarkerId('loc_${l.id}'),
-          position: LatLng(l.lat, l.lng),
-          icon: l.hasCoins ? _mintIcon! : _settlementIcon!,
-          anchor: const Offset(0.5, 0.5),
-          zIndexInt: l.hasCoins ? 3 : 2,
+          markerId: MarkerId('city_$i'),
+          position: city.position,
+          icon: icon.icon,
+          anchor: icon.anchor,
+          zIndexInt: 2,
           consumeTapEvents: true,
-          onTap: widget.isFullScreen ? () => _loadSummary(_Selection(title: l.name, location: l)) : null,
+          onTap: widget.isFullScreen ? () => _selectCity(city) : null,
         ));
       }
     }
 
     final f = widget.focusPoint;
-    if (f != null && _highlightIcon != null) {
+    final highlight = _highlightIcon;
+    if (f != null && highlight != null) {
       markers.add(Marker(
         markerId: const MarkerId('highlight'),
         position: f,
-        icon: _highlightIcon!,
-        anchor: const Offset(0.5, 0.5),
+        icon: highlight.icon,
+        anchor: highlight.anchor,
         zIndexInt: 10,
         consumeTapEvents: true,
         onTap: widget.isFullScreen ? _selectHighlight : null,
@@ -592,15 +645,19 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
           _buildToggleButton(
             icon: Icons.label,
             isActive: _showRegionLabels,
-            onPressed: () => setState(() => _showRegionLabels = !_showRegionLabels),
+            onPressed: () {
+              setState(() => _showRegionLabels = !_showRegionLabels);
+              _layoutZoom = null; // bölge etiketleri kalkınca kentlere yer açılır
+              _layoutCities();
+            },
             tooltip: l10n.translate('show_regions'),
           ),
           4.height,
           _buildToggleButton(
-            icon: Icons.location_on,
-            isActive: _showPoints,
-            onPressed: () => setState(() => _showPoints = !_showPoints),
-            tooltip: l10n.translate('show_mints'),
+            icon: Icons.location_city,
+            isActive: _showCities,
+            onPressed: () => setState(() => _showCities = !_showCities),
+            tooltip: l10n.translate('show_cities'),
           ),
           4.height,
           _buildToggleButton(
@@ -683,11 +740,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
     if (sel == null) return const SizedBox.shrink();
 
     final isMint = sel.isHighlight || (sel.location?.hasCoins ?? false);
-    final color = sel.isHighlight
-        ? MapMarkerIcons.coinHighlightColor
-        : isMint
-            ? MapMarkerIcons.mintColor
-            : MapMarkerIcons.settlementColor;
+    final color = sel.isHighlight ? MapMarkerIcons.coinHighlightColor : MapMarkerIcons.settlementColor;
     final c = context.numColors;
     final articleId = sel.location?.articleId;
     final summary = sel.loadingSummary ? l10n.translate('loading') : sel.summary;
@@ -795,8 +848,6 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
           ),
           8.height,
           _buildLegendItem(Icons.account_balance, MapMarkerIcons.coinHighlightColor, l10n.translate('highlighted_mint')),
-          4.height,
-          _buildLegendItem(Icons.location_on, MapMarkerIcons.mintColor, l10n.translate('mint_location')),
           4.height,
           _buildLegendItem(Icons.radio_button_unchecked, MapMarkerIcons.settlementColor,
               l10n.translate('settlement_location')),
