@@ -1,6 +1,11 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,7 +13,12 @@ import 'package:nb_utils/nb_utils.dart';
 import '../../core/navigation.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import 'capture_processing.dart';
 import 'recognition_service.dart';
+
+/// `compute` giriş noktası (üst düzey olmalı): [bytes, sideFraction] → kırpılmış JPEG + netlik.
+ProcessedCapture _processCaptureEntry(List<Object> args) =>
+    processCaptureBytes(args[0] as Uint8List, args[1] as double);
 
 /// ProKit-styled camera screen for coin scanning
 /// Modern dark theme with gradient accents and improved UX
@@ -31,6 +41,22 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
   String? _obversePath;
   String? _reversePath;
   bool _capturingReverse = false;
+
+  // Odak / yakınlaştırma (2026-09-28: çember doldurulmaya çalışılınca telefon odak mesafesinin
+  // altına iniyor, fotoğraf bulanıklaşıyordu → ~10 cm'de dur, yakınlaştır, dokunarak netle).
+  static const _circleFraction = 0.45; // çember çapı / önizleme genişliği
+  static const _defaultZoom = 2.0;
+
+  /// Bu değerin altındaki Laplace varyansı "bulanık" sayılır (cihazda ölçülerek ayarlandı).
+  static const _blurThreshold = 80.0;
+  double _minZoom = 1;
+  double _maxZoom = 1;
+  double _zoom = 1;
+  double _scaleStartZoom = 1;
+  Offset? _focusTap;
+  Timer? _focusTimer;
+  Size _boxSize = Size.zero;
+  bool _processing = false;
 
   @override
   void initState() {
@@ -62,14 +88,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
         orElse: () => _cameras!.first,
       );
 
-      _controller = CameraController(
-        camera,
-        ResolutionPreset.high,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.jpeg,
-      );
-
-      await _controller!.initialize();
+      await _startController(camera);
 
       if (mounted) {
         setState(() {
@@ -84,33 +103,171 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     }
   }
 
+  /// En yüksek çözünürlük + sürekli otomatik odak + varsayılan 2x yakınlaştırma.
+  Future<void> _startController(CameraDescription camera) async {
+    final controller = CameraController(
+      camera,
+      ResolutionPreset.max,
+      enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.jpeg,
+    );
+    await controller.initialize();
+    _controller = controller;
+    try {
+      await controller.setFocusMode(FocusMode.auto);
+      await controller.setExposureMode(ExposureMode.auto);
+    } catch (e) {
+      debugPrint('[Camera] focus/exposure mode unsupported: $e');
+    }
+    try {
+      _minZoom = await controller.getMinZoomLevel();
+      _maxZoom = await controller.getMaxZoomLevel();
+      _zoom = _defaultZoom.clamp(_minZoom, _maxZoom).toDouble();
+      await controller.setZoomLevel(_zoom);
+    } catch (e) {
+      debugPrint('[Camera] zoom unsupported: $e');
+      _minZoom = _maxZoom = _zoom = 1;
+    }
+  }
+
+  Future<void> _setZoom(double value) async {
+    final c = _controller;
+    if (c == null) return;
+    final z = value.clamp(_minZoom, _maxZoom).toDouble();
+    if ((z - _zoom).abs() < 0.01) return;
+    setState(() => _zoom = z);
+    try {
+      await c.setZoomLevel(z);
+    } catch (_) {}
+  }
+
+  /// Kutudaki dokunuşu önizleme karesine (cover) çevirip odak + pozlama noktası yapar.
+  Future<void> _focusAt(Offset local) async {
+    final c = _controller;
+    final ps = c?.value.previewSize;
+    if (c == null || ps == null || _boxSize.isEmpty) return;
+    final fw = ps.height; // dikey kare
+    final fh = ps.width;
+    final scale = math.max(_boxSize.width / fw, _boxSize.height / fh);
+    final ox = (fw * scale - _boxSize.width) / 2;
+    final oy = (fh * scale - _boxSize.height) / 2;
+    final p = Offset(
+      ((local.dx + ox) / (fw * scale)).clamp(0.0, 1.0),
+      ((local.dy + oy) / (fh * scale)).clamp(0.0, 1.0),
+    );
+    setState(() => _focusTap = local);
+    _focusTimer?.cancel();
+    _focusTimer = Timer(const Duration(milliseconds: 1200), () {
+      if (mounted) setState(() => _focusTap = null);
+    });
+    try {
+      await c.setFocusPoint(p);
+      await c.setExposurePoint(p);
+    } catch (e) {
+      debugPrint('[Camera] focus point unsupported: $e');
+    }
+  }
+
   Future<void> _takePicture() async {
-    if (_controller == null || !_controller!.value.isInitialized) return;
+    if (_controller == null || !_controller!.value.isInitialized || _processing) return;
 
     if (_obversePath == null && !await _checkQuota()) return;
 
+    setState(() => _processing = true);
     try {
       final image = await _controller!.takePicture();
+      final prepared = await _prepareCapture(image.path);
+      if (!mounted) return;
+      setState(() => _processing = false);
 
-      if (mounted) {
-        if (_obversePath == null) {
-          setState(() {
-            _obversePath = image.path;
-            _capturingReverse = true;
-          });
-        } else if (_reversePath == null) {
-          setState(() {
-            _reversePath = image.path;
-            _capturingReverse = false;
-          });
-        }
+      if (prepared.sharpness != null && prepared.sharpness! < _blurThreshold) {
+        final useAnyway = await _confirmBlurry();
+        if (!mounted || useAnyway != true) return;
+      }
+
+      if (_obversePath == null) {
+        setState(() {
+          _obversePath = prepared.path;
+          _capturingReverse = true;
+        });
+      } else if (_reversePath == null) {
+        setState(() {
+          _reversePath = prepared.path;
+          _capturingReverse = false;
+        });
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _processing = false);
         final l10n = AppLocalizations.of(context);
         toast(l10n.translate('capture_failed', params: {'error': e.toString()}));
       }
     }
+  }
+
+  /// Tam kareden çember bölgesini kırpar ve netliği ölçer. İşlenemezse özgün dosya kullanılır.
+  Future<({String path, double? sharpness})> _prepareCapture(String path) async {
+    try {
+      final ps = _controller?.value.previewSize;
+      final fraction = (ps == null || _boxSize.isEmpty)
+          ? 0.7
+          : cropSideFraction(
+              circleDiameter: _boxSize.width * _circleFraction,
+              boxWidth: _boxSize.width,
+              boxHeight: _boxSize.height,
+              frameWidth: ps.height,
+              frameHeight: ps.width,
+            );
+      // Yerel sıkıştırıcı hızlıca ~2000 px'e indirir ve EXIF yönünü uygular.
+      final reduced = await FlutterImageCompress.compressWithFile(
+        path,
+        minWidth: 2000,
+        minHeight: 2000,
+        quality: 95,
+        autoCorrectionAngle: true,
+      );
+      if (reduced == null) return (path: path, sharpness: null);
+      final r = await compute(_processCaptureEntry, <Object>[reduced, fraction]);
+      final out = File('${Directory.systemTemp.path}/coin_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      await out.writeAsBytes(r.jpeg, flush: true);
+      debugPrint('[Camera] crop fraction=${fraction.toStringAsFixed(3)} side=${r.side} '
+          'sharpness=${r.sharpness.toStringAsFixed(1)} zoom=${_zoom.toStringAsFixed(1)}');
+      return (path: out.path, sharpness: r.sharpness);
+    } catch (e) {
+      debugPrint('[Camera] capture processing failed, using original: $e');
+      return (path: path, sharpness: null);
+    }
+  }
+
+  Future<bool?> _confirmBlurry() {
+    final l10n = AppLocalizations.of(context);
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: numCardDark,
+        shape: RoundedRectangleBorder(borderRadius: radius(16)),
+        title: Text(l10n.translate('photo_blurry_title'), style: boldTextStyle(size: 16, color: white)),
+        content: Text(
+          l10n.translate('photo_blurry_message'),
+          style: secondaryTextStyle(size: 14, color: Colors.grey[400]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.translate('use_anyway'), style: secondaryTextStyle(color: numTextHint)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: numPrimaryLight,
+              foregroundColor: numTextPrimary,
+              shape: RoundedRectangleBorder(borderRadius: radius(8)),
+            ),
+            child: Text(l10n.translate('retake_photo')),
+          ),
+        ],
+      ),
+    );
   }
 
   void _proceedToPreview() {
@@ -318,14 +475,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     });
 
     try {
-      _controller = CameraController(
-        _cameras![nextIndex],
-        ResolutionPreset.high,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.jpeg,
-      );
-
-      await _controller!.initialize();
+      await _startController(_cameras![nextIndex]);
 
       if (mounted) {
         setState(() {
@@ -343,6 +493,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
 
   @override
   void dispose() {
+    _focusTimer?.cancel();
     _controller?.dispose();
     _pulseController.dispose();
     super.dispose();
@@ -507,88 +658,180 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     );
   }
 
+  /// Önizleme kutuyu gerilmeden doldurur (cover); çember kutunun genişliğine oranlıdır.
+  /// Dokun → odak, iki parmak → yakınlaştırma; 1x/2x/3x düğmeleri.
   Widget _buildCameraPreview(AppLocalizations l10n) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Camera Preview
-        Container(
-          margin: const EdgeInsets.all(16),
-          decoration: boxDecorationWithRoundedCorners(
-            borderRadius: radius(24),
-          ),
-          child: ClipRRect(
-            borderRadius: radius(24),
-            child: AspectRatio(
-              aspectRatio: 3 / 4,
-              child: CameraPreview(_controller!),
-            ),
-          ),
-        ),
+    final ps = _controller!.value.previewSize;
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: LayoutBuilder(builder: (context, constraints) {
+        _boxSize = constraints.biggest;
+        final circle = _boxSize.width * _circleFraction;
+        return ClipRRect(
+          borderRadius: radius(24),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Önizleme (cover): dikey karede genişlik = previewSize.height
+              Positioned.fill(
+                child: ps == null
+                    ? CameraPreview(_controller!)
+                    : FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: ps.height,
+                          height: ps.width,
+                          child: CameraPreview(_controller!),
+                        ),
+                      ),
+              ),
 
-        // Circular guide overlay with animation
-        AnimatedBuilder(
-          animation: _pulseController,
-          builder: (context, child) {
-            return Container(
-              width: 220 + (_pulseController.value * 10),
-              height: 220 + (_pulseController.value * 10),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: numPrimaryLight.withOpacity(0.5 + (_pulseController.value * 0.3)),
-                  width: 2,
+              // Dokunma / yakınlaştırma katmanı
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapUp: (d) => _focusAt(d.localPosition),
+                  onScaleStart: (_) => _scaleStartZoom = _zoom,
+                  onScaleUpdate: (d) {
+                    if (d.pointerCount >= 2) _setZoom(_scaleStartZoom * d.scale);
+                  },
                 ),
               ),
-            );
-          },
-        ),
 
-        // Corner guides
-        Positioned(
-          child: Container(
-            width: 240,
-            height: 240,
-            decoration: BoxDecoration(
-              borderRadius: radius(16),
-            ),
-            child: CustomPaint(
-              painter: _CornerGuidePainter(color: numPrimaryLight),
+              // Kılavuz çember
+              IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, child) {
+                    return Container(
+                      width: circle + (_pulseController.value * 6),
+                      height: circle + (_pulseController.value * 6),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: numPrimaryLight.withOpacity(0.5 + (_pulseController.value * 0.3)),
+                          width: 2,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // Köşe kılavuzları
+              IgnorePointer(
+                child: SizedBox(
+                  width: circle + 24,
+                  height: circle + 24,
+                  child: CustomPaint(
+                    painter: _CornerGuidePainter(color: numPrimaryLight),
+                  ),
+                ),
+              ),
+
+              // Odak göstergesi
+              if (_focusTap != null)
+                Positioned(
+                  left: _focusTap!.dx - 28,
+                  top: _focusTap!.dy - 28,
+                  child: IgnorePointer(
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: numPrimaryLight, width: 2),
+                        borderRadius: radius(8),
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Yakınlaştırma düğmeleri + ipucu
+              Positioned(
+                bottom: 16,
+                left: 12,
+                right: 12,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_maxZoom > _minZoom) _buildZoomChips(),
+                    10.height,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: boxDecorationWithRoundedCorners(
+                        backgroundColor: black.withOpacity(0.7),
+                        borderRadius: radius(20),
+                      ),
+                      child: Text(
+                        l10n.translate('camera_hint_distance'),
+                        textAlign: TextAlign.center,
+                        style: secondaryTextStyle(size: 12, color: white),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Kamera değiştirme
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: black.withOpacity(0.5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    onPressed: _cameras != null && _cameras!.length > 1 ? _switchCamera : null,
+                    icon: const Icon(Icons.flip_camera_ios, color: white),
+                  ),
+                ),
+              ),
+
+              // Çekim işleniyor
+              if (_processing)
+                Positioned.fill(
+                  child: Container(
+                    color: black.withOpacity(0.35),
+                    alignment: Alignment.center,
+                    child: const CircularProgressIndicator(color: numPrimaryLight),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildZoomChips() {
+    final levels = <double>[1, 2, 3].where((z) => z >= _minZoom - 0.01 && z <= _maxZoom + 0.01).toList();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final z in levels)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: GestureDetector(
+              onTap: () => _setZoom(z),
+              child: Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: (_zoom - z).abs() < 0.25 ? numPrimaryLight : black.withOpacity(0.55),
+                ),
+                child: Text(
+                  '${z.toStringAsFixed(0)}x',
+                  style: boldTextStyle(
+                    size: 13,
+                    color: (_zoom - z).abs() < 0.25 ? numTextPrimary : white,
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-
-        // Instruction text
-        Positioned(
-          bottom: 32,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: boxDecorationWithRoundedCorners(
-              backgroundColor: black.withOpacity(0.7),
-              borderRadius: radius(20),
-            ),
-            child: Text(
-              l10n.translate('place_coin_in_circle'),
-              style: secondaryTextStyle(size: 12, color: white),
-            ),
-          ),
-        ),
-
-        // Camera switch button
-        Positioned(
-          top: 24,
-          right: 24,
-          child: Container(
-            decoration: BoxDecoration(
-              color: black.withOpacity(0.5),
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              onPressed: _cameras != null && _cameras!.length > 1 ? _switchCamera : null,
-              icon: const Icon(Icons.flip_camera_ios, color: white),
-            ),
-          ),
-        ),
       ],
     );
   }
