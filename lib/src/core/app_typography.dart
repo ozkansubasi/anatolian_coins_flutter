@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
 
 /// NumisTR tipografi seti — TEK KAYNAK.
@@ -42,6 +43,14 @@ class NumTypo {
   /// 28+ — hero/display (theme: headlineMedium ve üstü)
   static const int display = 28;
 }
+
+/// Ana sayfa vitrin yazısı: slider slogan şeridi + bölüm başlıkları ("Antik
+/// Bölgeler", "Editör'den") aynı yazı tipinde (kullanıcı 2026-09-27).
+/// Marcellus: Cinzel gibi Roma yazıtı harfi ama küçük harfi var (Cinzel'de
+/// küçük harf de büyük harf gibi çizilir; slogan büyük harf görünüyordu).
+/// Tek ağırlık (400); assets/google_fonts/ içinde gömülü.
+TextStyle numShowcaseStyle({required double size, Color? color, double? letterSpacing}) =>
+    GoogleFonts.marcellus(fontSize: size, color: color, letterSpacing: letterSpacing, height: 1.25);
 
 /// nb_utils global tipografi varsayılanlarını NumisTR setine bağlar.
 /// main() içinde runApp'ten ÖNCE bir kez çağrılır.

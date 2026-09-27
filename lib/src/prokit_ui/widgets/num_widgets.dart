@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/app_typography.dart';
 import '../../core/num_colors.dart';
 
 /// NumisTR ortak widget'ları.
@@ -27,12 +28,9 @@ Widget numSectionHeader({
             title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: c.text,
-              height: 1.3,
-            ),
+            // Slogan şeridiyle aynı vitrin yazı tipi (Marcellus tek ağırlık; 18
+            // w600 Inter'in yerine 20 — ince harfte aynı ağırlığı verir).
+            style: numShowcaseStyle(size: NumTypo.h3.toDouble(), color: c.text),
           ),
           if (actionText != null)
             TextButton(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../../../core/app_typography.dart';
 import '../../../prokit_ui/numistr_colors.dart';
 
 /// Ana sayfa banner'i: gorsel banner'i KAPLAR, slogan altta ayri zeminli seritte.
@@ -105,16 +105,14 @@ class HomeBanner extends StatelessWidget {
                   end: Alignment.centerRight,
                 ),
               ),
-              // Başlıktaki logo yazısıyla aynı yazı tipi (Cinzel), ortalı.
+              // Vitrin yazı tipi (Marcellus): küçük harfli; bölüm başlıklarıyla aynı.
               child: Text(
                 slogan,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.cinzel(
+                style: numShowcaseStyle(
+                  size: NumTypo.subtitle.toDouble(),
                   color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.4,
-                  height: 1.2,
+                  letterSpacing: 0.3,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

@@ -160,6 +160,14 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         slogan: l10n.translate('banner_regions'),
         onTap: () => context.openRoute('/regions'),
       ),
+      // Öne çıkan bölgeler (kullanıcı 2026-09-27): bölge kategorisinin kendi
+      // görseli; dokununca o bölgenin sikkeleri (ana sayfa bölge ikonlarıyla aynı yol).
+      for (final region in const ['lydia', 'ionia', 'mysia'])
+        HomeBanner(
+          image: 'assets/images/regions/${region}_banner.jpg',
+          slogan: l10n.translate('banner_region_$region'),
+          onTap: () => context.openRoute('/browse?region=$region-coins'),
+        ),
     ];
 
     return Container(
