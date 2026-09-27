@@ -104,31 +104,29 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
 
   Future<void> _loadItems() async {
     final request = ++_request;
+    final api = ref.read(tickerApiProvider);
+
+    // Bu oturumda aynı bölge daha önce yüklendiyse beklemeden göster (dönen simge yok).
+    final cached = api.cachedItems(
+      region: widget.region,
+      category: widget.category,
+      language: widget.language,
+      limit: widget.itemCount,
+    );
+    if (cached != null) {
+      _showItems(cached);
+      return;
+    }
+
     try {
-      final api = ref.read(tickerApiProvider);
-      debugPrint('🎫 Ticker loading for region: ${widget.region}, language: ${widget.language}');
       final items = await api.getTickerItems(
         region: widget.region,
         category: widget.category,
         language: widget.language,
         limit: widget.itemCount,
       );
-      debugPrint('🎫 Ticker loaded ${items.length} items');
 
-      if (mounted && request == _request) {
-        setState(() {
-          _items = items;
-          _loading = false;
-          _hasError = false;
-        });
-
-        if (_items.isNotEmpty) {
-          // Start with fade in
-          _fadeController.forward();
-          // Start auto-advance timer
-          _startAutoAdvance();
-        }
-      }
+      if (mounted && request == _request) _showItems(items);
     } catch (e) {
       debugPrint('❌ Ticker error: $e');
       if (mounted && request == _request) {
@@ -137,6 +135,21 @@ class _NumistrTickerState extends ConsumerState<NumistrTicker>
           _hasError = true;
         });
       }
+    }
+  }
+
+  void _showItems(List<TickerItem> items) {
+    setState(() {
+      _items = items;
+      _loading = false;
+      _hasError = false;
+    });
+
+    if (_items.isNotEmpty) {
+      // Start with fade in
+      _fadeController.forward();
+      // Start auto-advance timer
+      _startAutoAdvance();
     }
   }
 

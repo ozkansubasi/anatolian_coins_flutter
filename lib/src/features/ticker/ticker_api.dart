@@ -19,17 +19,8 @@ class TickerItem {
   });
 
   factory TickerItem.fromJson(Map<String, dynamic> json) {
-    // Debug: Print all keys and values from JSON
-    debugPrint('🎫 TickerItem.fromJson RAW JSON keys: ${json.keys.toList()}');
-    debugPrint('🎫 TickerItem.fromJson fact_title: ${json['fact_title']}');
-    debugPrint('🎫 TickerItem.fromJson fact_description: ${json['fact_description']}');
-    debugPrint('🎫 TickerItem.fromJson title: ${json['title']}');
-    debugPrint('🎫 TickerItem.fromJson introtext: ${json['introtext']}');
-
     final factTitle = json['fact_title'] ?? json['ancient_name'] ?? '';
     final factDescription = json['fact_description'] ?? json['modern_name'] ?? '';
-
-    debugPrint('🎫 TickerItem PARSED - factTitle: "$factTitle", factDescription: "$factDescription"');
 
     return TickerItem(
       id: json['id'] ?? 0,
@@ -47,6 +38,23 @@ class TickerApi {
 
   TickerApi(this._client);
 
+  /// Oturum içi önbellek (bölge|kategori|dil|limit): bölge sayfasına her dönüşte
+  /// ticker yeniden istenip birkaç saniye dönmesin. Sunucu da 24 sa önbelliyor;
+  /// boş sonuç (hata dahil) saklanmaz, bir sonraki açılışta yeniden denenir.
+  static final _cache = <String, List<TickerItem>>{};
+
+  static String _key(String? region, String? category, String? language, int limit) =>
+      '${region ?? ''}|${category ?? ''}|${language ?? ''}|$limit';
+
+  /// Önbellekteki öğeler (yoksa null) — istek atmadan, eşzamanlı.
+  List<TickerItem>? cachedItems({
+    String? region,
+    String? category,
+    String? language,
+    int limit = 20,
+  }) =>
+      _cache[_key(region, category, language, limit)];
+
   /// Get ticker items
   /// [region] - Region code filter (e.g., 'lydia-coins')
   /// [category] - Category alias (default: 'darphane-isimleri')
@@ -58,6 +66,10 @@ class TickerApi {
     String? language,
     int limit = 20,
   }) async {
+    final key = _key(region, category, language, limit);
+    final cached = _cache[key];
+    if (cached != null) return cached;
+
     final params = <String, String>{
       'limit': limit.toString(),
     };
@@ -75,20 +87,18 @@ class TickerApi {
     }
 
     try {
-      debugPrint('🎫 Ticker API Request: /ticker with params: $params');
       final response = await _client.dio.get(
         '/ticker',
         queryParameters: params,
       );
 
       final data = response.data;
-      debugPrint('🎫 Ticker API Response: ${data.runtimeType}');
-      debugPrint('🎫 Ticker API Data: $data');
 
       if (data is Map && data['data'] != null && data['data']['items'] != null) {
         final items = data['data']['items'] as List;
-        debugPrint('🎫 Ticker API Found ${items.length} items');
-        return items.map((item) => TickerItem.fromJson(item)).toList();
+        final parsed = items.map((item) => TickerItem.fromJson(item)).toList();
+        if (parsed.isNotEmpty) _cache[key] = parsed;
+        return parsed;
       }
     } catch (e) {
       debugPrint('❌ Ticker API Error: $e');

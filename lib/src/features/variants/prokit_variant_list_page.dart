@@ -41,20 +41,6 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
 
   final Map<int, Map<String, String?>> _thumbnailCache = {};
 
-  List<Variant> get _filteredItems {
-    if (!_onlyImages) return _items;
-    return _items.where((v) {
-      if (_thumbnailCache.containsKey(v.articleId)) {
-        final imageData = _thumbnailCache[v.articleId];
-        if (imageData == null) return false;
-        final url = imageData['url'];
-        final remoteUrl = imageData['remoteUrl'];
-        return (url != null && url.isNotEmpty) || (remoteUrl != null && remoteUrl.isNotEmpty);
-      }
-      return false;
-    }).toList();
-  }
-
   @override
   void initState() {
     super.initState();
@@ -160,7 +146,9 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
         region: _selectedRegion,
         mint: mintParam,
         material: _selectedMaterial,
-        hasImages: false,
+        // "Yalnız görselli" sunucuda süzülür: eskiden istemci, küçük görseli
+        // gelmemiş sikkeyi gizliyordu → sikkeler tek tek, saniyeler içinde beliriyordu.
+        hasImages: _onlyImages,
         page: _page,
         perPage: 20,
         sort: _sort,
@@ -198,33 +186,37 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     }
   }
 
+  /// Liste yanıtında görsel yok: her sikkenin ilk görseli ayrı istekle bulunur.
+  /// Eskiden 20 istek SIRAYLA gidiyordu (3–4 sn); şimdi 6 paralel işçi.
+  /// Kartta `url_raw` = 480 px önizleme (~50 KB) — 1600 px filigranlı büyük
+  /// görsel (~350 KB) yalnız detay sayfasında. Kart en çok ~300 px çizilir.
   Future<void> _loadThumbnails(List<Variant> variants) async {
     final api = ref.read(variantsApiProvider);
-    for (final variant in variants) {
-      if (_thumbnailCache.containsKey(variant.articleId)) continue;
-      try {
-        final imgs = await api.images(variant.articleId, wm: true, abs: true);
-        if (imgs.isNotEmpty && mounted) {
-          final firstImage = imgs.first;
-          setState(() {
-            _thumbnailCache[variant.articleId] = {
-              'url': firstImage.url,
-              'remoteUrl': firstImage.remoteUrl,
+    final pending = variants.where((v) => !_thumbnailCache.containsKey(v.articleId)).toList();
+    var next = 0;
+
+    Future<void> worker() async {
+      while (next < pending.length) {
+        final variant = pending[next++];
+        Map<String, String?> data = {'url': null, 'remoteUrl': null};
+        try {
+          final imgs = await api.images(variant.articleId, wm: true, abs: true);
+          if (imgs.isNotEmpty) {
+            final first = imgs.first;
+            data = {
+              'url': first.urlRaw.isNotEmpty ? first.urlRaw : first.url,
+              'remoteUrl': first.remoteUrl,
             };
-          });
-        } else if (mounted) {
-          setState(() {
-            _thumbnailCache[variant.articleId] = {'url': null, 'remoteUrl': null};
-          });
+          }
+        } catch (_) {
+          // görselsiz kart: yer tutucu ikon kalır
         }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _thumbnailCache[variant.articleId] = {'url': null, 'remoteUrl': null};
-          });
-        }
+        if (!mounted) return;
+        setState(() => _thumbnailCache[variant.articleId] = data);
       }
     }
+
+    await Future.wait(List.generate(6, (_) => worker()));
   }
 
   void _showFilterBottomSheet() {
@@ -463,6 +455,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
         label: l10n.translate('filter_images_only'),
         onRemove: () {
           setState(() => _onlyImages = false);
+          _load(reset: true);
         },
       ));
     }
@@ -502,7 +495,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
       return _buildErrorState(l10n);
     }
 
-    if (_filteredItems.isEmpty) {
+    if (_items.isEmpty) {
       return _buildEmptyState(l10n);
     }
 
@@ -548,23 +541,6 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
   }
 
   Widget _buildEmptyState(AppLocalizations l10n) {
-    if (_onlyImages && _items.isNotEmpty &&
-        _items.any((v) => !_thumbnailCache.containsKey(v.articleId))) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(color: numPrimary),
-            16.height,
-            Text(
-              l10n.translate('loading'),
-              style: secondaryTextStyle(size: 14, color: context.numColors.textMuted),
-            ),
-          ],
-        ),
-      );
-    }
-
     if (!_initialLoad) return _buildRegionPicker(l10n);
 
     return Center(
@@ -639,17 +615,17 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: _filteredItems.length + (_hasMore ? 1 : 0),
+      itemCount: _items.length + (_hasMore ? 1 : 0),
       itemBuilder: (context, index) {
-        if (index >= _filteredItems.length) {
+        if (index >= _items.length) {
           return const Center(
             child: CircularProgressIndicator(color: numPrimary),
           );
         }
         return _CoinGridCard(
-          variant: _filteredItems[index],
-          thumbnailData: _thumbnailCache[_filteredItems[index].articleId],
-          onTap: () => context.push('/variant/${_filteredItems[index].articleId}'),
+          variant: _items[index],
+          thumbnailData: _thumbnailCache[_items[index].articleId],
+          onTap: () => context.push('/variant/${_items[index].articleId}'),
         );
       },
     );
@@ -659,10 +635,10 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     return ListView.separated(
       controller: _scroll,
       padding: const EdgeInsets.all(16),
-      itemCount: _filteredItems.length + (_hasMore ? 1 : 0),
+      itemCount: _items.length + (_hasMore ? 1 : 0),
       separatorBuilder: (_, __) => 12.height,
       itemBuilder: (context, index) {
-        if (index >= _filteredItems.length) {
+        if (index >= _items.length) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(16),
@@ -671,9 +647,9 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
           );
         }
         return _CoinListCard(
-          variant: _filteredItems[index],
-          thumbnailData: _thumbnailCache[_filteredItems[index].articleId],
-          onTap: () => context.push('/variant/${_filteredItems[index].articleId}'),
+          variant: _items[index],
+          thumbnailData: _thumbnailCache[_items[index].articleId],
+          onTap: () => context.push('/variant/${_items[index].articleId}'),
         );
       },
     );
