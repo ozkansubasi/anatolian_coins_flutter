@@ -49,7 +49,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
   static const _defaultZoom = 2.0;
 
   /// Bu değerin altındaki Laplace varyansı "bulanık" sayılır (cihazda ölçülerek ayarlandı).
-  static const _blurThreshold = 80.0;
+  static const _blurThreshold = 60.0; // cihaz: net 158 / 85,5, bilerek bulanık 36,8 (2026-09-28)
   double _minZoom = 1;
   double _maxZoom = 1;
   double _zoom = 1;
