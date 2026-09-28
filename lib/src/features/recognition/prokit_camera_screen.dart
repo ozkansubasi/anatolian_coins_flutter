@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nb_utils/nb_utils.dart';
+import '../../auth/auth_controller.dart';
 import '../../core/navigation.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
@@ -169,7 +170,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
   }
 
   Future<void> _takePicture() async {
-    if (_controller == null || !_controller!.value.isInitialized || _processing) return;
+    if (_controller == null || !_controller!.value.isInitialized || _processing)
+      return;
 
     if (_obversePath == null && !await _checkQuota()) return;
 
@@ -200,13 +202,15 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       if (mounted) {
         setState(() => _processing = false);
         final l10n = AppLocalizations.of(context);
-        toast(l10n.translate('capture_failed', params: {'error': e.toString()}));
+        toast(
+            l10n.translate('capture_failed', params: {'error': e.toString()}));
       }
     }
   }
 
   /// Tam kareden çember bölgesini kırpar ve netliği ölçer. İşlenemezse özgün dosya kullanılır.
-  Future<({String path, double? sharpness})> _prepareCapture(String path) async {
+  Future<({String path, double? sharpness})> _prepareCapture(
+      String path) async {
     try {
       final ps = _controller?.value.previewSize;
       final fraction = (ps == null || _boxSize.isEmpty)
@@ -227,10 +231,13 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
         autoCorrectionAngle: true,
       );
       if (reduced == null) return (path: path, sharpness: null);
-      final r = await compute(_processCaptureEntry, <Object>[reduced, fraction]);
-      final out = File('${Directory.systemTemp.path}/coin_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final r =
+          await compute(_processCaptureEntry, <Object>[reduced, fraction]);
+      final out = File(
+          '${Directory.systemTemp.path}/coin_${DateTime.now().millisecondsSinceEpoch}.jpg');
       await out.writeAsBytes(r.jpeg, flush: true);
-      debugPrint('[Camera] crop fraction=${fraction.toStringAsFixed(3)} side=${r.side} '
+      debugPrint(
+          '[Camera] crop fraction=${fraction.toStringAsFixed(3)} side=${r.side} '
           'sharpness=${r.sharpness.toStringAsFixed(1)} zoom=${_zoom.toStringAsFixed(1)}');
       return (path: out.path, sharpness: r.sharpness);
     } catch (e) {
@@ -246,7 +253,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       builder: (context) => AlertDialog(
         backgroundColor: numCardDark,
         shape: RoundedRectangleBorder(borderRadius: radius(16)),
-        title: Text(l10n.translate('photo_blurry_title'), style: boldTextStyle(size: 16, color: white)),
+        title: Text(l10n.translate('photo_blurry_title'),
+            style: boldTextStyle(size: 16, color: white)),
         content: Text(
           l10n.translate('photo_blurry_message'),
           style: secondaryTextStyle(size: 14, color: Colors.grey[400]),
@@ -254,7 +262,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.translate('use_anyway'), style: secondaryTextStyle(color: numTextHint)),
+            child: Text(l10n.translate('use_anyway'),
+                style: secondaryTextStyle(color: numTextHint)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -329,6 +338,12 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
   }
 
   Future<bool> _checkQuota() async {
+    // Oturumsuz tanıma sunucuda 401 ile reddediliyor; eskiden kota hatası "devam" sayılıyor,
+    // kullanıcı iki fotoğrafı çekip genel bir hatayla karşılaşıyordu (cihaz, 2026-09-28).
+    if (!ref.read(authControllerProvider).authenticated) {
+      _showSignInDialog();
+      return false;
+    }
     final quotaAsync = ref.read(scanQuotaProvider);
 
     return quotaAsync.when(
@@ -344,6 +359,40 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
         debugPrint('Quota check error: $error');
         return true;
       },
+    );
+  }
+
+  void _showSignInDialog() {
+    final l10n = AppLocalizations.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: numCardDark,
+        shape: RoundedRectangleBorder(borderRadius: radius(16)),
+        title: Text(l10n.translate('sign_in_required'), style: boldTextStyle(size: 16, color: white)),
+        content: Text(
+          l10n.translate('sign_in_to_scan_detail'),
+          style: secondaryTextStyle(size: 14, color: Colors.grey[400]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.translate('close'), style: secondaryTextStyle(color: numTextHint)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.push('/login');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: numPrimaryLight,
+              foregroundColor: numTextPrimary,
+              shape: RoundedRectangleBorder(borderRadius: radius(8)),
+            ),
+            child: Text(l10n.translate('sign_in')),
+          ),
+        ],
+      ),
     );
   }
 
@@ -363,7 +412,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                 color: Colors.orange.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+              child: const Icon(Icons.warning_amber_rounded,
+                  color: Colors.orange, size: 24),
             ),
             12.width,
             Expanded(
@@ -379,7 +429,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              l10n.translate('used_all_scans', params: {'limit': quota.limit.toString()}),
+              l10n.translate('used_all_scans',
+                  params: {'limit': quota.limit.toString()}),
               style: secondaryTextStyle(size: 14, color: Colors.grey[400]),
             ),
             16.height,
@@ -397,13 +448,17 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                     style: boldTextStyle(size: 14, color: numPrimaryLight),
                   ),
                   12.height,
-                  _buildBenefitRow(Icons.all_inclusive, l10n.translate('unlimited_scans')),
+                  _buildBenefitRow(
+                      Icons.all_inclusive, l10n.translate('unlimited_scans')),
                   8.height,
-                  _buildBenefitRow(Icons.offline_bolt, l10n.translate('offline_access')),
+                  _buildBenefitRow(
+                      Icons.offline_bolt, l10n.translate('offline_access')),
                   8.height,
-                  _buildBenefitRow(Icons.high_quality, l10n.translate('high_res_images')),
+                  _buildBenefitRow(
+                      Icons.high_quality, l10n.translate('high_res_images')),
                   8.height,
-                  _buildBenefitRow(Icons.auto_awesome, l10n.translate('advanced_recognition')),
+                  _buildBenefitRow(Icons.auto_awesome,
+                      l10n.translate('advanced_recognition')),
                 ],
               ),
             ),
@@ -414,7 +469,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
             onPressed: () => Navigator.of(context).pop(),
             // Diyalog her temada koyu (numCardDark); nb_utils varsayılan grisi
             // (#757575) bu zeminde okunmuyordu.
-            child: Text(l10n.translate('close'), style: secondaryTextStyle(color: numTextHint)),
+            child: Text(l10n.translate('close'),
+                style: secondaryTextStyle(color: numTextHint)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -439,7 +495,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
         Icon(icon, size: 18, color: numSuccess),
         8.width,
         Expanded(
-          child: Text(text, style: primaryTextStyle(size: 12, color: Colors.grey[300])),
+          child: Text(text,
+              style: primaryTextStyle(size: 12, color: Colors.grey[300])),
         ),
       ],
     );
@@ -541,7 +598,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                   color: numError.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.error_outline, size: 64, color: numError),
+                child:
+                    const Icon(Icons.error_outline, size: 64, color: numError),
               ),
               24.height,
               Text(
@@ -576,6 +634,16 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       children: [
         // Header
         _buildHeader(l10n),
+
+        // İpucu önizlemenin dışında: içeride çemberin altına biniyordu (cihaz, 2026-09-28)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            l10n.translate('camera_hint_distance'),
+            textAlign: TextAlign.center,
+            style: secondaryTextStyle(size: 12, color: Colors.grey[400]),
+          ),
+        ),
 
         // Camera Preview
         Expanded(
@@ -620,7 +688,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
               final quotaAsync = ref.watch(scanQuotaProvider);
               return quotaAsync.when(
                 data: (quota) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: boxDecorationWithRoundedCorners(
                     backgroundColor: quota.hasScansAvailable
                         ? numSuccess.withOpacity(0.2)
@@ -639,10 +708,13 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                       Text(
                         // limit < 0 = Pro (kotasız). Ham "-1/-1" basılıyordu;
                         // "sınırsız" kelimesi K2 kararıyla kullanılmıyor.
-                        quota.limit < 0 ? 'Pro' : '${quota.remaining}/${quota.limit}',
+                        quota.limit < 0
+                            ? 'Pro'
+                            : '${quota.remaining}/${quota.limit}',
                         style: boldTextStyle(
                           size: 12,
-                          color: quota.hasScansAvailable ? numSuccess : numError,
+                          color:
+                              quota.hasScansAvailable ? numSuccess : numError,
                         ),
                       ),
                     ],
@@ -667,137 +739,130 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       child: LayoutBuilder(builder: (context, constraints) {
         _boxSize = constraints.biggest;
         final circle = _boxSize.width * _circleFraction;
-        return ClipRRect(
-          borderRadius: radius(24),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Önizleme (cover): dikey karede genişlik = previewSize.height
-              Positioned.fill(
-                child: ps == null
-                    ? CameraPreview(_controller!)
-                    : FittedBox(
-                        fit: BoxFit.cover,
-                        child: SizedBox(
-                          width: ps.height,
-                          height: ps.width,
-                          child: CameraPreview(_controller!),
-                        ),
-                      ),
-              ),
-
-              // Dokunma / yakınlaştırma katmanı
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapUp: (d) => _focusAt(d.localPosition),
-                  onScaleStart: (_) => _scaleStartZoom = _zoom,
-                  onScaleUpdate: (d) {
-                    if (d.pointerCount >= 2) _setZoom(_scaleStartZoom * d.scale);
-                  },
-                ),
-              ),
-
-              // Kılavuz çember
-              IgnorePointer(
-                child: AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (context, child) {
-                    return Container(
-                      width: circle + (_pulseController.value * 6),
-                      height: circle + (_pulseController.value * 6),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: numPrimaryLight.withOpacity(0.5 + (_pulseController.value * 0.3)),
-                          width: 2,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // Köşe kılavuzları
-              IgnorePointer(
-                child: SizedBox(
-                  width: circle + 24,
-                  height: circle + 24,
-                  child: CustomPaint(
-                    painter: _CornerGuidePainter(color: numPrimaryLight),
-                  ),
-                ),
-              ),
-
-              // Odak göstergesi
-              if (_focusTap != null)
-                Positioned(
-                  left: _focusTap!.dx - 28,
-                  top: _focusTap!.dy - 28,
-                  child: IgnorePointer(
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: numPrimaryLight, width: 2),
-                        borderRadius: radius(8),
-                      ),
-                    ),
-                  ),
-                ),
-
-              // Yakınlaştırma düğmeleri + ipucu
-              Positioned(
-                bottom: 16,
-                left: 12,
-                right: 12,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_maxZoom > _minZoom) _buildZoomChips(),
-                    10.height,
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: boxDecorationWithRoundedCorners(
-                        backgroundColor: black.withOpacity(0.7),
-                        borderRadius: radius(20),
-                      ),
-                      child: Text(
-                        l10n.translate('camera_hint_distance'),
-                        textAlign: TextAlign.center,
-                        style: secondaryTextStyle(size: 12, color: white),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Kamera değiştirme
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: black.withOpacity(0.5),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    onPressed: _cameras != null && _cameras!.length > 1 ? _switchCamera : null,
-                    icon: const Icon(Icons.flip_camera_ios, color: white),
-                  ),
-                ),
-              ),
-
-              // Çekim işleniyor
-              if (_processing)
+        // Kutu tam boyuta sabitlenir: Stack yalnız sabit boyutlu çocukları (çember) kadar
+        // kalıyor, önizleme daralıp siyah görünüyordu (cihazda görüldü).
+        return SizedBox.fromSize(
+          size: _boxSize,
+          child: ClipRRect(
+            borderRadius: radius(24),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Önizleme (cover): dikey karede genişlik = previewSize.height
                 Positioned.fill(
-                  child: Container(
-                    color: black.withOpacity(0.35),
-                    alignment: Alignment.center,
-                    child: const CircularProgressIndicator(color: numPrimaryLight),
+                  child: ps == null
+                      ? CameraPreview(_controller!)
+                      : FittedBox(
+                          fit: BoxFit.cover,
+                          child: SizedBox(
+                            width: ps.height,
+                            height: ps.width,
+                            child: CameraPreview(_controller!),
+                          ),
+                        ),
+                ),
+
+                // Dokunma / yakınlaştırma katmanı
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTapUp: (d) => _focusAt(d.localPosition),
+                    onScaleStart: (_) => _scaleStartZoom = _zoom,
+                    onScaleUpdate: (d) {
+                      if (d.pointerCount >= 2)
+                        _setZoom(_scaleStartZoom * d.scale);
+                    },
                   ),
                 ),
-            ],
+
+                // Kılavuz çember
+                IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      return Container(
+                        width: circle + (_pulseController.value * 6),
+                        height: circle + (_pulseController.value * 6),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: numPrimaryLight.withOpacity(
+                                0.5 + (_pulseController.value * 0.3)),
+                            width: 2,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                // Köşe kılavuzları
+                IgnorePointer(
+                  child: SizedBox(
+                    width: circle + 24,
+                    height: circle + 24,
+                    child: CustomPaint(
+                      painter: _CornerGuidePainter(color: numPrimaryLight),
+                    ),
+                  ),
+                ),
+
+                // Odak göstergesi
+                if (_focusTap != null)
+                  Positioned(
+                    left: _focusTap!.dx - 28,
+                    top: _focusTap!.dy - 28,
+                    child: IgnorePointer(
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: numPrimaryLight, width: 2),
+                          borderRadius: radius(8),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Yakınlaştırma düğmeleri (ipucu önizlemenin üstünde, dışarıda)
+                if (_maxZoom > _minZoom)
+                  Positioned(
+                    bottom: 12,
+                    left: 12,
+                    right: 12,
+                    child: Center(child: _buildZoomChips()),
+                  ),
+
+                // Kamera değiştirme
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      onPressed: _cameras != null && _cameras!.length > 1
+                          ? _switchCamera
+                          : null,
+                      icon: const Icon(Icons.flip_camera_ios, color: white),
+                    ),
+                  ),
+                ),
+
+                // Çekim işleniyor
+                if (_processing)
+                  Positioned.fill(
+                    child: Container(
+                      color: black.withOpacity(0.35),
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(
+                          color: numPrimaryLight),
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       }),
@@ -805,7 +870,9 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
   }
 
   Widget _buildZoomChips() {
-    final levels = <double>[1, 2, 3].where((z) => z >= _minZoom - 0.01 && z <= _maxZoom + 0.01).toList();
+    final levels = <double>[1, 2, 3]
+        .where((z) => z >= _minZoom - 0.01 && z <= _maxZoom + 0.01)
+        .toList();
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -820,7 +887,9 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: (_zoom - z).abs() < 0.25 ? numPrimaryLight : black.withOpacity(0.55),
+                  color: (_zoom - z).abs() < 0.25
+                      ? numPrimaryLight
+                      : black.withOpacity(0.55),
                 ),
                 child: Text(
                   '${z.toStringAsFixed(0)}x',
@@ -933,7 +1002,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
               onPressed: _canProceed ? _proceedToPreview : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: _canProceed ? numPrimaryLight : numSurfaceDark,
-                foregroundColor: _canProceed ? numTextPrimary : Colors.grey[600],
+                foregroundColor:
+                    _canProceed ? numTextPrimary : Colors.grey[600],
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: radius(12)),
                 elevation: _canProceed ? 4 : 0,
@@ -1023,7 +1093,9 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
               decoration: boxDecorationWithRoundedCorners(
                 backgroundColor: imagePath != null
                     ? numSuccess.withOpacity(0.9)
-                    : (isActive ? numPrimaryLight.withOpacity(0.9) : black.withOpacity(0.6)),
+                    : (isActive
+                        ? numPrimaryLight.withOpacity(0.9)
+                        : black.withOpacity(0.6)),
                 borderRadius: radius(4),
               ),
               child: Text(
@@ -1117,18 +1189,22 @@ class _CornerGuidePainter extends CustomPainter {
     canvas.drawLine(const Offset(0, 0), Offset(cornerLength, 0), paint);
 
     // Top-right corner
-    canvas.drawLine(Offset(size.width - cornerLength, 0), Offset(size.width, 0), paint);
-    canvas.drawLine(Offset(size.width, 0), Offset(size.width, cornerLength), paint);
+    canvas.drawLine(
+        Offset(size.width - cornerLength, 0), Offset(size.width, 0), paint);
+    canvas.drawLine(
+        Offset(size.width, 0), Offset(size.width, cornerLength), paint);
 
     // Bottom-left corner
-    canvas.drawLine(Offset(0, size.height - cornerLength), Offset(0, size.height), paint);
-    canvas.drawLine(Offset(0, size.height), Offset(cornerLength, size.height), paint);
+    canvas.drawLine(
+        Offset(0, size.height - cornerLength), Offset(0, size.height), paint);
+    canvas.drawLine(
+        Offset(0, size.height), Offset(cornerLength, size.height), paint);
 
     // Bottom-right corner
-    canvas.drawLine(
-        Offset(size.width, size.height - cornerLength), Offset(size.width, size.height), paint);
-    canvas.drawLine(
-        Offset(size.width - cornerLength, size.height), Offset(size.width, size.height), paint);
+    canvas.drawLine(Offset(size.width, size.height - cornerLength),
+        Offset(size.width, size.height), paint);
+    canvas.drawLine(Offset(size.width - cornerLength, size.height),
+        Offset(size.width, size.height), paint);
   }
 
   @override
