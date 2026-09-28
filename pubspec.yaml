@@ -30,6 +30,11 @@ dependencies:
 
   # Camera & Recognition
   camera: ^0.10.5+9                # Kamera erişimi
+  # Android'de CameraX: önizleme SurfaceProducer ile çizilir. Varsayılan camera_android
+  # SurfaceTexture kullanıyor; Impeller (Vulkan) onu ara ara içe aktaramıyor → siyah önizleme
+  # ("Invalid external texture", Redmi 2209116AG, 2026-09-28).
+  # 0.7.x CameraX 1.6 getiriyor → AGP 8.9.1 ister (bizde 8.7.3); 0.6.30+ = CameraX 1.5.3.
+  camera_android_camerax: ^0.6.30
   image_picker: ^1.0.7             # Galeri seçimi
   image: ^4.1.7                    # Image manipulation
   flutter_image_compress: ^2.2.0   # Sıkıştırma
