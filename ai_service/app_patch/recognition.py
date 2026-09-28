@@ -54,6 +54,7 @@ import faiss
 import torch
 
 logger = logging.getLogger(__name__)
+cv2.setNumThreads(1)            # Faz D: parallelism comes from the verification workers
 
 IMN = np.array([0.485, 0.456, 0.406], np.float32)
 IST = np.array([0.229, 0.224, 0.225], np.float32)
@@ -99,13 +100,15 @@ QUALITY_CONF = 0.50             # quality reasons only claimed when top conf bel
 #   5770 comparisons (every >=100 "error" was a parent/subtype record sharing the photo).
 #   different coin of the same type (B): not helped (other dies) -> honest confidence instead.
 VERIFY_ENABLED = True
-VERIFY_K = 20                   # top candidates checked (candidate recall@20: A 93.3%, B 48%)
+VERIFY_K = 10                   # top candidates checked; K 8..20 gave the same A/B within 0.7 pt
+                                # (simulated on the 150 pairs), 20 cost ~7 s per two-sided request
 VERIFY_ROWS = 3                 # catalog photos per candidate face, closest to the query first
 VERIFY_SIZE = 512               # longer image side for SIFT
 VERIFY_FEATURES = 1000
 VERIFY_RATIO = 0.8              # Lowe ratio test
 VERIFY_RANSAC_PX = 8.0
-VERIFY_WORKERS = 3
+VERIFY_WORKERS = 4              # one per core; OpenCV itself single-threaded below (profiled:
+                                # SIFT ~125 ms/photo is the cost; nested OpenCV threads oversubscribed)
 VERIFIED_MIN = 150              # inliers (both faces) that verify a candidate on their own
 # ... or a weaker but clearly singled-out match: one face well photographed, the other poor
 # (user's photo-of-screen test 2026-09-28: obverse 112 + reverse 4 = 116 vs best rival 37).
