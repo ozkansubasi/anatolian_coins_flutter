@@ -25,6 +25,15 @@ Faz C (2026-09-28) — exact two-side scoring:
   other way round) is scored too and the better one is kept. Single-side queries are
   unchanged. FUSION_MODE = 'legacy' restores Faz A behaviour (eval / rollback).
 
+Faz D (2026-09-29) — local-feature verification:
+- One global vector cannot tell whether a candidate is the SAME coin: the Price/Alexander
+  family alone is 23% of the index and looks alike at 224 px. The top VERIFY_K candidates are
+  now checked geometrically (SIFT on the query coin crop vs the candidate's catalog photos of
+  the matching face, ratio test, RANSAC similarity -> inlier count). A verified candidate is
+  promoted and gets a high confidence; when nothing verifies, confidence is capped and the
+  answer is flagged as uncertain instead of claiming a match (Faz C: 57% confident-but-wrong
+  on different coins of the same type). VERIFY_ENABLED = False restores Faz C.
+
 Interface (constructor, recognize(), response dict) stays backward compatible;
 new response keys are additive. Index paths hardcoded so a simple `docker
 restart` (no recreate) preserves pip installs + model caches.
@@ -32,6 +41,10 @@ Rollback: /opt/ai_service/app_patch/recognition.py.backup_fazA_*
 """
 import json
 import logging
+import os
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
 
@@ -79,6 +92,32 @@ TIE_MAX_SHOW = 10               # a tied group is returned whole, up to this cei
 SHARP_MIN = 25.0                # Laplacian variance on 224px crop; below = low detail
 QUALITY_CONF = 0.50             # quality reasons only claimed when top conf below this
 
+# ---- Faz D: local-feature verification (2026-09-29) ----
+# Measured (150 pairs, phone-like degradation, separate container, scripts/ai_eval/eval_rerank.py):
+#   same photo degraded (A): top-1 83.3% -> 90.0% (ceiling = candidate recall@20, 93.3%);
+#   true-match inliers p1 338 / median ~1000; genuinely different coins never reached 100 in
+#   5770 comparisons (every >=100 "error" was a parent/subtype record sharing the photo).
+#   different coin of the same type (B): not helped (other dies) -> honest confidence instead.
+VERIFY_ENABLED = True
+VERIFY_K = 20                   # top candidates checked (candidate recall@20: A 93.3%, B 48%)
+VERIFY_ROWS = 3                 # catalog photos per candidate face, closest to the query first
+VERIFY_SIZE = 512               # longer image side for SIFT
+VERIFY_FEATURES = 1000
+VERIFY_RATIO = 0.8              # Lowe ratio test
+VERIFY_RANSAC_PX = 8.0
+VERIFY_WORKERS = 3
+VERIFIED_MIN = 150              # inliers (both faces) that verify a candidate on their own
+# ... or a weaker but clearly singled-out match: one face well photographed, the other poor
+# (user's photo-of-screen test 2026-09-28: obverse 112 + reverse 4 = 116 vs best rival 37).
+# 150 pairs: no rule variant verified a wrong coin (siblings sharing the photo counted right).
+VERIFIED_REL_MIN, VERIFIED_REL_RATIO = 80, 2.5
+VERIFY_GROUP_RATIO = 2.0        # verified candidates within 1/2 of the best are promoted together
+VERIFIED_CONF_LO, VERIFIED_CONF_HI, VERIFIED_INL_HI = 0.85, 1.0, 600
+VERIFIED_REL_CONF = 0.80        # confidence when verified only by the relative rule
+UNVERIFIED_CAP = 0.60           # ceiling when nothing verified (app: yellow band, above its 0.4 filter)
+UNVERIFIED_REASON = 'ambiguous_match'   # app shows "best match may not be certain"
+IMG_DIR = "/app/index/images"   # hardlinks of /opt/ai_service/data/training/train/images (same fs)
+
 # ---- Faz B: optional collector-provided attributes (metal / weight / diameter) ----
 # Small cosine bonus/penalty so attributes re-rank near-ties without overpowering vision.
 ATTR_METAL_BONUS, ATTR_METAL_PENALTY = 0.010, -0.015
@@ -112,6 +151,8 @@ class RecognitionService:
         self.face = []
         self.by_art = {}
         self.rows_by_face = {}
+        self._tl = threading.local()
+        self._pool = ThreadPoolExecutor(VERIFY_WORKERS) if VERIFY_ENABLED else None
         try:
             torch.set_num_threads(4)
             import timm
@@ -150,6 +191,8 @@ class RecognitionService:
                         pass
             logger.info("✓ DINOv3+SAM2 loaded (fazA): %d vectors, %d articles"
                         % (self.faiss_index.ntotal, len(self.by_art)))
+            if VERIFY_ENABLED and not os.path.isdir(IMG_DIR):
+                logger.warning("Faz D: %s missing -> verification skipped, Faz C confidence kept" % IMG_DIR)
         except Exception as e:
             logger.error("DINOv3+SAM2 load failed: %s" % e, exc_info=True)
             self.encoder = None
@@ -221,6 +264,7 @@ class RecognitionService:
             'embs': embs,
             'detected': detected,
             'sharpness': round(self._sharpness(crop if detected else bgr), 1),
+            'vimg': crop if detected else bgr,      # Faz D: local features of the coin
         }
 
     def _search_side(self, embs, exclude=frozenset()) -> Dict[int, float]:
@@ -256,8 +300,9 @@ class RecognitionService:
                     best = d
         return best
 
-    def _fuse(self, obv, rev, exclude=frozenset(), mode=None):
-        """-> (fused {article: score}, obv_scores {article: cos}, rev_scores {article: cos})."""
+    def _fuse(self, obv, rev, exclude=frozenset(), mode=None, with_swap=False):
+        """-> (fused {article: score}, obv_scores {article: cos}, rev_scores {article: cos})
+        [+ set of articles whose photos matched the other way round, when `with_swap`]."""
         mode = mode or FUSION_MODE
         obv_best = self._search_side(obv['embs'], exclude) if obv else {}
         rev_best = self._search_side(rev['embs'], exclude) if rev else {}
@@ -270,12 +315,13 @@ class RecognitionService:
                     fused[a] = W_OBV * do + W_REV * dr
                 else:
                     fused[a] = do if do is not None else dr
-            return fused, obv_best, rev_best
+            return (fused, obv_best, rev_best, set()) if with_swap else (fused, obv_best, rev_best)
 
         # Faz C: score every candidate on both sides against its own vectors
         cache: Dict[int, np.ndarray] = {}
         o_sc: Dict[int, float] = {}
         r_sc: Dict[int, float] = {}
+        swapped = set()
         for a in set(obv_best) | set(rev_best):
             o_on = self._face_score(obv['embs'], a, 'on', exclude, cache)
             r_ar = self._face_score(rev['embs'], a, 'arka', exclude, cache)
@@ -285,12 +331,95 @@ class RecognitionService:
             # photos taken the other way round: "obverse" photo shows the reverse
             o_ar = self._face_score(obv['embs'], a, 'arka', exclude, cache)
             r_on = self._face_score(rev['embs'], a, 'on', exclude, cache)
-            swapped = W_OBV * r_on + W_REV * o_ar
-            if swapped > normal:
-                fused[a], o_sc[a], r_sc[a] = swapped, o_ar, r_on
+            swap_score = W_OBV * r_on + W_REV * o_ar
+            if swap_score > normal:
+                fused[a], o_sc[a], r_sc[a] = swap_score, o_ar, r_on
+                swapped.add(a)
             else:
                 fused[a], o_sc[a], r_sc[a] = normal, o_on, r_ar
-        return fused, o_sc, r_sc
+        return (fused, o_sc, r_sc, swapped) if with_swap else (fused, o_sc, r_sc)
+
+    # ---- Faz D: local-feature verification ----
+    def _lf(self):
+        """Per-thread OpenCV objects: SIFT/CLAHE/FLANN are not thread-safe (segfault, measured)."""
+        t = self._tl
+        if not hasattr(t, 'sift'):
+            t.sift = cv2.SIFT_create(nfeatures=VERIFY_FEATURES)
+            t.clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            t.flann = cv2.FlannBasedMatcher(dict(algorithm=1, trees=4), dict(checks=32))
+        return t
+
+    def _lf_feats(self, bgr):
+        """-> (N x 2 points, N x 128 descriptors) or None. No cv2.KeyPoint objects are kept."""
+        if bgr is None:
+            return None
+        t = self._lf()
+        g = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+        s = VERIFY_SIZE / max(g.shape[:2])
+        g = t.clahe.apply(cv2.resize(g, (max(1, int(g.shape[1] * s)), max(1, int(g.shape[0] * s))),
+                                     interpolation=cv2.INTER_AREA))
+        kp, des = t.sift.detectAndCompute(g, None)
+        if des is None or len(kp) < 8:
+            return None
+        return np.float32([k.pt for k in kp]), des.astype(np.float32)
+
+    def _lf_inliers(self, fq, fc) -> int:
+        if fq is None or fc is None:
+            return 0
+        (pq, dq), (pc, dc) = fq, fc
+        pairs = self._lf().flann.knnMatch(dq, dc, k=2)
+        good = [m for m, n in (p for p in pairs if len(p) == 2) if m.distance < VERIFY_RATIO * n.distance]
+        if len(good) < 6:
+            return 0
+        _, mask = cv2.estimateAffinePartial2D(pq[[g.queryIdx for g in good]], pc[[g.trainIdx for g in good]],
+                                              method=cv2.RANSAC, ransacReprojThreshold=VERIFY_RANSAC_PX)
+        return int(mask.sum()) if mask is not None else 0
+
+    def _row_inliers(self, job) -> int:
+        """(index row, query features) -> inliers; -1 if the catalog photo is unavailable."""
+        r, fq = job
+        name = os.path.basename(str(self.metadata[r].get('image_path') or ''))
+        img = cv2.imread(os.path.join(IMG_DIR, name), cv2.IMREAD_COLOR) if name else None
+        if img is None:
+            return -1
+        return self._lf_inliers(fq, self._lf_feats(img))
+
+    def _verify(self, obv, rev, cand_ids, swapped, exclude=frozenset()):
+        """Local-feature check of `cand_ids`.
+        -> ({article: (obverse_photo_inliers, reverse_photo_inliers)}, photos_checked, photos_missing)."""
+        q = [(obv, self._lf_feats(obv['vimg'])) if obv else None,
+             (rev, self._lf_feats(rev['vimg'])) if rev else None]
+        plan, jobs = {}, {}
+        for a in cand_ids:
+            faces = ('arka', 'on') if a in swapped else ('on', 'arka')
+            plan[a] = []
+            for k, face in enumerate(faces):
+                if q[k] is None or q[k][1] is None:
+                    plan[a].append([])
+                    continue
+                rows = [r for r in (self.rows_by_face.get((a, face)) or self.rows_by_face.get((a, '*')) or [])
+                        if r not in exclude]
+                if len(rows) > VERIFY_ROWS:
+                    embs = q[k][0]['embs']
+                    sim = {r: max(float(np.dot(e, self.faiss_index.reconstruct(int(r)))) for e in embs)
+                           for r in rows}
+                    rows = sorted(rows, key=sim.get, reverse=True)[:VERIFY_ROWS]
+                plan[a].append(rows)
+                for r in rows:
+                    jobs[(k, r)] = (r, q[k][1])
+        res = dict(zip(jobs, self._pool.map(self._row_inliers, jobs.values()))) if jobs else {}
+        missing = sum(1 for v in res.values() if v < 0)
+        out = {a: tuple(max([max(0, res[(k, r)]) for r in rows] or [0]) for k, rows in enumerate(p))
+               for a, p in plan.items()}
+        return out, len(res) - missing, missing
+
+    @staticmethod
+    def _verified_conf(inl: int) -> float:
+        if inl < VERIFIED_MIN:
+            return VERIFIED_REL_CONF
+        f = (inl - VERIFIED_MIN) / max(1, VERIFIED_INL_HI - VERIFIED_MIN)
+        return float(np.clip(VERIFIED_CONF_LO + f * (VERIFIED_CONF_HI - VERIFIED_CONF_LO),
+                             VERIFIED_CONF_LO, VERIFIED_CONF_HI))
 
     def _attr_adjust(self, article_id, metal, weight_g, diameter_mm) -> float:
         """Faz B: cosine adjustment from optional collector attributes. 0 when unknown."""
@@ -314,7 +443,8 @@ class RecognitionService:
 
     async def recognize(self, obverse_bytes: bytes, reverse_bytes: bytes = None,
                         metal: str = None, weight_g: float = None,
-                        diameter_mm: float = None) -> Dict[str, Any]:
+                        diameter_mm: float = None, exclude=frozenset()) -> Dict[str, Any]:
+        """`exclude`: index rows to ignore — evaluation only (held-out query photos)."""
         if self.encoder is None or self.faiss_index is None:
             return self._stub_response()
         try:
@@ -335,13 +465,41 @@ class RecognitionService:
             if obv is None and rev is None:
                 return self._stub_response()
 
-            fused, obv_best, rev_best = self._fuse(obv, rev)
+            fused, obv_best, rev_best, swapped = self._fuse(obv, rev, exclude, with_swap=True)
 
             if metal or weight_g or diameter_mm:
                 fused = {a: d + self._attr_adjust(a, metal, weight_g, diameter_mm)
                          for a, d in fused.items()}
 
             ranked = sorted(fused.items(), key=lambda kv: kv[1], reverse=True)
+
+            # ---- Faz D: verify the top candidates, promote the verified group ----
+            inl: Dict[int, Tuple[int, int]] = {}
+            verified: Dict[int, int] = {}
+            checked = missing = 0
+            t_ver = time.time()
+            if VERIFY_ENABLED and self._pool is not None and ranked:
+                try:
+                    inl, checked, missing = self._verify(
+                        obv, rev, [a for a, _ in ranked[:VERIFY_K]], swapped, exclude)
+                except Exception as e:
+                    logger.error("Faz D verification failed: %s" % e, exc_info=True)
+                    inl = {}
+            verify_ran = checked > 0 and missing <= checked     # photos available -> result is meaningful
+            verify_ms = int((time.time() - t_ver) * 1000)
+            if verify_ran and inl:
+                tot = {a: io + ia for a, (io, ia) in inl.items()}
+                best = max(tot, key=lambda a: (tot[a], fused[a]))
+                # records sharing the very same photo score identically: they are not rivals
+                same = lambda a: abs(fused[a] - fused[best]) <= TIE_EPS  # noqa: E731
+                rival = max([v for a, v in tot.items() if not same(a)] or [0])
+                if tot[best] >= VERIFIED_MIN or (tot[best] >= VERIFIED_REL_MIN
+                                                 and tot[best] >= VERIFIED_REL_RATIO * max(rival, 1)):
+                    group = [a for a, v in tot.items() if v >= tot[best] / VERIFY_GROUP_RATIO
+                             and (a == best or same(a) or v >= VERIFIED_MIN)]
+                    group.sort(key=lambda a: (tot[a], fused[a]), reverse=True)
+                    verified = {a: tot[a] for a in group}
+                    ranked = [(a, fused[a]) for a in group] + [(a, d) for a, d in ranked if a not in verified]
 
             # ---- Asama 1: collapse an indistinguishable top group ----
             # Candidates within TIE_EPS of the leader cannot be told apart by the image
@@ -369,6 +527,10 @@ class RecognitionService:
             matches = []
             for a, d in ranked:
                 conf = _conf(d)
+                if a in verified:
+                    conf = max(conf, self._verified_conf(verified[a]))
+                elif verify_ran:
+                    conf = min(conf, UNVERIFIED_CAP)
                 if conf < MIN_CONF:
                     break
                 m = self.by_art.get(a, {})
@@ -387,6 +549,9 @@ class RecognitionService:
                     'ocr_score': None,
                     'obverse_score': oc,
                     'reverse_score': rc,
+                    'verified': a in verified,
+                    'inliers_obverse': inl[a][0] if a in inl else None,
+                    'inliers_reverse': inl[a][1] if a in inl else None,
                     'distance': float(d),
                     'image_type': None,
                     'region': m.get('region_code'),
@@ -427,6 +592,9 @@ class RecognitionService:
                 elif len(matches) > 1 and (top - matches[1]['confidence']) < AMBIG_MARGIN and top < AMBIG_TOP:
                     reason = 'ambiguous_match'
 
+            if verify_ran and matches and not verified and reason is None:
+                reason = UNVERIFIED_REASON
+
             quality = {}
             if obv:
                 quality['obverse'] = {'coin_detected': obv['detected'], 'sharpness': obv['sharpness']}
@@ -434,17 +602,22 @@ class RecognitionService:
                 quality['reverse'] = {'coin_detected': rev['detected'], 'sharpness': rev['sharpness']}
 
             end = datetime.utcnow()
-            logger.info("recognize(faz%s): sides=%d top art=%s conf=%.3f reason=%s tie=%d" %
+            logger.info("recognize(faz%s%s): sides=%d top art=%s conf=%.3f reason=%s tie=%d "
+                        "verified=%d top_inl=%s checked=%d missing=%d verify_ms=%d" %
                         ('C' if (obv and rev and FUSION_MODE == 'exact') else 'A',
+                         'D' if verify_ran else '',
                          len(sides), matches[0]['article_id'] if matches else None, top, reason,
-                         len(tied_ids) if is_tied else 0))
+                         len(tied_ids) if is_tied else 0, len(verified),
+                         max(verified.values()) if verified else None, checked, missing, verify_ms))
             return {
                 'matches': matches,
                 'confidence': top,
                 'ambiguous': is_tied,
                 'tie_size': len(tied_ids) if is_tied else 0,
                 'tied_articles': [int(a) for a in tied_ids] if is_tied else [],
-                'method': 'dinov3_sam2_fazABC' if FUSION_MODE == 'exact' else 'dinov3_sam2_fazAB',
+                'method': ('dinov3_sam2_fazABC' if FUSION_MODE == 'exact' else 'dinov3_sam2_fazAB')
+                          + ('D' if verify_ran else ''),
+                'verified': bool(verified),
                 'processing_time_ms': int((end - start).total_seconds() * 1000),
                 'ocr_extracted': None,
                 'no_match': no_match,
