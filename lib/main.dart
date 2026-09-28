@@ -38,8 +38,8 @@ void main() async {
   // Tipografi seti: nb_utils (ProKit) stil varsayılanlarını tek kaynağa bağlar
   initNumistrTypography();
 
-  // Release build'de debug loglarını tamamen sustur
-  if (kReleaseMode) {
+  // Release build'de debug loglarını tamamen sustur (tanı derlemesi hariç: NUMISTR_DIAG)
+  if (kReleaseMode && !const bool.fromEnvironment('NUMISTR_DIAG')) {
     debugPrint = (String? message, {int? wrapWidth}) {};
   }
 

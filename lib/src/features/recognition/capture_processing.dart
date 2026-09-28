@@ -35,7 +35,12 @@ class ProcessedCapture {
   final double sharpness;
   final int side;
 
-  const ProcessedCapture(this.jpeg, this.sharpness, this.side);
+  /// Kırpmadan önceki (yönü uygulanmış) görüntü boyutu — tanı logu için.
+  final int srcWidth;
+  final int srcHeight;
+
+  const ProcessedCapture(this.jpeg, this.sharpness, this.side,
+      {this.srcWidth = 0, this.srcHeight = 0});
 }
 
 /// Görüntüyü çözer, yönünü uygular, ortadan [sideFraction]×genişlik kare kırpar
@@ -56,6 +61,8 @@ ProcessedCapture processCaptureBytes(Uint8List bytes, double sideFraction, {int 
     Uint8List.fromList(img.encodeJpg(crop, quality: 92)),
     laplacianVariance(crop),
     crop.width,
+    srcWidth: im.width,
+    srcHeight: im.height,
   );
 }
 

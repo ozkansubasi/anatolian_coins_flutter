@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nb_utils/nb_utils.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/navigation.dart';
 import '../../l10n/app_localizations.dart';
@@ -233,16 +234,35 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       if (reduced == null) return (path: path, sharpness: null);
       final r =
           await compute(_processCaptureEntry, <Object>[reduced, fraction]);
-      final out = File(
-          '${Directory.systemTemp.path}/coin_${DateTime.now().millisecondsSinceEpoch}.jpg');
+      final stamp = DateTime.now().millisecondsSinceEpoch;
+      final out = File('${Directory.systemTemp.path}/coin_$stamp.jpg');
       await out.writeAsBytes(r.jpeg, flush: true);
       debugPrint(
-          '[Camera] crop fraction=${fraction.toStringAsFixed(3)} side=${r.side} '
+          '[Camera] preview=${ps?.width.toInt()}x${ps?.height.toInt()} box=${_boxSize.width.toInt()}x${_boxSize.height.toInt()} '
+          'src=${await File(path).length()}B reduced=${r.srcWidth}x${r.srcHeight} '
+          'crop fraction=${fraction.toStringAsFixed(3)} side=${r.side} '
           'sharpness=${r.sharpness.toStringAsFixed(1)} zoom=${_zoom.toStringAsFixed(1)}');
+      if (_diagCaptures) await _saveDiagCopies(path, out.path, stamp);
       return (path: out.path, sharpness: r.sharpness);
     } catch (e) {
       debugPrint('[Camera] capture processing failed, using original: $e');
       return (path: path, sharpness: null);
+    }
+  }
+
+  /// Tanı derlemesi (`--dart-define=NUMISTR_DIAG=true`): özgün ve kırpılmış çekim
+  /// uygulamanın dış klasörüne kopyalanır (`adb pull /sdcard/Android/data/<paket>/files/diag`).
+  static const _diagCaptures = bool.fromEnvironment('NUMISTR_DIAG');
+
+  Future<void> _saveDiagCopies(String original, String processed, int stamp) async {
+    try {
+      final base = await getExternalStorageDirectory();
+      if (base == null) return;
+      final dir = await Directory('${base.path}/diag').create(recursive: true);
+      await File(original).copy('${dir.path}/${stamp}_original.jpg');
+      await File(processed).copy('${dir.path}/${stamp}_crop.jpg');
+    } catch (e) {
+      debugPrint('[Camera] diag copy failed: $e');
     }
   }
 
