@@ -100,9 +100,10 @@ QUALITY_CONF = 0.50             # quality reasons only claimed when top conf bel
 #   5770 comparisons (every >=100 "error" was a parent/subtype record sharing the photo).
 #   different coin of the same type (B): not helped (other dies) -> honest confidence instead.
 VERIFY_ENABLED = True
-VERIFY_K = 10                   # top candidates checked; K 8..20 gave the same A/B within 0.7 pt
-                                # (simulated on the 150 pairs), 20 cost ~7 s per two-sided request
-VERIFY_ROWS = 3                 # catalog photos per candidate face, closest to the query first
+VERIFY_K = 20                   # top candidates checked. K=10 was tried (150-pair simulation: same
+                                # A/B) but dropped the user's real case (7337 sat at global rank ~11)
+VERIFY_ROWS = 2                 # catalog photos per candidate face, closest to the query first
+                                # (3 -> 2 for time; the query's own photo is the closest in practice)
 VERIFY_SIZE = 512               # longer image side for SIFT
 VERIFY_FEATURES = 1000
 VERIFY_RATIO = 0.8              # Lowe ratio test
