@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -170,8 +169,9 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
   }
 
   Future<void> _takePicture() async {
-    if (_controller == null || !_controller!.value.isInitialized || _processing)
+    if (_controller == null || !_controller!.value.isInitialized || _processing) {
       return;
+    }
 
     if (_obversePath == null && !await _checkQuota()) return;
 
@@ -769,8 +769,9 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                     onTapUp: (d) => _focusAt(d.localPosition),
                     onScaleStart: (_) => _scaleStartZoom = _zoom,
                     onScaleUpdate: (d) {
-                      if (d.pointerCount >= 2)
+                      if (d.pointerCount >= 2) {
                         _setZoom(_scaleStartZoom * d.scale);
+                      }
                     },
                   ),
                 ),
