@@ -16,6 +16,11 @@ class CoinMatch(BaseModel):
     obverse_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Obverse-side visual score")
     reverse_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Reverse-side visual score")
     image_type: Optional[str] = Field(None, description="Matched image side/type")
+    # Faz D / AI4 (2026-09-29)
+    verified: Optional[bool] = Field(None, description="Local-feature (SIFT/RANSAC) verification passed: same coin/die")
+    inliers_obverse: Optional[int] = Field(None, description="Geometric inliers, obverse photo")
+    inliers_reverse: Optional[int] = Field(None, description="Geometric inliers, reverse photo")
+    basis: Optional[str] = Field(None, description="Photo carrying the candidate: both | obverse | reverse")
     tied_with: Optional[List[int]] = Field(None, description="Article IDs this match is indistinguishable from (identical photograph)")
     distance: Optional[float] = Field(None, description="FAISS L2 distance")
 
@@ -57,6 +62,11 @@ class RecognitionResponse(BaseModel):
     ambiguous: bool = Field(False, description="Top candidates are indistinguishable (same photograph on several catalog records)")
     tie_size: int = Field(0, description="Number of tied top candidates (0 when not ambiguous)")
     tied_articles: List[int] = Field(default_factory=list, description="Article IDs in the tied top group")
+    # Faz D / AI4 (2026-09-29)
+    verified: bool = Field(False, description="The top match passed local-feature verification")
+    near_matches: List[CoinMatch] = Field(default_factory=list,
+                                          description="AI4: closest candidates when no match reached MIN_CONF "
+                                                      "(never mixed into `matches`)")
     no_match: bool = Field(False, description="True when no confident match was found")
     no_match_reason: Optional[str] = Field(None, description="no_coin_detected | low_detail_surface | below_confidence | ambiguous_match | service_unavailable")
     quality: Optional[Dict[str, Any]] = Field(None, description="Per-side input quality metrics")

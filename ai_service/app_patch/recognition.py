@@ -136,6 +136,16 @@ VERIFIED_CONF_LO, VERIFIED_CONF_HI, VERIFIED_INL_HI = 0.85, 1.0, 600
 VERIFIED_REL_CONF = 0.80        # confidence when verified only by the relative rule
 UNVERIFIED_CAP = 0.60           # ceiling when nothing verified (app: yellow band, above its 0.4 filter)
 UNVERIFIED_REASON = 'ambiguous_match'   # app shows "best match may not be certain"
+
+# ---- AI4 (2026-09-29): near candidates when nothing matches reliably ----
+# When the two faces fused stay below MIN_CONF the answer used to be an empty list ("no reliable
+# match") even if one face matched well (real coin 2026-09-28: obverse 0.91-0.93 vs Ephesus
+# denarii, reverse spoilt by glare). The closest candidates now come back SEPARATELY as
+# `near_matches` (never inside `matches`, so older apps behave exactly as before), each with the
+# face that carries it: 'basis' both | obverse | reverse.
+NEAR_N = 5
+NEAR_MIN_CONF = 0.10            # below this even a "near" candidate is noise
+BASIS_GAP = 0.30                # face-confidence gap that makes one face the basis
 IMG_DIR = "/app/index/images"   # hardlinks of /opt/ai_service/data/training/train/images (same fs)
 
 # ---- Faz B: optional collector-provided attributes (metal / weight / diameter) ----
@@ -558,23 +568,26 @@ class RecognitionService:
             # belongs to can be pushed past TOP_N by its own duplicates (measured).
             limit = min(max(TOP_N, len(tied_ids)), TIE_MAX_SHOW) if is_tied else TOP_N
 
-            matches = []
-            for a, d in ranked:
-                conf = _conf(d)
-                if a in verified:
-                    conf = max(conf, self._verified_conf(verified[a]))
-                elif verify_ran:
-                    conf = min(conf, UNVERIFIED_CAP)
-                if conf < MIN_CONF:
-                    break
+            def _basis(oc, rc):
+                """Which photo carries the candidate (AI4): a face well ahead of the other."""
+                if rc is None:
+                    return 'obverse'
+                if oc is None:
+                    return 'reverse'
+                if oc - rc >= BASIS_GAP:
+                    return 'obverse'
+                if rc - oc >= BASIS_GAP:
+                    return 'reverse'
+                return 'both'
+
+            def _entry(a, d, conf, rank, in_tie):
                 m = self.by_art.get(a, {})
                 oc = _conf(obv_best[a]) if a in obv_best else None
                 rc = _conf(rev_best[a]) if a in rev_best else None
                 # While tied, confidence states how sure we are of the IDENTIFICATION,
                 # not of the visual match; visual_score keeps the unmodified value.
-                in_tie = a in tied_set
-                matches.append({
-                    'rank': len(matches) + 1,
+                return {
+                    'rank': rank,
                     'article_id': int(a),
                     'title': m.get('title_tr') or m.get('title_en') or 'Unknown',
                     'confidence': min(conf, TIE_CONF_CAP) if in_tie else conf,
@@ -583,6 +596,7 @@ class RecognitionService:
                     'ocr_score': None,
                     'obverse_score': oc,
                     'reverse_score': rc,
+                    'basis': _basis(oc, rc),
                     'verified': a in verified,
                     'inliers_obverse': inl[a][0] if a in inl else None,
                     'inliers_reverse': inl[a][1] if a in inl else None,
@@ -594,7 +608,18 @@ class RecognitionService:
                     'material': m.get('material'),
                     'date_from': _int(m.get('date_from')),
                     'date_to': _int(m.get('date_to')),
-                })
+                }
+
+            matches = []
+            for a, d in ranked:
+                conf = _conf(d)
+                if a in verified:
+                    conf = max(conf, self._verified_conf(verified[a]))
+                elif verify_ran:
+                    conf = min(conf, UNVERIFIED_CAP)
+                if conf < MIN_CONF:
+                    break
+                matches.append(_entry(a, d, conf, len(matches) + 1, a in tied_set))
                 if len(matches) >= limit:
                     break
 
@@ -629,6 +654,15 @@ class RecognitionService:
             if verify_ran and matches and not verified and reason is None:
                 reason = UNVERIFIED_REASON
 
+            # AI4: nothing reached MIN_CONF -> still offer the closest candidates, separately
+            near = []
+            if no_match and reason != 'no_coin_detected':
+                for a, d in ranked[:NEAR_N]:
+                    conf = min(_conf(d), UNVERIFIED_CAP)
+                    if conf < NEAR_MIN_CONF:
+                        break
+                    near.append(_entry(a, d, conf, len(near) + 1, False))
+
             quality = {}
             if obv:
                 quality['obverse'] = {'coin_detected': obv['detected'], 'sharpness': obv['sharpness']}
@@ -637,12 +671,13 @@ class RecognitionService:
 
             end = datetime.utcnow()
             logger.info("recognize(faz%s%s): sides=%d top art=%s conf=%.3f reason=%s tie=%d "
-                        "verified=%d top_inl=%s checked=%d missing=%d verify_ms=%d" %
+                        "verified=%d top_inl=%s checked=%d missing=%d verify_ms=%d near=%d" %
                         ('C' if (obv and rev and FUSION_MODE == 'exact') else 'A',
                          'D' if verify_ran else '',
                          len(sides), matches[0]['article_id'] if matches else None, top, reason,
                          len(tied_ids) if is_tied else 0, len(verified),
-                         max(verified.values()) if verified else None, checked, missing, verify_ms))
+                         max(verified.values()) if verified else None, checked, missing, verify_ms,
+                         len(near)))
             return {
                 'matches': matches,
                 'confidence': top,
@@ -652,6 +687,7 @@ class RecognitionService:
                 'method': ('dinov3_sam2_fazABC' if FUSION_MODE == 'exact' else 'dinov3_sam2_fazAB')
                           + ('D' if verify_ran else '') + ('E' if self.proj is not None else ''),
                 'verified': bool(verified),
+                'near_matches': near,
                 'processing_time_ms': int((end - start).total_seconds() * 1000),
                 'ocr_extracted': None,
                 'no_match': no_match,
