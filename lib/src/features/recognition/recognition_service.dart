@@ -286,6 +286,13 @@ class RecognitionResponse {
   /// Yuz basina girdi kalitesi: {'obverse': {'coin_detected': bool, 'sharpness': num}, ...}
   final Map<String, dynamic>? quality;
 
+  /// Faz D (2026-09-29): ilk eşleşme yerel özellik doğrulamasından geçti (aynı sikke/kalıp).
+  /// null = sunucu bu alanı göndermiyor (eklenti < 1.16.5) → eski davranış.
+  final bool? verified;
+
+  /// AI4: hiçbir aday güven eşiğine ulaşmadığında sunucunun ayrıca verdiği en yakın adaylar.
+  final List<CoinMatch> nearMatches;
+
   RecognitionResponse({
     required this.matches,
     this.quota,
@@ -295,6 +302,8 @@ class RecognitionResponse {
     this.noMatch = false,
     this.noMatchReason,
     this.quality,
+    this.verified,
+    this.nearMatches = const [],
   });
 
   /// Convenience getter for remaining scans (backward compatibility)
@@ -324,6 +333,11 @@ class RecognitionResponse {
       noMatch: data['no_match'] as bool? ?? matches.isEmpty,
       noMatchReason: data['no_match_reason'] as String?,
       quality: data['quality'] as Map<String, dynamic>?,
+      verified: data.containsKey('verified') ? data['verified'] == true : null,
+      nearMatches: (data['near_matches'] as List<dynamic>? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(CoinMatch.fromJson)
+          .toList(),
     );
   }
 }
@@ -348,6 +362,12 @@ class CoinMatch {
   final double? obverseScore;
   final double? reverseScore;
 
+  /// Faz D: yerel özellik doğrulamasından geçti (aynı sikke/kalıp).
+  final bool verified;
+
+  /// AI4: adayı taşıyan fotoğraf — both | obverse | reverse (tek yüz eşleşmesinde uyarı için).
+  final String? basis;
+
   CoinMatch({
     required this.articleId,
     required this.title,
@@ -361,6 +381,8 @@ class CoinMatch {
     this.explanation,
     this.obverseScore,
     this.reverseScore,
+    this.verified = false,
+    this.basis,
   });
 
   factory CoinMatch.fromJson(Map<String, dynamic> json) {
@@ -389,6 +411,8 @@ class CoinMatch {
       explanation: json['explanation'] as String?,
       obverseScore: (json['obverse_score'] as num?)?.toDouble(),
       reverseScore: (json['reverse_score'] as num?)?.toDouble(),
+      verified: json['verified'] == true,
+      basis: json['basis'] as String?,
     );
   }
 
@@ -408,6 +432,8 @@ class CoinMatch {
         'explanation': explanation,
         'obverse_score': obverseScore,
         'reverse_score': reverseScore,
+        'verified': verified,
+        'basis': basis,
       };
 }
 

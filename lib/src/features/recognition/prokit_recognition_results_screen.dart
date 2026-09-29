@@ -232,7 +232,14 @@ class _ProkitRecognitionResultsScreenState
     final filterRegion = ref.watch(recognitionFilterRegionProvider);
     final filterMaterial = ref.watch(recognitionFilterMaterialProvider);
 
-    var matches = results.matches.where((m) => m.confidence >= confidenceThreshold).toList();
+    // AI4 (2026-09-29): sunucu doğrulamayı bildiriyorsa yalnız doğrulanmış eşleşme "eşleşme"dir.
+    // Doğrulanmamış (ya da eşik altı) adaylar "kesin eşleşme yok — en yakın adaylar" olarak ve
+    // kullanıcı eşiği UYGULANMADAN gösterilir: eşik onları gizleyip yalnız "sonuç yok" diyordu.
+    // verified == null (eklenti < 1.16.5) → eski davranış.
+    final uncertain = results.verified == false;
+    var matches = uncertain
+        ? (results.matches.isNotEmpty ? results.matches : results.nearMatches).toList()
+        : results.matches.where((m) => m.confidence >= confidenceThreshold).toList();
     if (filterRegion != null) {
       matches = matches
           .where((m) => m.region?.toLowerCase() == filterRegion.toLowerCase())
@@ -249,7 +256,7 @@ class _ProkitRecognitionResultsScreenState
 
     final t = context.numText;
     final c = context.numColors;
-    final isAmbiguous = results.noMatchReason == 'ambiguous_match';
+    final isAmbiguous = !uncertain && results.noMatchReason == 'ambiguous_match';
     final others = matches.skip(1).toList();
 
     return Column(
@@ -262,9 +269,55 @@ class _ProkitRecognitionResultsScreenState
                 obverse: _obverseFile,
                 reverse: _reverseFile,
                 label: l10n.translate('scanned_coin'),
-                summary: l10n.translate('possible_matches', params: {'n': '${matches.length}'}),
+                summary: l10n.translate(uncertain ? 'near_candidates_count' : 'possible_matches',
+                    params: {'n': '${matches.length}'}),
               ),
               const SizedBox(height: 16),
+
+              if (uncertain) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: numWarning.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.help_outline, color: numWarning, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l10n.translate('no_certain_match'), style: t.value.copyWith(color: c.text)),
+                            const SizedBox(height: 4),
+                            Text(l10n.translate('near_candidates_desc'),
+                                style: t.caption.copyWith(color: c.text)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(l10n.translate('near_candidates'), style: t.section),
+                const SizedBox(height: 10),
+                Container(
+                  decoration: BoxDecoration(
+                    color: c.card,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: c.border),
+                  ),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < matches.length; i++)
+                        _CandidateRow(
+                            match: matches[i], l10n: l10n, last: i == matches.length - 1, showBasis: true),
+                    ],
+                  ),
+                ),
+              ],
 
               if (isAmbiguous) ...[
                 Container(
@@ -288,11 +341,13 @@ class _ProkitRecognitionResultsScreenState
                 const SizedBox(height: 16),
               ],
 
-              Text(l10n.translate('closest_match'), style: t.tag),
-              const SizedBox(height: 8),
-              _TopMatchCard(match: matches.first, l10n: l10n),
+              if (!uncertain) ...[
+                Text(l10n.translate('closest_match'), style: t.tag),
+                const SizedBox(height: 8),
+                _TopMatchCard(match: matches.first, l10n: l10n),
+              ],
 
-              if (others.isNotEmpty) ...[
+              if (!uncertain && others.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 Text(l10n.translate('other_candidates'), style: t.section),
                 const SizedBox(height: 10),
@@ -559,6 +614,16 @@ class _TopMatchCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 14),
+              if (match.verified) ...[
+                Row(
+                  children: [
+                    Icon(Icons.verified, color: c.accent, size: 18),
+                    const SizedBox(width: 6),
+                    Text(l10n.translate('match_verified'), style: t.value.copyWith(color: c.accent)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
               _Similarity(value: match.confidence, label: l10n.translate('similarity')),
               if (faces.isNotEmpty) ...[
                 const SizedBox(height: 6),
@@ -587,7 +652,10 @@ class _CandidateRow extends StatelessWidget {
   final CoinMatch match;
   final AppLocalizations l10n;
   final bool last;
-  const _CandidateRow({required this.match, required this.l10n, required this.last});
+
+  /// AI4: tek yüze dayanan yakın adayda "yalnız ön/arka yüz fotoğrafına göre" notu.
+  final bool showBasis;
+  const _CandidateRow({required this.match, required this.l10n, required this.last, this.showBasis = false});
 
   @override
   Widget build(BuildContext context) {
@@ -613,6 +681,11 @@ class _CandidateRow extends StatelessWidget {
                   if (meta.isNotEmpty) ...[
                     const SizedBox(height: 3),
                     Text(meta, style: t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                  if (showBasis && (match.basis == 'obverse' || match.basis == 'reverse')) ...[
+                    const SizedBox(height: 3),
+                    Text(l10n.translate('basis_${match.basis}'),
+                        style: t.caption.copyWith(color: numWarning), maxLines: 1, overflow: TextOverflow.ellipsis),
                   ],
                 ],
               ),
