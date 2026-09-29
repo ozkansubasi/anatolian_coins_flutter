@@ -34,6 +34,15 @@ Faz D (2026-09-29) — local-feature verification:
   answer is flagged as uncertain instead of claiming a match (Faz C: 57% confident-but-wrong
   on different coins of the same type). VERIFY_ENABLED = False restores Faz C.
 
+Faz E (2026-09-29, AI1 — ADAY, canlı değil) — coin-tuned embedding space:
+- The stock DINOv3 vector carries lighting, patina, background and photo style as much as type
+  identity. A linear map W learned on the catalog's own multi-specimen types (supervised
+  contrastive, eval query photos held out) re-weights it toward type identity; optionally a
+  fine-tuned encoder (ENCODER_CKPT). Index vectors are E·W (normalised), queries q·W.
+- Confidence mapping DIST_LO/HI is re-calibrated by percentile matching to the old scale, and the
+  cosine-unit constants (TIE_EPS, attribute bonuses) are scaled by EMB_SCALE. PROJ_PATH = None and
+  ENCODER_CKPT = None restore Faz D exactly.
+
 Interface (constructor, recognize(), response dict) stays backward compatible;
 new response keys are additive. Index paths hardcoded so a simple `docker
 restart` (no recreate) preserves pip installs + model caches.
@@ -58,10 +67,17 @@ cv2.setNumThreads(1)            # Faz D: parallelism comes from the verification
 
 IMN = np.array([0.485, 0.456, 0.406], np.float32)
 IST = np.array([0.229, 0.224, 0.225], np.float32)
-INDEX_PATH = "/app/index/coins_dinov3_base.index"
 META_PATH = "/app/index/metadata_dinov3.json"
 
-DIST_LO, DIST_HI = 0.85, 0.98   # cosine -> confidence rescale (unchanged from Faz 2)
+# ---- Faz E: embedding space (AI1) ----
+# Measured on Mac (scripts/ai1/, 150 pairs, pipeline identical to production: cos 1.00000):
+#   different coin of same type (B) degraded @5 32.0% -> 53.3%, clean @5 44.7% -> 72.0%;
+#   same photo degraded (A) @1 84.0% -> 92.0%; eval types fully held out: B deg @5 50-55%.
+PROJ_PATH = "/app/index/proj_W_ft1p.npy"      # None -> stock DINOv3 space (Faz D)
+ENCODER_CKPT = "/app/models/encoder_ft1_ep5.pt"   # fine-tuned (last 4 blocks, SupCon + phone-like aug)
+INDEX_PATH = "/app/index/coins_dinov3_ft1p.index" if PROJ_PATH else "/app/index/coins_dinov3_base.index"
+EMB_SCALE = 4.762                             # new ~= 4.762 * old - 3.8033 (percentile map, calib_ft1_ep5.json)
+DIST_LO, DIST_HI = (0.2442, 0.8632) if PROJ_PATH else (0.85, 0.98)   # cosine -> confidence
 SEARCH_K = 200                  # raw FAISS hits per side before article dedup (Faz C: 60 -> 200)
 FUSION_MODE = 'exact'           # 'exact' (Faz C) | 'legacy' (Faz A: missing side skipped)
 TOP_N = 5                       # max results returned (fewer is fine)
@@ -86,7 +102,7 @@ AMBIG_TOP = 0.50                # ambiguity only flagged when top1 below this
 # near-duplicates that a byte hash cannot see), largest caught gap 0.000273. Clean: smallest gap
 # 0.002138, p1 0.005450. 0.001 sits in the empty band between the two -> 88.3% of collisions
 # caught, 0/120 false positives on clean records.
-TIE_EPS = 0.001                 # fused-distance gap below which candidates are indistinguishable
+TIE_EPS = 0.001 * (EMB_SCALE if PROJ_PATH else 1.0)   # fused gap below which candidates are indistinguishable
 TIE_CONF_CAP = 0.60             # confidence ceiling while tied (app: yellow band, above the 0.4 filter)
 TIE_MIN = 2                     # this many tied candidates before ambiguity is declared
 TIE_MAX_SHOW = 10               # a tied group is returned whole, up to this ceiling
@@ -124,11 +140,12 @@ IMG_DIR = "/app/index/images"   # hardlinks of /opt/ai_service/data/training/tra
 
 # ---- Faz B: optional collector-provided attributes (metal / weight / diameter) ----
 # Small cosine bonus/penalty so attributes re-rank near-ties without overpowering vision.
-ATTR_METAL_BONUS, ATTR_METAL_PENALTY = 0.010, -0.015
+_S = EMB_SCALE if PROJ_PATH else 1.0          # Faz E: bonuses are in cosine units -> rescale
+ATTR_METAL_BONUS, ATTR_METAL_PENALTY = 0.010 * _S, -0.015 * _S
 ATTR_W_TOL, ATTR_W_FAR = 0.12, 0.30          # relative weight tolerance / far bound
-ATTR_W_BONUS, ATTR_W_PENALTY = 0.010, -0.012
+ATTR_W_BONUS, ATTR_W_PENALTY = 0.010 * _S, -0.012 * _S
 ATTR_D_TOL, ATTR_D_FAR = 0.08, 0.25          # relative diameter tolerance / far bound
-ATTR_D_BONUS, ATTR_D_PENALTY = 0.008, -0.010
+ATTR_D_BONUS, ATTR_D_PENALTY = 0.008 * _S, -0.010 * _S
 METAL_ALIASES = {
     'gumus': 'silver', 'gümüş': 'silver', 'ag': 'silver', 'ar': 'silver', 'silver': 'silver',
     'bronz': 'copper', 'bronze': 'copper', 'ae': 'copper', 'bakir': 'copper', 'bakır': 'copper', 'copper': 'copper',
@@ -157,6 +174,7 @@ class RecognitionService:
         self.rows_by_face = {}
         self._tl = threading.local()
         self._pool = ThreadPoolExecutor(VERIFY_WORKERS) if VERIFY_ENABLED else None
+        self.proj = None
         try:
             torch.set_num_threads(4)
             import timm
@@ -164,8 +182,16 @@ class RecognitionService:
             self.encoder = timm.create_model(
                 "vit_base_patch16_dinov3", pretrained=True, num_classes=0,
                 dynamic_img_size=True).eval()
+            if ENCODER_CKPT:
+                sd = torch.load(ENCODER_CKPT, map_location="cpu")
+                # strict: a mismatched checkpoint must fail loudly, never fall back to stock weights
+                self.encoder.load_state_dict(sd.get("encoder", sd), strict=True)
+                logger.info("Faz E: fine-tuned encoder %s (epoch %s)" % (ENCODER_CKPT, sd.get("epoch")))
             for p in self.encoder.parameters():
                 p.requires_grad = False
+            if PROJ_PATH:
+                self.proj = np.load(PROJ_PATH).astype(np.float32)
+                logger.info("Faz E: projection %s %s" % (PROJ_PATH, self.proj.shape))
             logger.info("Loading SAM2 segmenter...")
             from ultralytics import SAM
             self.sam = SAM("sam2_t.pt")
@@ -240,7 +266,11 @@ class RecognitionService:
         x = torch.from_numpy(np.transpose((im - IMN) / IST, (2, 0, 1))[None].astype(np.float32))
         with torch.no_grad():
             f = self.encoder(x).numpy().ravel()
-        return (f / (np.linalg.norm(f) + 1e-9)).astype(np.float32)
+        f = f / (np.linalg.norm(f) + 1e-9)
+        if self.proj is not None:                 # Faz E: coin-tuned space (index holds E·W too)
+            f = f @ self.proj
+            f = f / (np.linalg.norm(f) + 1e-9)
+        return f.astype(np.float32)
 
     def _side(self, image_bytes: bytes):
         """bytes -> {'embs': [raw, seg?], 'detected', 'sharpness'} or None.
@@ -620,7 +650,7 @@ class RecognitionService:
                 'tie_size': len(tied_ids) if is_tied else 0,
                 'tied_articles': [int(a) for a in tied_ids] if is_tied else [],
                 'method': ('dinov3_sam2_fazABC' if FUSION_MODE == 'exact' else 'dinov3_sam2_fazAB')
-                          + ('D' if verify_ran else ''),
+                          + ('D' if verify_ran else '') + ('E' if self.proj is not None else ''),
                 'verified': bool(verified),
                 'processing_time_ms': int((end - start).total_seconds() * 1000),
                 'ocr_extracted': None,
