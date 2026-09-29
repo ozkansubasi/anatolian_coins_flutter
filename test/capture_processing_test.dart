@@ -59,4 +59,55 @@ void main() {
     expect(out.width, 1200);
     expect(out.height, 1200);
   });
+  // Önizlemede 15°'lik döndürme (2026-09-28 kullanıcı isteği): yön Transform.rotate ile aynı
+  // (pozitif = saat yönü), boyut korunur, köşe boşluğu kenar rengiyle dolar.
+  img.Image markerImage() {
+    final im = img.Image(width: 300, height: 300);
+    img.fill(im, color: img.ColorRgb8(120, 120, 120));
+    img.fillRect(im, x1: 140, y1: 10, x2: 160, y2: 60, color: img.ColorRgb8(255, 0, 0)); // üst-orta
+    return im;
+  }
+
+  ({double x, double y}) redCentroid(img.Image im) {
+    var sx = 0.0, sy = 0.0, n = 0;
+    for (final p in im) {
+      if (p.r > 180 && p.g < 90 && p.b < 90) {
+        sx += p.x;
+        sy += p.y;
+        n++;
+      }
+    }
+    return (x: sx / n, y: sy / n);
+  }
+
+  test('rotateImageBytes: +45° saat yönü — üstteki işaret sağa kayar, boyut korunur', () {
+    final bytes = Uint8List.fromList(img.encodeJpg(markerImage(), quality: 100));
+    final out = img.decodeJpg(rotateImageBytes(bytes, 45))!;
+    expect(out.width, 300);
+    expect(out.height, 300);
+    final c = redCentroid(out);
+    expect(c.x, greaterThan(170)); // merkezin (150) sağında
+    expect(c.y, lessThan(120)); // hâlâ üst yarıda
+  });
+
+  test('rotateImageBytes: -15° saat yönünün tersi — işaret sola kayar', () {
+    final bytes = Uint8List.fromList(img.encodeJpg(markerImage(), quality: 100));
+    final c = redCentroid(img.decodeJpg(rotateImageBytes(bytes, -15))!);
+    expect(c.x, lessThan(145));
+  });
+
+  test('rotateImageBytes: köşeler siyah değil, kenar rengiyle dolu', () {
+    final bytes = Uint8List.fromList(img.encodeJpg(markerImage(), quality: 100));
+    final out = img.decodeJpg(rotateImageBytes(bytes, 30))!;
+    final corner = out.getPixel(2, 2);
+    expect(corner.r, inInclusiveRange(100, 140));
+    expect(corner.g, inInclusiveRange(100, 140));
+  });
+
+  test('rotateImageBytes: 0° dokunmaz (boyut aynı)', () {
+    final bytes = Uint8List.fromList(img.encodeJpg(markerImage(), quality: 100));
+    final out = img.decodeJpg(rotateImageBytes(bytes, 360))!;
+    expect(out.width, 300);
+    expect(redCentroid(out).x, closeTo(150, 3));
+  });
 }

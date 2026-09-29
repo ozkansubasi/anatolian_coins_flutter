@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,10 @@ import 'package:path/path.dart' as path;
 import 'package:nb_utils/nb_utils.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import 'capture_processing.dart';
+
+Uint8List _rotateEntry(List<Object> args) =>
+    rotateImageBytes(args[0] as Uint8List, args[1] as double);
 
 /// ProKit-styled preview screen for captured/selected image(s)
 /// Modern card-based layout with gradient accents
@@ -77,15 +82,22 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
     }
   }
 
-  Future<void> _rotateObverse() async {
-    setState(() {
-      _obverseRotation = (_obverseRotation + 90) % 360;
-    });
-  }
+  /// Döndürme adımı: sikkeyi dik hizalamak için 90° kaba kalıyordu (kullanıcı, 2026-09-28).
+  static const double _rotateStep = 15;
 
-  Future<void> _rotateReverse() async {
+  /// Açı (-180, 180] aralığında tutulur; gösterge "-15°" gibi okunur.
+  void _rotate(int tab, double delta) {
+    double norm(double a) {
+      final m = (a + delta) % 360;
+      return m > 180 ? m - 360 : m;
+    }
+
     setState(() {
-      _reverseRotation = (_reverseRotation + 90) % 360;
+      if (tab == 0) {
+        _obverseRotation = norm(_obverseRotation);
+      } else {
+        _reverseRotation = norm(_reverseRotation);
+      }
     });
   }
 
@@ -97,13 +109,20 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
         'compressed_${suffix}_${DateTime.now().millisecondsSinceEpoch}.jpg',
       );
 
-      final compressRotation = ((rotation / 90).round() * 90) % 360;
+      // FlutterImageCompress yalnız 90'ın katlarını döndürür; 15°'lik adımlar için görüntü
+      // önce isolate'te döndürülür (yön önizlemedeki Transform.rotate ile aynı).
+      var source = imageFile.absolute.path;
+      final turn = rotation % 360;
+      if (turn != 0) {
+        final rotated = await compute(_rotateEntry, <Object>[await imageFile.readAsBytes(), turn]);
+        source = path.join(dir.path, 'rotated_${suffix}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+        await File(source).writeAsBytes(rotated, flush: true);
+      }
 
       final result = await FlutterImageCompress.compressAndGetFile(
-        imageFile.absolute.path,
+        source,
         targetPath,
         quality: 85,
-        rotate: compressRotation,
         minWidth: 800,
         minHeight: 800,
       );
@@ -315,14 +334,14 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
           file: _obverseFile!,
           rotation: _obverseRotation,
           label: l10n.translate('obverse'),
-          onRotate: _rotateObverse,
+          onRotateBy: (d) => _rotate(0, d),
           rotateText: l10n.translate('rotate'),
         ),
         _buildImageCard(
           file: _reverseFile!,
           rotation: _reverseRotation,
           label: l10n.translate('reverse'),
-          onRotate: _rotateReverse,
+          onRotateBy: (d) => _rotate(1, d),
           rotateText: l10n.translate('rotate'),
         ),
       ],
@@ -334,7 +353,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
       file: _obverseFile!,
       rotation: _obverseRotation,
       label: l10n.translate('obverse'),
-      onRotate: _rotateObverse,
+      onRotateBy: (d) => _rotate(0, d),
       rotateText: l10n.translate('rotate'),
     );
   }
@@ -343,7 +362,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
     required File file,
     required double rotation,
     required String label,
-    required VoidCallback onRotate,
+    required void Function(double delta) onRotateBy,
     required String rotateText,
   }) {
     return Container(
@@ -461,24 +480,12 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
                 16.width,
                 _buildRotateButton(
                   icon: Icons.rotate_left,
-                  onTap: _isProcessing
-                      ? null
-                      : () {
-                          if (_selectedTab == 0) {
-                            setState(() {
-                              _obverseRotation = (_obverseRotation - 90) % 360;
-                            });
-                          } else {
-                            setState(() {
-                              _reverseRotation = (_reverseRotation - 90) % 360;
-                            });
-                          }
-                        },
+                  onTap: _isProcessing ? null : () => onRotateBy(-_rotateStep),
                 ),
                 12.width,
                 _buildRotateButton(
                   icon: Icons.rotate_right,
-                  onTap: _isProcessing ? null : onRotate,
+                  onTap: _isProcessing ? null : () => onRotateBy(_rotateStep),
                 ),
               ],
             ),

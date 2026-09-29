@@ -66,6 +66,51 @@ ProcessedCapture processCaptureBytes(Uint8List bytes, double sideFraction, {int 
   );
 }
 
+/// Görüntüyü [degrees] kadar SAAT YÖNÜNDE döndürür (önizlemedeki `Transform.rotate` ile aynı
+/// yön), özgün boyuta ortadan kırpar; köşelerde açılan boşluk kenarların ortalama rengiyle
+/// doldurulur (siyah köşe sunucudaki sikke bölütlemesini ve ham-kare gömmesini şaşırtmasın).
+/// Önizlemede 15°'lik adımlarla hizalanan sikke sunucuya hizalı gider. `compute` ile çağrılır.
+Uint8List rotateImageBytes(Uint8List bytes, double degrees, {int quality = 92}) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) throw const FormatException('image decode failed');
+  final src = img.bakeOrientation(decoded);
+  final d = degrees % 360;
+  if (d == 0) return Uint8List.fromList(img.encodeJpg(src, quality: quality));
+  final w = src.width;
+  final h = src.height;
+  final rot = img.copyRotate(src.convert(numChannels: 4),
+      angle: d, interpolation: img.Interpolation.linear);
+  final cropped = img.copyCrop(rot,
+      x: ((rot.width - w) / 2).round(), y: ((rot.height - h) / 2).round(), width: w, height: h);
+  final canvas = img.Image(width: w, height: h);
+  img.fill(canvas, color: _borderMean(src));
+  img.compositeImage(canvas, cropped);
+  return Uint8List.fromList(img.encodeJpg(canvas, quality: quality));
+}
+
+img.Color _borderMean(img.Image im) {
+  var r = 0.0, g = 0.0, b = 0.0, n = 0;
+  void add(int x, int y) {
+    final p = im.getPixel(x, y);
+    r += p.r;
+    g += p.g;
+    b += p.b;
+    n++;
+  }
+
+  final stepX = math.max(1, im.width ~/ 64);
+  final stepY = math.max(1, im.height ~/ 64);
+  for (var x = 0; x < im.width; x += stepX) {
+    add(x, 0);
+    add(x, im.height - 1);
+  }
+  for (var y = 0; y < im.height; y += stepY) {
+    add(0, y);
+    add(im.width - 1, y);
+  }
+  return img.ColorRgb8((r / n).round(), (g / n).round(), (b / n).round());
+}
+
 /// Netlik ölçüsü: gri görüntünün Laplace (4 komşu) yanıtının varyansı. Bulanık görüntüde
 /// kenarlar yumuşar, yanıt ve varyansı düşer. Ölçek etkisini sabitlemek için 400 px'e indirgenir.
 double laplacianVariance(img.Image src) {
