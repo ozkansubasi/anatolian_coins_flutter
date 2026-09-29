@@ -773,7 +773,9 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                   FallbackImage(
                     url: img.url,
                     remoteUrl: img.remoteUrl,
-                    fit: BoxFit.cover,
+                    // `detay` görselleri çoğu kez iki yüzü yan yana gösteren geniş kareler: `cover` onları
+                    // ortadan kırpıp iki yarım sikke bırakıyordu (kullanıcı, 2026-09-29) → tamamı sığsın.
+                    fit: img.type == 'detay' ? BoxFit.contain : BoxFit.cover,
                     errorWidget: const CoinImagePlaceholder(compact: true),
                   ),
                   if (img.weight != null || img.diameter != null)
