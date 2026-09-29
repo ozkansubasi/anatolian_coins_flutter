@@ -11,6 +11,10 @@
 	<uses-permission android:name="android.permission.CAMERA"/>
 	<uses-feature android:name="android.hardware.camera" android:required="false"/>
 	<uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
+	<!-- camera_android_camerax, camera.any'yi zorunlu bildiriyor: kamerasız 117 cihaz (tablet/Chromebook)
+	     Play'de dışlanıyordu. Katalog kamerasız da kullanılır → isteğe bağlı (2026-09-29). -->
+	<uses-feature android:name="android.hardware.camera.any" android:required="false"
+		tools:replace="android:required"/>
 
     <!-- Android 11+ browser intent requirement -->
     <queries>
