@@ -553,7 +553,6 @@
   "closest_match": "En yakın eşleşme",
   "other_candidates": "Diğer olasılıklar",
   "no_certain_match": "Kesin eşleşme bulunamadı",
-  "near_candidates_desc": "Fotoğraf katalogdaki hiçbir sikkeyle kesin olarak doğrulanamadı. Aşağıdakiler görünüşü en çok benzeyen adaylar; sikke sayfalarındaki ayrıntılarla karşılaştırın.",
   "near_candidates": "En yakın adaylar",
   "near_candidates_count": "{n} yakın aday",
   "basis_obverse": "Yalnız ön yüz fotoğrafına göre",

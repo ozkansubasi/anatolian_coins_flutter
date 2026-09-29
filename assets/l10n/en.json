@@ -553,7 +553,6 @@
   "closest_match": "Closest match",
   "other_candidates": "Other candidates",
   "no_certain_match": "No certain match found",
-  "near_candidates_desc": "The photo could not be verified against any coin in the catalogue. These are the closest-looking candidates; compare them with the details on each coin page.",
   "near_candidates": "Closest candidates",
   "near_candidates_count": "{n} close candidates",
   "basis_obverse": "Based on the obverse photo only",

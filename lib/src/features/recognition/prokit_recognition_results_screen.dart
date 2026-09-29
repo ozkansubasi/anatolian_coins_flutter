@@ -281,21 +281,14 @@ class _ProkitRecognitionResultsScreenState
                     color: numWarning.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  // Yalnız başlık (kullanıcı 2026-09-29: açıklama gereksiz uzundu; altındaki
+                  // "En yakın adaylar" başlığı ve liste yeterince anlatıyor).
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Icon(Icons.help_outline, color: numWarning, size: 20),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(l10n.translate('no_certain_match'), style: t.value.copyWith(color: c.text)),
-                            const SizedBox(height: 4),
-                            Text(l10n.translate('near_candidates_desc'),
-                                style: t.caption.copyWith(color: c.text)),
-                          ],
-                        ),
+                        child: Text(l10n.translate('no_certain_match'), style: t.value.copyWith(color: c.text)),
                       ),
                     ],
                   ),
@@ -313,7 +306,11 @@ class _ProkitRecognitionResultsScreenState
                     children: [
                       for (var i = 0; i < matches.length; i++)
                         _CandidateRow(
-                            match: matches[i], l10n: l10n, last: i == matches.length - 1, showBasis: true),
+                            match: matches[i],
+                            l10n: l10n,
+                            last: i == matches.length - 1,
+                            showBasis: true,
+                            showScore: false),
                     ],
                   ),
                 ),
@@ -655,7 +652,13 @@ class _CandidateRow extends StatelessWidget {
 
   /// AI4: tek yüze dayanan yakın adayda "yalnız ön/arka yüz fotoğrafına göre" notu.
   final bool showBasis;
-  const _CandidateRow({required this.match, required this.l10n, required this.last, this.showBasis = false});
+
+  /// Doğrulanmamış adayda yüzde + çubuk GÖSTERİLMEZ (2026-09-29): sayı görsel benzerlik değil,
+  /// katalog fotoğrafının kendisine göre ölçeklenmiş güven — aynı tipin başka örneği %30–60'ta kalır.
+  /// Gözle %80–90 benzeyen sikkede "%33" yanıltıyordu ve kullanıcı eşiğiyle (ör. %65) çelişiyordu.
+  final bool showScore;
+  const _CandidateRow(
+      {required this.match, required this.l10n, required this.last, this.showBasis = false, this.showScore = true});
 
   @override
   Widget build(BuildContext context) {
@@ -690,8 +693,13 @@ class _CandidateRow extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            _Similarity(value: match.confidence, label: '', compact: true),
+            if (showScore) ...[
+              const SizedBox(width: 12),
+              _Similarity(value: match.confidence, label: '', compact: true),
+            ] else ...[
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right, color: c.textMuted, size: 20),
+            ],
           ],
         ),
       ),
