@@ -34,7 +34,10 @@ Faz D (2026-09-29) — local-feature verification:
   answer is flagged as uncertain instead of claiming a match (Faz C: 57% confident-but-wrong
   on different coins of the same type). VERIFY_ENABLED = False restores Faz C.
 
-Faz E (2026-09-29, AI1 — ADAY, canlı değil) — coin-tuned embedding space:
+Faz D2 (2026-09-29) — the same verification, fast: catalog SIFT features are read precomputed
+from LF_DIR instead of being extracted per request (bit-identical results; see LF_DIR below).
+
+Faz E (2026-09-29, AI1 — canlı) — coin-tuned embedding space:
 - The stock DINOv3 vector carries lighting, patina, background and photo style as much as type
   identity. A linear map W learned on the catalog's own multi-specimen types (supervised
   contrastive, eval query photos held out) re-weights it toward type identity; optionally a
@@ -148,6 +151,15 @@ NEAR_MIN_CONF = 0.10            # below this even a "near" candidate is noise
 BASIS_GAP = 0.30                # face-confidence gap that makes one face the basis
 IMG_DIR = "/app/index/images"   # hardlinks of /opt/ai_service/data/training/train/images (same fs)
 
+# ---- Faz D2 (2026-09-29): precomputed catalog features ----
+# SIFT on each catalog photo cost ~133 ms and a two-face request checks up to 80 photos, so verification
+# took 3.4-4.0 s of a ~8 s request. The features are now read from LF_DIR: one .npz per catalog photo,
+# written by scripts/ai_eval/lf_onhesap.py with this module's own _lf_feats + lf_save, so they are
+# bit-identical to computing them here (OpenCV's SIFT descriptors are whole numbers 0..255 held in float32;
+# uint8 on disk is lossless, 300/300 photos measured). A photo without a file (added after the last
+# precompute) is computed from the image exactly as before; LF_DIR = None restores Faz D.
+LF_DIR = "/app/index/lf"
+
 # ---- Faz B: optional collector-provided attributes (metal / weight / diameter) ----
 # Small cosine bonus/penalty so attributes re-rank near-ties without overpowering vision.
 _S = EMB_SCALE if PROJ_PATH else 1.0          # Faz E: bonuses are in cosine units -> rescale
@@ -168,6 +180,24 @@ METAL_ALIASES = {
 
 def _conf(d: float) -> float:
     return float(np.clip((float(d) - DIST_LO) / (DIST_HI - DIST_LO), 0.0, 1.0))
+
+
+def lf_save(path: str, feats) -> None:
+    """Faz D2 cache file: p = N x 2 float32 keypoints, d = N x 128 uint8 descriptors. `feats` None
+    (too few keypoints) is stored with N = 0 so that photo is not retried per request. Written to a
+    temporary name and renamed, so a reader never sees a partial file."""
+    p, d = feats if feats is not None else (np.zeros((0, 2), np.float32), np.zeros((0, 128), np.float32))
+    tmp = path + '.tmp'
+    with open(tmp, 'wb') as f:
+        np.savez_compressed(f, p=np.asarray(p, np.float32), d=np.asarray(d).astype(np.uint8))
+    os.replace(tmp, path)
+
+
+def lf_load(path: str):
+    """-> (points, float32 descriptors) exactly as _lf_feats returned them, or None."""
+    with np.load(path) as z:
+        p, d = z['p'], z['d']
+    return (p, d.astype(np.float32)) if len(p) >= 8 else None
 
 
 class RecognitionService:
@@ -419,20 +449,36 @@ class RecognitionService:
                                               method=cv2.RANSAC, ransacReprojThreshold=VERIFY_RANSAC_PX)
         return int(mask.sum()) if mask is not None else 0
 
-    def _row_inliers(self, job) -> int:
-        """(index row, query features) -> inliers; -1 if the catalog photo is unavailable."""
+    def _lf_catalog(self, name: str):
+        """-> (catalog photo features or None, source): 'lf' precomputed (Faz D2), 'img' computed from
+        the photo, None photo unavailable."""
+        if LF_DIR:
+            try:
+                return lf_load(os.path.join(LF_DIR, name + '.npz')), 'lf'
+            except FileNotFoundError:
+                pass
+            except Exception as e:                  # a damaged file must not fail the request
+                logger.warning("Faz D2: unreadable features for %s: %s" % (name, e))
+        img = cv2.imread(os.path.join(IMG_DIR, name), cv2.IMREAD_COLOR)
+        if img is None:
+            return None, None
+        return self._lf_feats(img), 'img'
+
+    def _row_inliers(self, job) -> Tuple[int, Optional[str]]:
+        """(index row, query features) -> (inliers, feature source); inliers -1 if the photo is unavailable."""
         r, fq = job
         name = os.path.basename(str(self.metadata[r].get('image_path') or ''))
-        img = cv2.imread(os.path.join(IMG_DIR, name), cv2.IMREAD_COLOR) if name else None
-        if img is None:
-            return -1
-        return self._lf_inliers(fq, self._lf_feats(img))
+        fc, src = self._lf_catalog(name) if name else (None, None)
+        if src is None:
+            return -1, None
+        return self._lf_inliers(fq, fc), src
 
     def _verify(self, obv, rev, cand_ids, swapped, exclude=frozenset()):
-        """Local-feature check of `cand_ids`.
-        -> ({article: (obverse_photo_inliers, reverse_photo_inliers)}, photos_checked, photos_missing)."""
-        q = [(obv, self._lf_feats(obv['vimg'])) if obv else None,
-             (rev, self._lf_feats(rev['vimg'])) if rev else None]
+        """Local-feature check of `cand_ids`. -> ({article: (obverse_photo_inliers, reverse_photo_inliers)},
+        photos_checked, photos_missing, photos_with_precomputed_features)."""
+        sides = (obv, rev)                          # both query crops at once (Faz D2: was one after the other)
+        fq = list(self._pool.map(lambda s: self._lf_feats(s['vimg']) if s else None, sides))
+        q = [(s, f) if s else None for s, f in zip(sides, fq)]
         plan, jobs = {}, {}
         for a in cand_ids:
             faces = ('arka', 'on') if a in swapped else ('on', 'arka')
@@ -451,11 +497,13 @@ class RecognitionService:
                 plan[a].append(rows)
                 for r in rows:
                     jobs[(k, r)] = (r, q[k][1])
-        res = dict(zip(jobs, self._pool.map(self._row_inliers, jobs.values()))) if jobs else {}
+        got = dict(zip(jobs, self._pool.map(self._row_inliers, jobs.values()))) if jobs else {}
+        res = {j: v for j, (v, _) in got.items()}
         missing = sum(1 for v in res.values() if v < 0)
+        precomputed = sum(1 for _, src in got.values() if src == 'lf')
         out = {a: tuple(max([max(0, res[(k, r)]) for r in rows] or [0]) for k, rows in enumerate(p))
                for a, p in plan.items()}
-        return out, len(res) - missing, missing
+        return out, len(res) - missing, missing, precomputed
 
     @staticmethod
     def _verified_conf(inl: int) -> float:
@@ -520,11 +568,11 @@ class RecognitionService:
             # ---- Faz D: verify the top candidates, promote the verified group ----
             inl: Dict[int, Tuple[int, int]] = {}
             verified: Dict[int, int] = {}
-            checked = missing = 0
+            checked = missing = precomputed = 0
             t_ver = time.time()
             if VERIFY_ENABLED and self._pool is not None and ranked:
                 try:
-                    inl, checked, missing = self._verify(
+                    inl, checked, missing, precomputed = self._verify(
                         obv, rev, [a for a, _ in ranked[:VERIFY_K]], swapped, exclude)
                 except Exception as e:
                     logger.error("Faz D verification failed: %s" % e, exc_info=True)
@@ -671,13 +719,13 @@ class RecognitionService:
 
             end = datetime.utcnow()
             logger.info("recognize(faz%s%s): sides=%d top art=%s conf=%.3f reason=%s tie=%d "
-                        "verified=%d top_inl=%s checked=%d missing=%d verify_ms=%d near=%d" %
+                        "verified=%d top_inl=%s checked=%d missing=%d lf=%d verify_ms=%d near=%d" %
                         ('C' if (obv and rev and FUSION_MODE == 'exact') else 'A',
                          'D' if verify_ran else '',
                          len(sides), matches[0]['article_id'] if matches else None, top, reason,
                          len(tied_ids) if is_tied else 0, len(verified),
-                         max(verified.values()) if verified else None, checked, missing, verify_ms,
-                         len(near)))
+                         max(verified.values()) if verified else None, checked, missing, precomputed,
+                         verify_ms, len(near)))
             return {
                 'matches': matches,
                 'confidence': top,
