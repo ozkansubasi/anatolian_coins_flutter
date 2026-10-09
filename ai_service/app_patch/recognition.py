@@ -374,19 +374,31 @@ class RecognitionService:
             return None
         embs = [self._embed(bgr)]
         crop, detected = self._segment(bgr)
+        h, w = bgr.shape[:2]
         if detected:
-            h, w = bgr.shape[:2]
             ch, cw = crop.shape[:2]
             if (ch * cw) < 0.05 * h * w:      # SAM latched onto a tiny region
                 detected = False
             else:
                 embs.append(self._embed(crop))
+        center = None
+        if not detected:
+            # No coin mask: the centre square is searched and verified too. A gallery photo is sent uncropped
+            # (the app's camera crops to its guide circle, the gallery does not): on a photo of a screen the raw
+            # frame is mostly browser chrome and ranked nothing above MIN_CONF -> "no coin detected"
+            # (real screen photos 2026-10-09: 4 of 77). The coin is almost always in the centre square.
+            s = min(h, w) // 2
+            center = bgr[max(0, h // 2 - s):h // 2 + s, max(0, w // 2 - s):w // 2 + s]
+            if center.shape[0] * center.shape[1] < 0.9 * h * w:     # a square frame is already "the centre"
+                embs.append(self._embed(center))
+            else:
+                center = None
         return {
             'embs': embs,
             'detected': detected,
             'sharpness': round(self._sharpness(crop if detected else bgr), 1),
-            'vimg': crop if detected else bgr,      # Faz D: local features of the coin
-            'vraw': bgr if detected else None,      # ... and of the whole frame (see _verify)
+            'vimg': crop if detected else (center if center is not None else bgr),  # Faz D: local features
+            'vraw': bgr if (detected or center is not None) else None,      # ... and of the whole frame (_verify)
         }
 
     def _search_side(self, embs, exclude=frozenset()) -> Dict[int, float]:
