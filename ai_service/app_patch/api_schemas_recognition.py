@@ -67,6 +67,12 @@ class RecognitionResponse(BaseModel):
     near_matches: List[CoinMatch] = Field(default_factory=list,
                                           description="AI4: closest candidates when no match reached MIN_CONF "
                                                       "(never mixed into `matches`)")
+    # Hedef 2 (2026-10-09)
+    identification: Optional[Dict[str, Any]] = Field(
+        None, description="What the photo still tells: level type|ruler|dynasty|mint|date|null, basis (photo carrying "
+                          "it), ruler {name, share, reign_tr, reign_en, note_tr, note_en}, ruler_alternatives, dynasty {id, name_tr, "
+                          "name_en, share, note_tr, note_en}, mint {name, share}, date {estimate, from, to}, reverse "
+                          "{status verified|unverified|not_sent, candidates [{article_id, title, score}]}")
     no_match: bool = Field(False, description="True when no confident match was found")
     no_match_reason: Optional[str] = Field(None, description="no_coin_detected | low_detail_surface | below_confidence | ambiguous_match | service_unavailable")
     quality: Optional[Dict[str, Any]] = Field(None, description="Per-side input quality metrics")

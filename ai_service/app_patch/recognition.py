@@ -53,6 +53,7 @@ Rollback: /opt/ai_service/app_patch/recognition.py.backup_fazA_*
 """
 import json
 import logging
+import math
 import os
 import threading
 import time
@@ -159,6 +160,35 @@ IMG_DIR = "/app/index/images"   # hardlinks of /opt/ai_service/data/training/tra
 # uint8 on disk is lossless, 300/300 photos measured). A photo without a file (added after the last
 # precompute) is computed from the image exactly as before; LF_DIR = None restores Faz D.
 LF_DIR = "/app/index/lf"
+
+# ---- Hedef 2 (2026-10-09): what the photo still tells when the exact type is not verified ----
+# "No match" was the answer even when the portrait obviously showed, say, Marcus Aurelius (user). The nearest
+# catalog records of the PORTRAIT photo vote for their ruler / dynasty / mint (weight exp((cos - cos_top) / HIER_T));
+# a level is claimed only when one name holds the share below AND the photo is close enough to the catalog.
+# Calibrated with the exact type held out (all its rows + every near-identical copy), phone-like degradation,
+# 489 coins x obverse + reverse photo (scripts/ai_eval/eval_hukumdar.py, hukumdar_analiz2.py,
+# claudedocs/ai-hukumdar-fizibilite-2026-10-09.md):
+#   ruler   top 10, share >= 0.7, cos >= 0.60                  -> 17% of ruler coins named, 96.1% precision
+#   dynasty top 30 obverse rows, share >= 0.7, cos >= 0.50       -> 36.7% at 95.5%
+#   mint    top 10 obverse rows, share >= 0.8, cos >= 0.55       -> 19% at 95.7%
+#   date    25-75 percentile of the top 20, shown when <= 100 y  -> 67% shown, 90.6% within +-25 years
+#   0 claims on a ruler with no other type (39), on city coins (150) and on the real out-of-catalog coin.
+# The portrait photo = the one whose nearest catalog rows are mostly OBVERSE photos (users swap the two; right
+# side 97%). Voting with the photo that has the stronger ruler vote instead was measured too: <= 84% precision
+# (late-Roman reverses are generic and crowd the vote) - not used.
+# The table (ruler from the authority field or the obverse description) is built from the catalog:
+# scripts/ai_eval/hukumdar_tablosu.py + hiyerarsi_uret.py. Missing file -> the layer is simply off.
+HIER_PATH = "/app/index/hiyerarsi.json"
+NOTES_PATH = "/app/index/hukumdar_notlari.json"   # optional {name | "dynasty:<id>": {reign_tr, reign_en, tr, en}}
+HIER_T = 0.05
+BASIS_K = 20                    # rows looked at to tell which photo is the portrait (obverse) side
+RULER_K, RULER_SHARE, RULER_MIN_COS = 10, 0.70, 0.60
+DYN_K, DYN_SHARE, DYN_MIN_COS = 30, 0.70, 0.50        # obverse rows only
+MINT_K, MINT_SHARE, MINT_MIN_COS = 10, 0.80, 0.55     # obverse rows only
+DATE_K, DATE_MAX_SPAN = 20, 100
+DATE_MIN_COS = 0.50             # catalog-like photos are 88-90% right even below this, but the one real
+                                # out-of-catalog coin (cos 0.45-0.48) got a date ~300 years off -> cautious floor
+REV_N = 3                       # ruler's types closest to the other face (stage 2)
 
 # ---- Faz B: optional collector-provided attributes (metal / weight / diameter) ----
 # Small cosine bonus/penalty so attributes re-rank near-ties without overpowering vision.
@@ -267,6 +297,23 @@ class RecognitionService:
             logger.error("DINOv3+SAM2 load failed: %s" % e, exc_info=True)
             self.encoder = None
             self.faiss_index = None
+        self.hier, self.dynasties, self.notes, self.by_ruler = {}, {}, {}, {}
+        try:
+            if os.path.exists(HIER_PATH):
+                h = json.load(open(HIER_PATH, encoding="utf-8"))
+                self.hier = {int(k): v for k, v in h["makale"].items()}
+                self.dynasties = h.get("hanedan", {})
+                for a in self.by_art:
+                    r = self.hier.get(a, {}).get("a")
+                    if r:
+                        self.by_ruler.setdefault(r, []).append(a)
+            if os.path.exists(NOTES_PATH):
+                self.notes = json.load(open(NOTES_PATH, encoding="utf-8"))
+            logger.info("Hedef 2: hierarchy %d articles, %d rulers in index, %d notes"
+                        % (len(self.hier), len(self.by_ruler), len(self.notes)))
+        except Exception as e:                      # the layer is optional: recognition must not depend on it
+            logger.error("Hedef 2: hierarchy load failed: %s" % e, exc_info=True)
+            self.hier, self.dynasties, self.notes, self.by_ruler = {}, {}, {}, {}
 
     # ---- pipeline ----
     def _to_bgr(self, b: bytes):
@@ -547,6 +594,158 @@ class RecognitionService:
                     adj += pen
         return adj
 
+    # ---- Hedef 2: ruler / dynasty / mint / date ----
+    def _vote(self, cands, key, k):
+        """cands [(article, cos)] best first -> [(name, share)] best first. Candidates without the attribute vote
+        for nobody: they still count in the total, so a mostly unlabeled neighbourhood never yields a claim."""
+        if not cands:
+            return []
+        c0, oy, tot = cands[0][1], {}, 0.0
+        for a, c in cands[:k]:
+            w = math.exp((c - c0) / HIER_T)
+            tot += w
+            v = self.hier.get(a, {}).get(key)
+            if v:
+                oy[v] = oy.get(v, 0.0) + w
+        return sorted(((v, w / tot) for v, w in oy.items()), key=lambda x: -x[1])
+
+    def _ruler_info(self, name, share=None):
+        n = self.notes.get(name) or {}
+        return {'name': name, 'share': None if share is None else round(share, 3),
+                'reign_tr': n.get('reign_tr'), 'reign_en': n.get('reign_en'), 'note_tr': n.get('tr'), 'note_en': n.get('en')}
+
+    def _dynasty_info(self, gid, share=None):
+        d = self.dynasties.get(gid) or {}
+        n = self.notes.get('dynasty:' + gid) or {}
+        return {'id': gid, 'name_tr': d.get('tr', gid), 'name_en': d.get('en', gid),
+                'share': None if share is None else round(share, 3), 'note_tr': n.get('tr'), 'note_en': n.get('en')}
+
+    def _date_range(self, cands):
+        """Weighted midpoint of the candidates' dates -> {estimate, from, to} (weighted 25-75 percentile)."""
+        if not cands:
+            return None
+        c0, pts = cands[0][1], []
+        for a, c in cands[:DATE_K]:
+            h = self.hier.get(a, {})
+            if h.get('s') is None:
+                continue
+            pts.append(((h['s'] + (h['e'] if h.get('e') is not None else h['s'])) / 2.0, math.exp((c - c0) / HIER_T)))
+        if not pts:
+            return None
+        pts.sort()
+        tw = sum(w for _, w in pts)
+
+        def q(p):
+            acc = 0.0
+            for x, w in pts:
+                acc += w
+                if acc >= p * tw:
+                    return x
+            return pts[-1][0]
+        r5 = lambda x: int(5 * round(x / 5.0))  # noqa: E731
+        lo, hi = q(0.25), q(0.75)
+        if hi - lo > DATE_MAX_SPAN:
+            return None
+        return {'estimate': r5(sum(x * w for x, w in pts) / tw), 'from': r5(lo), 'to': r5(hi)}
+
+    def _hier_candidates(self, embs, exclude):
+        """[(article, cos, face of its closest row)] best first, each article at its closest row."""
+        best: Dict[int, Tuple[float, str]] = {}
+        for emb in embs:
+            D, I = self.faiss_index.search(emb.reshape(1, -1).astype(np.float32), SEARCH_K)
+            for d, i in zip(D[0], I[0]):
+                if i < 0 or int(i) in exclude:
+                    continue
+                a = self.art[i]
+                if a not in best or d > best[a][0]:
+                    best[a] = (float(d), self.face[i])
+        c = sorted(best.items(), key=lambda kv: -kv[1][0])
+        return [(a, d, f) for a, (d, f) in c[:2 * max(RULER_K, DYN_K, MINT_K, DATE_K)]]
+
+    @staticmethod
+    def _obverse_weight(cands) -> float:
+        """Share of the top BASIS_K (similarity-weighted) that are obverse photos: high = this is the portrait side."""
+        top = cands[:BASIS_K]
+        if not top:
+            return 0.0
+        c0 = top[0][1]
+        w = [(math.exp((c - c0) / HIER_T), f) for _, c, f in top]
+        return sum(x for x, f in w if f == 'on') / sum(x for x, _ in w)
+
+    def _identify(self, obv, rev, matches, exclude=frozenset()):
+        """-> identification dict or None. Level: type (verified exact type) > ruler > dynasty > mint > date."""
+        if not self.hier:
+            return None
+        if matches and matches[0].get('verified'):
+            a = matches[0]['article_id']
+            h = self.hier.get(a, {})
+            s, e = h.get('s'), h.get('e')
+            return {'level': 'type', 'basis': matches[0].get('basis'),
+                    'ruler': self._ruler_info(h['a']) if h.get('a') else None, 'ruler_alternatives': [],
+                    'dynasty': self._dynasty_info(h['g']) if h.get('g') in self.dynasties else None,
+                    'mint': {'name': h['m'], 'share': None} if h.get('m') else None,
+                    'date': {'estimate': None, 'from': s, 'to': e if e is not None else s} if s is not None else None,
+                    'reverse': None}
+        # the portrait photo: the one whose nearest catalog rows are mostly obverse photos (users swap the two)
+        best = None
+        for name, s in (('obverse', obv), ('reverse', rev)):
+            if not s:
+                continue
+            c = self._hier_candidates(s['embs'], exclude)
+            if not c:
+                continue
+            ow = self._obverse_weight(c)
+            if best is None or ow > best[0]:
+                best = (ow, name, c)
+        if best is None:
+            return None
+        _, basis, cands = best
+        allc = [(a, c) for a, c, _ in cands]
+        onc = [(a, c) for a, c, f in cands if f == 'on']
+        rv = self._vote(allc, 'a', RULER_K)
+        ruler = rv[0] if rv and rv[0][1] >= RULER_SHARE and allc[0][1] >= RULER_MIN_COS else None
+        dv = self._vote(onc, 'g', DYN_K)
+        dyn = dv[0] if (dv and dv[0][1] >= DYN_SHARE and onc[0][1] >= DYN_MIN_COS
+                        and dv[0][0] in self.dynasties) else None
+        if ruler and not dyn:
+            g = self.hier.get(self.by_ruler.get(ruler[0], [None])[0] or -1, {}).get('g')
+            dyn = (g, None) if g in self.dynasties else None
+        mv = self._vote(onc, 'm', MINT_K)
+        mint = mv[0] if mv and mv[0][1] >= MINT_SHARE and onc[0][1] >= MINT_MIN_COS else None
+        date = self._date_range(allc) if allc[0][1] >= DATE_MIN_COS else None
+        alts = []
+        if dyn and not ruler:                           # dynasty only: its two most likely members
+            alts = [n for n, _ in rv if self.hier.get(self.by_ruler.get(n, [-1])[0], {}).get('g') == dyn[0]][:2]
+        reverse = None
+        other = rev if basis == 'obverse' else obv
+        if ruler:
+            if other is None:
+                reverse = {'status': 'not_sent', 'candidates': []}
+            else:
+                face = 'arka' if basis == 'obverse' else 'on'
+                cache: Dict[int, np.ndarray] = {}
+                sc = []
+                for a in self.by_ruler.get(ruler[0], []):
+                    v = self._face_score(other['embs'], a, face, exclude, cache)
+                    if v is not None:
+                        sc.append((a, v))
+                sc.sort(key=lambda x: -x[1])
+                top_ok = bool(matches and matches[0].get('verified')
+                              and self.hier.get(matches[0]['article_id'], {}).get('a') == ruler[0])
+                reverse = {'status': 'verified' if top_ok else 'unverified',
+                           'candidates': [{'article_id': int(a),
+                                           'title': (self.by_art.get(a) or {}).get('title_tr')
+                                           or (self.by_art.get(a) or {}).get('title_en') or 'Unknown',
+                                           'score': round(_conf(v), 3)} for a, v in sc[:REV_N]]}
+        level = 'ruler' if ruler else 'dynasty' if dyn else 'mint' if mint else 'date' if date else None
+        if level is None:                               # nothing reliable to say -> no field at all
+            return None
+        return {'level': level, 'basis': basis,
+                'ruler': self._ruler_info(*ruler) if ruler else None, 'ruler_alternatives': alts,
+                'dynasty': self._dynasty_info(*dyn) if dyn else None,
+                'mint': {'name': mint[0], 'share': round(mint[1], 3)} if mint else None,
+                'date': date, 'reverse': reverse}
+
     async def recognize(self, obverse_bytes: bytes, reverse_bytes: bytes = None,
                         metal: str = None, weight_g: float = None,
                         diameter_mm: float = None, exclude=frozenset()) -> Dict[str, Any]:
@@ -644,6 +843,7 @@ class RecognitionService:
 
             def _entry(a, d, conf, rank, in_tie):
                 m = self.by_art.get(a, {})
+                h = self.hier.get(a, {})                # Hedef 2: catalog ruler / mint / dates
                 oc = _conf(obv_best[a]) if a in obv_best else None
                 rc = _conf(rev_best[a]) if a in rev_best else None
                 # While tied, confidence states how sure we are of the IDENTIFICATION,
@@ -665,11 +865,11 @@ class RecognitionService:
                     'distance': float(d),
                     'image_type': None,
                     'region': m.get('region_code'),
-                    'mint_name': m.get('mint_name'),
-                    'authority_name': m.get('authority_name'),
+                    'mint_name': m.get('mint_name') or h.get('m'),
+                    'authority_name': m.get('authority_name') or h.get('a'),
                     'material': m.get('material'),
-                    'date_from': _int(m.get('date_from')),
-                    'date_to': _int(m.get('date_to')),
+                    'date_from': _int(m.get('date_from')) if m.get('date_from') is not None else h.get('s'),
+                    'date_to': _int(m.get('date_to')) if m.get('date_to') is not None else h.get('e'),
                 }
 
             matches = []
@@ -725,6 +925,14 @@ class RecognitionService:
                         break
                     near.append(_entry(a, d, conf, len(near) + 1, False))
 
+            # Hedef 2: what the photo still tells (never for a frame without a coin)
+            ident = None
+            if reason != 'no_coin_detected':
+                try:
+                    ident = self._identify(obv, rev, matches, exclude)
+                except Exception as e:                  # optional layer: never fails the recognition
+                    logger.error("Hedef 2: identification failed: %s" % e, exc_info=True)
+
             quality = {}
             if obv:
                 quality['obverse'] = {'coin_detected': obv['detected'], 'sharpness': obv['sharpness']}
@@ -733,13 +941,15 @@ class RecognitionService:
 
             end = datetime.utcnow()
             logger.info("recognize(faz%s%s): sides=%d top art=%s conf=%.3f reason=%s tie=%d "
-                        "verified=%d top_inl=%s checked=%d missing=%d lf=%d verify_ms=%d near=%d" %
+                        "verified=%d top_inl=%s checked=%d missing=%d lf=%d verify_ms=%d near=%d ident=%s:%s" %
                         ('C' if (obv and rev and FUSION_MODE == 'exact') else 'A',
                          'D' if verify_ran else '',
                          len(sides), matches[0]['article_id'] if matches else None, top, reason,
                          len(tied_ids) if is_tied else 0, len(verified),
                          max(verified.values()) if verified else None, checked, missing, precomputed,
-                         verify_ms, len(near)))
+                         verify_ms, len(near), ident and ident['level'],
+                         ident and ((ident.get('ruler') or {}).get('name') or (ident.get('dynasty') or {}).get('id')
+                                    or (ident.get('mint') or {}).get('name'))))
             return {
                 'matches': matches,
                 'confidence': top,
@@ -750,6 +960,7 @@ class RecognitionService:
                           + ('D' if verify_ran else '') + ('E' if self.proj is not None else ''),
                 'verified': bool(verified),
                 'near_matches': near,
+                'identification': ident,
                 'processing_time_ms': int((end - start).total_seconds() * 1000),
                 'ocr_extracted': None,
                 'no_match': no_match,
