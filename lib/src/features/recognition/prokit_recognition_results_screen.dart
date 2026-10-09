@@ -252,7 +252,10 @@ class _ProkitRecognitionResultsScreenState
           .toList();
     }
     if (matches.length > topK) matches = matches.sublist(0, topK);
-    if (matches.isEmpty) return _buildNoResults(l10n, results.noMatchReason);
+    // Hedef 2: aday kalmasa da fotoğraf hükümdar/dönem/darphane/tarih söylüyorsa "sonuç yok" denmez.
+    final ident = results.identification;
+    final showIdent = uncertain && ident != null && ident.level != 'type' && ident.hasContent;
+    if (matches.isEmpty && !showIdent) return _buildNoResults(l10n, results.noMatchReason);
 
     final t = context.numText;
     final c = context.numColors;
@@ -269,8 +272,10 @@ class _ProkitRecognitionResultsScreenState
                 obverse: _obverseFile,
                 reverse: _reverseFile,
                 label: l10n.translate('scanned_coin'),
-                summary: l10n.translate(uncertain ? 'near_candidates_count' : 'possible_matches',
-                    params: {'n': '${matches.length}'}),
+                summary: matches.isEmpty
+                    ? l10n.translate('no_certain_match')
+                    : l10n.translate(uncertain ? 'near_candidates_count' : 'possible_matches',
+                        params: {'n': '${matches.length}'}),
               ),
               const SizedBox(height: 16),
 
@@ -294,26 +299,32 @@ class _ProkitRecognitionResultsScreenState
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(l10n.translate('near_candidates'), style: t.section),
-                const SizedBox(height: 10),
-                Container(
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: c.border),
+                if (showIdent) ...[
+                  _IdentificationCard(ident: ident, l10n: l10n),
+                  const SizedBox(height: 16),
+                ],
+                if (matches.isNotEmpty) ...[
+                  Text(l10n.translate('near_candidates'), style: t.section),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: c.card,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: c.border),
+                    ),
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < matches.length; i++)
+                          _CandidateRow(
+                              match: matches[i],
+                              l10n: l10n,
+                              last: i == matches.length - 1,
+                              showBasis: true,
+                              showScore: false),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < matches.length; i++)
-                        _CandidateRow(
-                            match: matches[i],
-                            l10n: l10n,
-                            last: i == matches.length - 1,
-                            showBasis: true,
-                            showScore: false),
-                    ],
-                  ),
-                ),
+                ],
               ],
 
               if (isAmbiguous) ...[
@@ -342,6 +353,11 @@ class _ProkitRecognitionResultsScreenState
                 Text(l10n.translate('closest_match'), style: t.tag),
                 const SizedBox(height: 8),
                 _TopMatchCard(match: matches.first, l10n: l10n),
+                // Doğrulanmış tipte hükümdar / dönem notu (Hedef 2)
+                if (ident != null && ident.level == 'type' && ident.hasContent) ...[
+                  const SizedBox(height: 12),
+                  _IdentificationCard(ident: ident, l10n: l10n),
+                ],
               ],
 
               if (!uncertain && others.isNotEmpty) ...[
@@ -750,6 +766,125 @@ class _StateMessage extends StatelessWidget {
             Row(mainAxisAlignment: MainAxisAlignment.center, children: actions),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Hedef 2 (2026-10-09): tam tip doğrulanmadığında da fotoğrafın söyledikleri — ön yüzdeki portre
+/// (hükümdar + kısa not), dönem, darphane, tahmini tarih ve arka yüzün o hükümdarın varyantlarıyla
+/// karşılaştırması. Doğrulanmış tipte yalnız "hükümdar hakkında" notu. Sunucu eşikleri: hükümdar
+/// iddiası tip dışlı ölçümde %98 kesin (claudedocs/ai-hukumdar-fizibilite-2026-10-09.md).
+class _IdentificationCard extends StatelessWidget {
+  final CoinIdentification ident;
+  final AppLocalizations l10n;
+  const _IdentificationCard({required this.ident, required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.numColors;
+    final t = context.numText;
+    final en = l10n.locale.languageCode == 'en';
+    final reign = en ? ident.rulerReignEn : ident.rulerReignTr;
+    final rulerNote = en ? ident.rulerNoteEn : ident.rulerNoteTr;
+    final dynasty = en ? ident.dynastyNameEn : ident.dynastyNameTr;
+    final dynastyNote = en ? ident.dynastyNoteEn : ident.dynastyNoteTr;
+    final isType = ident.level == 'type';
+    final date = CoinFormat.dateRange(ident.dateFrom, ident.dateTo, l10n);
+    final name = ident.rulerName;
+    final named = name == null ? null : (reign != null ? '$name ($reign)' : name);
+
+    Widget block(IconData icon, String title, String main, [String? sub]) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: c.accent, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: t.tag),
+                    const SizedBox(height: 2),
+                    Text(main, style: t.value.copyWith(color: c.text)),
+                    if (sub != null && sub.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(sub, style: t.caption),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+
+    final dynastySub = [
+      if (dynastyNote != null) dynastyNote,
+      if (name == null && ident.rulerAlternatives.isNotEmpty)
+        l10n.translate('ident_possible_rulers', params: {'names': ident.rulerAlternatives.join(', ')}),
+    ].join('\n');
+    final rev = ident.reverseStatus;
+    final revText = (name == null || rev == null || isType)
+        ? null
+        : l10n.translate('ident_reverse_$rev', params: {'name': name});
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 2),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isType)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(l10n.translate('ident_intro'), style: t.caption),
+            ),
+          if (named != null)
+            block(
+              Icons.person_outline,
+              l10n.translate(isType
+                  ? 'ident_title_type'
+                  : (ident.basis == 'reverse' ? 'ident_title_ruler_reverse' : 'ident_title_ruler')),
+              isType ? named : l10n.translate('ident_ruler_line', params: {'name': named}),
+              rulerNote,
+            ),
+          // Hükümdar söylendiyse dönem yalnız notu varsa ayrıca gösterilir (tekrar olmasın).
+          if (dynasty != null && (name == null || dynastyNote != null))
+            block(Icons.account_balance_outlined, l10n.translate('ident_title_dynasty'), dynasty, dynastySub),
+          if (!isType && ident.mint != null)
+            block(Icons.place_outlined, l10n.translate('ident_title_mint'), CoinFormat.titleCase(ident.mint!)),
+          if (!isType && date != null)
+            block(Icons.event_outlined, l10n.translate('ident_title_date'),
+                l10n.translate('ident_date_line', params: {'range': date})),
+          if (revText != null) ...[
+            block(Icons.flip_outlined, l10n.translate('ident_reverse_title'), revText),
+            if (rev == 'unverified' && ident.reverseCandidates.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: c.divider),
+                  ),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < ident.reverseCandidates.length; i++)
+                        _CandidateRow(
+                            match: ident.reverseCandidates[i],
+                            l10n: l10n,
+                            last: i == ident.reverseCandidates.length - 1,
+                            showScore: false),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ],
       ),
     );
   }

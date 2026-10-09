@@ -64,4 +64,53 @@ void main() {
     expect(back.basis, 'obverse');
     expect(back.articleId, 7337);
   });
+
+  // Hedef 2 (2026-10-09): identification — tip doğrulanmasa da hükümdar / dönem / darphane / tarih.
+  test('identification: hükümdar düzeyi, arka yüz adayları ve dönem ayrıştırılır', () {
+    final r = RecognitionResponse.fromJson({
+      'data': {
+        'verified': false,
+        'matches': [],
+        'identification': {
+          'level': 'ruler',
+          'basis': 'obverse',
+          'ruler': {'name': 'Marcus Aurelius', 'share': 0.83, 'reign_tr': 'MS 161–180', 'reign_en': 'AD 161–180',
+              'note_tr': 'Filozof imparator', 'note_en': 'Philosopher emperor'},
+          'ruler_alternatives': [],
+          'dynasty': {'id': 'nerva_antonine', 'name_tr': 'Nerva–Antoninler', 'name_en': 'Nerva–Antonine', 'share': 0.94},
+          'mint': {'name': 'pergamum', 'share': 0.9},
+          'date': {'estimate': 165, 'from': 160, 'to': 170},
+          'reverse': {
+            'status': 'unverified',
+            'candidates': [
+              {'article_id': 23345, 'title': 'CN Type 4059', 'score': 0.31},
+              {'article_id': 'bozuk', 'title': 'X', 'score': 0.2},
+            ],
+          },
+        },
+      },
+    });
+    final i = r.identification!;
+    expect(i.level, 'ruler');
+    expect(i.rulerName, 'Marcus Aurelius');
+    expect(i.rulerReignTr, 'MS 161–180');
+    expect(i.dynastyNameTr, 'Nerva–Antoninler');
+    expect(i.mint, 'pergamum');
+    expect([i.dateFrom, i.dateTo], [160, 170]);
+    expect(i.reverseStatus, 'unverified');
+    expect(i.reverseCandidates.map((c) => c.articleId), [23345]); // kimliksiz aday atlanır
+    expect(i.hasContent, isTrue);
+  });
+
+  test('identification yoksa, bozuksa ya da düzeyi yoksa null', () {
+    expect(RecognitionResponse.fromJson({'data': {'matches': []}}).identification, isNull);
+    expect(RecognitionResponse.fromJson({'data': {'matches': [], 'identification': 'bozuk'}}).identification, isNull);
+    expect(RecognitionResponse.fromJson({'data': {'matches': [], 'identification': {'level': null}}}).identification,
+        isNull);
+  });
+
+  test('doğrulanmış tipte not yoksa kart gösterilmez (hasContent=false)', () {
+    final i = CoinIdentification.tryParse({'level': 'type', 'mint': {'name': 'ephesus'}, 'date': {'from': -130, 'to': -129}})!;
+    expect(i.hasContent, isFalse);
+  });
 }

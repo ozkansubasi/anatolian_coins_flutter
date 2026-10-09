@@ -293,6 +293,10 @@ class RecognitionResponse {
   /// AI4: hiçbir aday güven eşiğine ulaşmadığında sunucunun ayrıca verdiği en yakın adaylar.
   final List<CoinMatch> nearMatches;
 
+  /// Hedef 2 (2026-10-09): tip doğrulanmasa da fotoğrafın söyledikleri (hükümdar / dönem /
+  /// darphane / tarih). null = sunucu göndermiyor (eklenti < 1.17.0) ya da söylenecek bir şey yok.
+  final CoinIdentification? identification;
+
   RecognitionResponse({
     required this.matches,
     this.quota,
@@ -304,6 +308,7 @@ class RecognitionResponse {
     this.quality,
     this.verified,
     this.nearMatches = const [],
+    this.identification,
   });
 
   /// Convenience getter for remaining scans (backward compatibility)
@@ -338,8 +343,90 @@ class RecognitionResponse {
           .whereType<Map<String, dynamic>>()
           .map(CoinMatch.fromJson)
           .toList(),
+      identification: CoinIdentification.tryParse(data['identification']),
     );
   }
+}
+
+/// Hedef 2: tam tip doğrulanmadığında da fotoğraftan çıkarılan bilgi. Düzey sırası:
+/// type (doğrulanmış tip) > ruler > dynasty > mint > date. Adlar katalogdaki gibi gelir
+/// (hükümdar İngilizce, darphane küçük harf anahtar); not ve dönem metni TR/EN ikisi birden.
+class CoinIdentification {
+  final String level; // type | ruler | dynasty | mint | date
+  final String? basis; // obverse | reverse — portreyi taşıyan fotoğraf
+  final String? rulerName;
+  final String? rulerReignTr, rulerReignEn, rulerNoteTr, rulerNoteEn;
+  final List<String> rulerAlternatives;
+  final String? dynastyNameTr, dynastyNameEn, dynastyNoteTr, dynastyNoteEn;
+  final String? mint;
+  final int? dateFrom, dateTo;
+  final String? reverseStatus; // verified | unverified | not_sent
+  final List<CoinMatch> reverseCandidates;
+
+  const CoinIdentification({
+    required this.level,
+    this.basis,
+    this.rulerName,
+    this.rulerReignTr,
+    this.rulerReignEn,
+    this.rulerNoteTr,
+    this.rulerNoteEn,
+    this.rulerAlternatives = const [],
+    this.dynastyNameTr,
+    this.dynastyNameEn,
+    this.dynastyNoteTr,
+    this.dynastyNoteEn,
+    this.mint,
+    this.dateFrom,
+    this.dateTo,
+    this.reverseStatus,
+    this.reverseCandidates = const [],
+  });
+
+  /// Bozuk ya da eksik veri uygulamayı kırmaz: düzeyi olmayan yanıt → null.
+  static CoinIdentification? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final j = Map<String, dynamic>.from(raw);
+    final level = j['level'];
+    if (level is! String || level.isEmpty) return null;
+    Map<String, dynamic> m(Object? v) => v is Map ? Map<String, dynamic>.from(v) : const {};
+    final ruler = m(j['ruler']);
+    final dyn = m(j['dynasty']);
+    final date = m(j['date']);
+    final rev = m(j['reverse']);
+    return CoinIdentification(
+      level: level,
+      basis: j['basis'] as String?,
+      rulerName: ruler['name'] as String?,
+      rulerReignTr: ruler['reign_tr'] as String?,
+      rulerReignEn: ruler['reign_en'] as String?,
+      rulerNoteTr: ruler['note_tr'] as String?,
+      rulerNoteEn: ruler['note_en'] as String?,
+      rulerAlternatives: (j['ruler_alternatives'] as List<dynamic>? ?? []).whereType<String>().toList(),
+      dynastyNameTr: dyn['name_tr'] as String?,
+      dynastyNameEn: dyn['name_en'] as String?,
+      dynastyNoteTr: dyn['note_tr'] as String?,
+      dynastyNoteEn: dyn['note_en'] as String?,
+      mint: m(j['mint'])['name'] as String?,
+      dateFrom: CoinMatch._toInt(date['from']),
+      dateTo: CoinMatch._toInt(date['to']),
+      reverseStatus: rev['status'] as String?,
+      reverseCandidates: (rev['candidates'] as List<dynamic>? ?? [])
+          .whereType<Map>()
+          .map((c) => CoinMatch(
+                articleId: CoinMatch._toInt(c['article_id']) ?? 0,
+                title: c['title'] as String? ?? '',
+                confidence: (c['score'] as num?)?.toDouble() ?? 0.0,
+              ))
+          .where((c) => c.articleId > 0)
+          .toList(),
+    );
+  }
+
+  /// Bilgi kartı gösterilecek mi: doğrulanmış tipte yalnız hükümdar/dönem notu varsa.
+  bool get hasContent => level == 'type'
+      ? (rulerName != null || dynastyNameTr != null)
+      : (rulerName != null || dynastyNameTr != null || mint != null || dateFrom != null);
 }
 
 /// Coin match result model
