@@ -479,9 +479,15 @@ class RecognitionService:
         sides = (obv, rev)                          # both query crops at once (Faz D2: was one after the other)
         fq = list(self._pool.map(lambda s: self._lf_feats(s['vimg']) if s else None, sides))
         q = [(s, f) if s else None for s, f in zip(sides, fq)]
+        # A single photo says nothing about which face it shows (the app sends it as "obverse"), and the
+        # search already matched it against both faces. Verifying it against the obverse photos only left
+        # every reverse-only scan unverified, capped at UNVERIFIED_CAP (canary 2026-10-09: image 15000 =
+        # reverse of 5517 -> 4 inliers vs its obverse, 782 vs its reverse). The VERIFY_ROWS closest photos
+        # of either face are checked instead, so the cost per candidate is unchanged.
+        single = (obv is None) != (rev is None)
         plan, jobs = {}, {}
         for a in cand_ids:
-            faces = ('arka', 'on') if a in swapped else ('on', 'arka')
+            faces = ('*', '*') if single else ('arka', 'on') if a in swapped else ('on', 'arka')
             plan[a] = []
             for k, face in enumerate(faces):
                 if q[k] is None or q[k][1] is None:
