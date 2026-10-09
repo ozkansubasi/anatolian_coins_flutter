@@ -339,6 +339,7 @@ class RecognitionService:
             'detected': detected,
             'sharpness': round(self._sharpness(crop if detected else bgr), 1),
             'vimg': crop if detected else bgr,      # Faz D: local features of the coin
+            'vraw': bgr if detected else None,      # ... and of the whole frame (see _verify)
         }
 
     def _search_side(self, embs, exclude=frozenset()) -> Dict[int, float]:
@@ -465,19 +466,26 @@ class RecognitionService:
         return self._lf_feats(img), 'img'
 
     def _row_inliers(self, job) -> Tuple[int, Optional[str]]:
-        """(index row, query features) -> (inliers, feature source); inliers -1 if the photo is unavailable."""
-        r, fq = job
+        """(index row, query feature sets) -> (best inliers, feature source); -1 if the photo is unavailable."""
+        r, fqs = job
         name = os.path.basename(str(self.metadata[r].get('image_path') or ''))
         fc, src = self._lf_catalog(name) if name else (None, None)
         if src is None:
             return -1, None
-        return self._lf_inliers(fq, fc), src
+        return max(self._lf_inliers(fq, fc) for fq in fqs), src
 
     def _verify(self, obv, rev, cand_ids, swapped, exclude=frozenset()):
         """Local-feature check of `cand_ids`. -> ({article: (obverse_photo_inliers, reverse_photo_inliers)},
         photos_checked, photos_missing, photos_with_precomputed_features)."""
         sides = (obv, rev)                          # both query crops at once (Faz D2: was one after the other)
-        fq = list(self._pool.map(lambda s: self._lf_feats(s['vimg']) if s else None, sides))
+        # The SAM crop can be a part of the coin: prompted at the centre it sometimes takes the central device
+        # instead of the coin (canary 2026-10-09: 15000 -> a 31% fragment, 56 inliers vs 1000 for the whole
+        # frame). The catalog features come from whole frames, so the whole frame is checked too and the
+        # better of the two counts. Measured over 400 catalog photos: claudedocs/deploy/runbooks/
+        # 2026-10-09-ai-kirpim-dogrulama.md
+        imgs = [(k, s[key]) for k, s in enumerate(sides) if s for key in ('vimg', 'vraw') if s.get(key) is not None]
+        feats = list(self._pool.map(lambda kv: self._lf_feats(kv[1]), imgs))
+        fq = [[f for (k2, _), f in zip(imgs, feats) if k2 == k and f is not None] for k in range(2)]
         q = [(s, f) if s else None for s, f in zip(sides, fq)]
         # A single photo says nothing about which face it shows (the app sends it as "obverse"), and the
         # search already matched it against both faces. Verifying it against the obverse photos only left
@@ -490,7 +498,7 @@ class RecognitionService:
             faces = ('*', '*') if single else ('arka', 'on') if a in swapped else ('on', 'arka')
             plan[a] = []
             for k, face in enumerate(faces):
-                if q[k] is None or q[k][1] is None:
+                if q[k] is None or not q[k][1]:
                     plan[a].append([])
                     continue
                 rows = [r for r in (self.rows_by_face.get((a, face)) or self.rows_by_face.get((a, '*')) or [])
