@@ -179,7 +179,8 @@ LF_DIR = "/app/index/lf"
 # The table (ruler from the authority field or the obverse description) is built from the catalog:
 # scripts/ai_eval/hukumdar_tablosu.py + hiyerarsi_uret.py. Missing file -> the layer is simply off.
 HIER_PATH = "/app/index/hiyerarsi.json"
-NOTES_PATH = "/app/index/hukumdar_notlari.json"   # optional {name | "dynasty:<id>": {reign_tr, reign_en, tr, en}}
+NOTES_PATH = "/app/index/hukumdar_notlari.json"   # optional {name: {name_tr, name_en, kind, reign_tr, reign_en, tr, en} |
+                                                  #           "dynasty:<id>": {tr, en}}
 HIER_T = 0.05
 BASIS_K = 20                    # rows looked at to tell which photo is the portrait (obverse) side
 RULER_K, RULER_SHARE, RULER_MIN_COS = 10, 0.70, 0.60
@@ -622,9 +623,15 @@ class RecognitionService:
         return sorted(((v, w / tot) for v, w in oy.items()), key=lambda x: -x[1])
 
     def _ruler_info(self, name, share=None):
+        # name = catalog canonical (English, may carry ", governor of Asia"); the app shows name_tr / name_en.
+        # kind (ruler | family | official | community) picks the card title: a governor or a people is no "ruler".
         n = self.notes.get(name) or {}
-        return {'name': name, 'share': None if share is None else round(share, 3),
+        return {'name': name, 'name_tr': n.get('name_tr', name), 'name_en': n.get('name_en', name),
+                'kind': n.get('kind', 'ruler'), 'share': None if share is None else round(share, 3),
                 'reign_tr': n.get('reign_tr'), 'reign_en': n.get('reign_en'), 'note_tr': n.get('tr'), 'note_en': n.get('en')}
+
+    def _alt_names(self, names, lang):
+        return [(self.notes.get(x) or {}).get('name_' + lang, x) for x in names]
 
     def _dynasty_info(self, gid, share=None):
         d = self.dynasties.get(gid) or {}
@@ -694,6 +701,7 @@ class RecognitionService:
             s, e = h.get('s'), h.get('e')
             return {'level': 'type', 'basis': matches[0].get('basis'),
                     'ruler': self._ruler_info(h['a']) if h.get('a') else None, 'ruler_alternatives': [],
+                    'ruler_alternatives_tr': [], 'ruler_alternatives_en': [],
                     'dynasty': self._dynasty_info(h['g']) if h.get('g') in self.dynasties else None,
                     'mint': {'name': h['m'], 'share': None} if h.get('m') else None,
                     'date': {'estimate': None, 'from': s, 'to': e if e is not None else s} if s is not None else None,
@@ -754,6 +762,7 @@ class RecognitionService:
             return None
         return {'level': level, 'basis': basis,
                 'ruler': self._ruler_info(*ruler) if ruler else None, 'ruler_alternatives': alts,
+                'ruler_alternatives_tr': self._alt_names(alts, 'tr'), 'ruler_alternatives_en': self._alt_names(alts, 'en'),
                 'dynasty': self._dynasty_info(*dyn) if dyn else None,
                 'mint': {'name': mint[0], 'share': round(mint[1], 3)} if mint else None,
                 'date': date, 'reverse': reverse}
