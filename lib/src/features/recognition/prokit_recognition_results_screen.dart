@@ -791,8 +791,21 @@ class _IdentificationCard extends StatelessWidget {
     final dynastyNote = en ? ident.dynastyNoteEn : ident.dynastyNoteTr;
     final isType = ident.level == 'type';
     final date = CoinFormat.dateRange(ident.dateFrom, ident.dateTo, l10n);
-    final name = ident.rulerName;
+    // Katalogdaki kanonik ad (İngilizce, "…, governor of Asia" ekli olabilir) yerine görünen ad; eski sunucuda yok → kanonik.
+    final name = (en ? ident.rulerNameEn : ident.rulerNameTr) ?? ident.rulerName;
     final named = name == null ? null : (reign != null ? '$name ($reign)' : name);
+    final localAlts = en ? ident.rulerAlternativesEn : ident.rulerAlternativesTr;
+    final alts = localAlts.isNotEmpty ? localAlts : ident.rulerAlternatives;
+    // Vali, satrap ya da bir halk "hükümdar" değildir: başlık türe göre (sunucu göndermezse hükümdar).
+    final kind = ident.rulerKind;
+    final authority = kind == 'official' || kind == 'community';
+    final rulerTitle = isType
+        ? (authority
+            ? 'ident_title_type_authority'
+            : (kind == 'family' ? 'ident_title_type_family' : 'ident_title_type'))
+        : (authority
+            ? 'ident_title_authority'
+            : (ident.basis == 'reverse' ? 'ident_title_ruler_reverse' : 'ident_title_ruler'));
 
     Widget block(IconData icon, String title, String main, [String? sub]) => Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -821,8 +834,8 @@ class _IdentificationCard extends StatelessWidget {
 
     final dynastySub = [
       if (dynastyNote != null) dynastyNote,
-      if (name == null && ident.rulerAlternatives.isNotEmpty)
-        l10n.translate('ident_possible_rulers', params: {'names': ident.rulerAlternatives.join(', ')}),
+      if (name == null && alts.isNotEmpty)
+        l10n.translate('ident_possible_rulers', params: {'names': alts.join(', ')}),
     ].join('\n');
     final rev = ident.reverseStatus;
     final revText = (name == null || rev == null || isType)
@@ -846,10 +859,8 @@ class _IdentificationCard extends StatelessWidget {
             ),
           if (named != null)
             block(
-              Icons.person_outline,
-              l10n.translate(isType
-                  ? 'ident_title_type'
-                  : (ident.basis == 'reverse' ? 'ident_title_ruler_reverse' : 'ident_title_ruler')),
+              kind == 'community' ? Icons.groups_outlined : Icons.person_outline,
+              l10n.translate(rulerTitle),
               isType ? named : l10n.translate('ident_ruler_line', params: {'name': named}),
               rulerNote,
             ),

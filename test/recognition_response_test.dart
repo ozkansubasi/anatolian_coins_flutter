@@ -113,4 +113,32 @@ void main() {
     final i = CoinIdentification.tryParse({'level': 'type', 'mint': {'name': 'ephesus'}, 'date': {'from': -130, 'to': -129}})!;
     expect(i.hasContent, isFalse);
   });
+
+  // 2026-10-10: kanonik ad (İngilizce, "…, governor of Asia") yerine görünen ad + tür (kart başlığı).
+  test('identification: görünen ad, tür ve yerel alternatifler ayrıştırılır', () {
+    final i = CoinIdentification.tryParse({
+      'level': 'ruler',
+      'ruler': {'name': 'T. Ampius, governor of Asia', 'name_tr': 'T. Ampius Balbus', 'name_en': 'T. Ampius Balbus',
+          'kind': 'official', 'reign_tr': 'MÖ 58–57'},
+      'ruler_alternatives': ['Trajan', 'Alexander III of Macedon'],
+      'ruler_alternatives_tr': ['Traianus', 'Büyük İskender'],
+      'ruler_alternatives_en': ['Trajan', 'Alexander the Great'],
+    })!;
+    expect(i.rulerName, 'T. Ampius, governor of Asia');
+    expect([i.rulerNameTr, i.rulerNameEn, i.rulerKind], ['T. Ampius Balbus', 'T. Ampius Balbus', 'official']);
+    expect(i.rulerAlternativesTr, ['Traianus', 'Büyük İskender']);
+    expect(i.rulerAlternativesEn, ['Trajan', 'Alexander the Great']);
+  });
+
+  test('identification: eski sunucu (görünen ad yok) → boş alanlar, kanonik ad korunur', () {
+    final i = CoinIdentification.tryParse({
+      'level': 'ruler',
+      'ruler': {'name': 'Hadrian'},
+      'ruler_alternatives': ['Trajan', 7],
+    })!;
+    expect(i.rulerName, 'Hadrian');
+    expect([i.rulerNameTr, i.rulerNameEn, i.rulerKind], [null, null, null]);
+    expect(i.rulerAlternatives, ['Trajan']); // dize olmayan atlanır
+    expect(i.rulerAlternativesTr, isEmpty);
+  });
 }

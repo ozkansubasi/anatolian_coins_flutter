@@ -349,14 +349,16 @@ class RecognitionResponse {
 }
 
 /// Hedef 2: tam tip doğrulanmadığında da fotoğraftan çıkarılan bilgi. Düzey sırası:
-/// type (doğrulanmış tip) > ruler > dynasty > mint > date. Adlar katalogdaki gibi gelir
-/// (hükümdar İngilizce, darphane küçük harf anahtar); not ve dönem metni TR/EN ikisi birden.
+/// type (doğrulanmış tip) > ruler > dynasty > mint > date. Hükümdarın kanonik adı katalogdaki gibi
+/// (İngilizce) gelir, gösterilecek ad `name_tr` / `name_en`; darphane küçük harf anahtar; not ve dönem
+/// metni TR/EN ikisi birden. `kind` (ruler | family | official | community) kart başlığını seçer.
 class CoinIdentification {
   final String level; // type | ruler | dynasty | mint | date
   final String? basis; // obverse | reverse — portreyi taşıyan fotoğraf
   final String? rulerName;
+  final String? rulerNameTr, rulerNameEn, rulerKind;
   final String? rulerReignTr, rulerReignEn, rulerNoteTr, rulerNoteEn;
-  final List<String> rulerAlternatives;
+  final List<String> rulerAlternatives, rulerAlternativesTr, rulerAlternativesEn;
   final String? dynastyNameTr, dynastyNameEn, dynastyNoteTr, dynastyNoteEn;
   final String? mint;
   final int? dateFrom, dateTo;
@@ -367,11 +369,16 @@ class CoinIdentification {
     required this.level,
     this.basis,
     this.rulerName,
+    this.rulerNameTr,
+    this.rulerNameEn,
+    this.rulerKind,
     this.rulerReignTr,
     this.rulerReignEn,
     this.rulerNoteTr,
     this.rulerNoteEn,
     this.rulerAlternatives = const [],
+    this.rulerAlternativesTr = const [],
+    this.rulerAlternativesEn = const [],
     this.dynastyNameTr,
     this.dynastyNameEn,
     this.dynastyNoteTr,
@@ -394,15 +401,21 @@ class CoinIdentification {
     final dyn = m(j['dynasty']);
     final date = m(j['date']);
     final rev = m(j['reverse']);
+    List<String> names(Object? v) => (v as List<dynamic>? ?? []).whereType<String>().toList();
     return CoinIdentification(
       level: level,
       basis: j['basis'] as String?,
       rulerName: ruler['name'] as String?,
+      rulerNameTr: ruler['name_tr'] as String?,
+      rulerNameEn: ruler['name_en'] as String?,
+      rulerKind: ruler['kind'] as String?,
       rulerReignTr: ruler['reign_tr'] as String?,
       rulerReignEn: ruler['reign_en'] as String?,
       rulerNoteTr: ruler['note_tr'] as String?,
       rulerNoteEn: ruler['note_en'] as String?,
-      rulerAlternatives: (j['ruler_alternatives'] as List<dynamic>? ?? []).whereType<String>().toList(),
+      rulerAlternatives: names(j['ruler_alternatives']),
+      rulerAlternativesTr: names(j['ruler_alternatives_tr']),
+      rulerAlternativesEn: names(j['ruler_alternatives_en']),
       dynastyNameTr: dyn['name_tr'] as String?,
       dynastyNameEn: dyn['name_en'] as String?,
       dynastyNoteTr: dyn['note_tr'] as String?,
