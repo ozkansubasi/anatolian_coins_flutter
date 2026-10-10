@@ -367,7 +367,8 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       children: [
         numSectionHeader(
           title: l10n.translate('editors_pick'),
-          actionText: l10n.translate('more'),
+          // Bağlantı nereye götürdüğünü söyler: "Daha Fazla" yerine "Blog" (kullanıcı, 2026-10-10).
+          actionText: l10n.translate('blog'),
           // Blog menusune gider; "sikke arama" (/browse) yanlis hedefti.
           onAction: () => context.openRoute('/blog'),
         ),

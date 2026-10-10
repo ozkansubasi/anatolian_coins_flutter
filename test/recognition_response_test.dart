@@ -141,4 +141,13 @@ void main() {
     expect(i.rulerAlternatives, ['Trajan']); // dize olmayan atlanır
     expect(i.rulerAlternativesTr, isEmpty);
   });
+
+  test('AI11: quality.same_face true ise sameFace; yoksa ya da eski sunucuda false', () {
+    RecognitionResponse r(Map<String, dynamic>? quality) =>
+        RecognitionResponse.fromJson({'data': {'matches': [], if (quality != null) 'quality': quality}});
+    expect(r({'obverse': {'coin_detected': true}, 'same_face': true}).sameFace, isTrue);
+    expect(r({'obverse': {'coin_detected': true}}).sameFace, isFalse);
+    expect(r({'same_face': 'evet'}).sameFace, isFalse); // yalnız gerçek true
+    expect(r(null).sameFace, isFalse); // eklenti quality göndermiyor
+  });
 }

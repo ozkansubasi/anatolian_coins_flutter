@@ -311,6 +311,7 @@
   "reason_below_confidence": "Güvenilir eşleşme bulunamadı",
   "reason_below_confidence_desc": "Sonuçların hiçbiri güven eşiğini geçemedi. Daha net bir fotoğraf, farklı açı veya arka yüz fotoğrafı eklemek sonucu iyileştirebilir.",
   "reason_ambiguous_match": "Sonuçlar birbirine çok yakın; en iyi eşleşme kesin olmayabilir. Arka yüz fotoğrafı eklemek ayrımı netleştirir.",
+  "same_face_notice": "İki fotoğraf da sikkenin aynı yüzünü gösteriyor; arka yüz tanıması atlandı ve sonuç tek fotoğrafa göre. Daha güvenilir sonuç için sikkenin öbür yüzünü de çekin.",
   "try_clearer_photo": "Daha net bir fotoğraf deneyin, daha iyi aydınlatma kullanın",
   "take_another_photo": "Başka Fotoğraf Çek",
   "showing_top_matches": "En iyi eşleşmeler gösteriliyor",

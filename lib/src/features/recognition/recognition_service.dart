@@ -314,6 +314,10 @@ class RecognitionResponse {
   /// Convenience getter for remaining scans (backward compatibility)
   int get remainingScans => quota?.remaining ?? 0;
 
+  /// AI11 (2026-10-10): iki fotoğraf sikkenin aynı yüzünü gösteriyordu; sunucu tek fotoğrafla yanıtladı,
+  /// ikinci fotoğraf tanımada kullanılmadı (`quality.same_face`).
+  bool get sameFace => quality?['same_face'] == true;
+
   factory RecognitionResponse.fromJson(Map<String, dynamic> json) {
     // Handle both direct response format and wrapped 'data' format from Joomla
     final data = json['data'] as Map<String, dynamic>? ?? json;

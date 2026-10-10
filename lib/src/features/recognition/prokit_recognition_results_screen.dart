@@ -192,7 +192,7 @@ class _ProkitRecognitionResultsScreenState
     );
   }
 
-  Widget _buildNoResults(AppLocalizations l10n, [String? reason]) {
+  Widget _buildNoResults(AppLocalizations l10n, [String? reason, bool sameFace = false]) {
     final reasonKey = switch (reason) {
       'no_coin_detected' => 'reason_no_coin_detected',
       'low_detail_surface' => 'reason_low_detail_surface',
@@ -208,7 +208,10 @@ class _ProkitRecognitionResultsScreenState
       icon: icon,
       iconColor: context.numColors.hint,
       title: l10n.translate(reasonKey ?? 'no_matches'),
-      message: l10n.translate(reasonKey != null ? '${reasonKey}_desc' : 'try_clearer_photo'),
+      // AI11: iki fotoğraf aynı yüzü gösteriyorsa en yararlı öneri öbür yüzü çekmek
+      message: l10n.translate(sameFace
+          ? 'same_face_notice'
+          : (reasonKey != null ? '${reasonKey}_desc' : 'try_clearer_photo')),
       actions: [
         FilledButton.icon(
           onPressed: _scanAnother,
@@ -255,7 +258,7 @@ class _ProkitRecognitionResultsScreenState
     // Hedef 2: aday kalmasa da fotoğraf hükümdar/dönem/darphane/tarih söylüyorsa "sonuç yok" denmez.
     final ident = results.identification;
     final showIdent = uncertain && ident != null && ident.level != 'type' && ident.hasContent;
-    if (matches.isEmpty && !showIdent) return _buildNoResults(l10n, results.noMatchReason);
+    if (matches.isEmpty && !showIdent) return _buildNoResults(l10n, results.noMatchReason, results.sameFace);
 
     final t = context.numText;
     final c = context.numColors;
@@ -278,6 +281,12 @@ class _ProkitRecognitionResultsScreenState
                         params: {'n': '${matches.length}'}),
               ),
               const SizedBox(height: 16),
+
+              // AI11: iki fotoğraf da aynı yüzü gösteriyordu → sunucu tek fotoğrafla yanıtladı
+              if (results.sameFace) ...[
+                _SameFaceNotice(l10n: l10n),
+                const SizedBox(height: 16),
+              ],
 
               if (uncertain) ...[
                 Container(
@@ -456,6 +465,35 @@ class _ProkitRecognitionResultsScreenState
 // --- Parçalar ----------------------------------------------------------------
 
 /// Taranan sikke: kullanıcının ön/arka yüz fotoğrafları + özet.
+/// AI11 (2026-10-10): iki fotoğraf sikkenin aynı yüzünü gösteriyordu; ikinci fotoğraf tanımada kullanılmadı.
+class _SameFaceNotice extends StatelessWidget {
+  final AppLocalizations l10n;
+  const _SameFaceNotice({required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.numText;
+    final c = context.numColors;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: numWarning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.flip, color: numWarning, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(l10n.translate('same_face_notice'), style: t.caption.copyWith(color: c.text)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ScannedCoinStrip extends StatelessWidget {
   final File obverse;
   final File? reverse;

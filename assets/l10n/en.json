@@ -311,6 +311,7 @@
   "reason_below_confidence": "No reliable match found",
   "reason_below_confidence_desc": "None of the results passed the confidence threshold. A clearer photo, a different angle or adding the reverse side may help.",
   "reason_ambiguous_match": "The results are very close; the top match may not be definitive. Adding a reverse-side photo helps disambiguate.",
+  "same_face_notice": "Both photos show the same side of the coin, so reverse recognition was skipped and the result is based on one photo. For a more reliable result, photograph the other side too.",
   "try_clearer_photo": "Try a clearer photo with better lighting",
   "take_another_photo": "Take Another Photo",
   "showing_top_matches": "Showing top matches",
