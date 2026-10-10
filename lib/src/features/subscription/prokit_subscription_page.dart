@@ -977,11 +977,17 @@ class ProkitSubscriptionPage extends ConsumerWidget {
   /// Mağaza aboneliği iOS/Android ayarlarından iptal edilir; web (iyzico)
   /// aboneliği edilemez, kullanıcı numistr.org Hesabım sayfasına yönlendirilir.
   /// Yanlış yönlendirme, iptal edemeyen kullanıcı demek.
+  ///
+  /// iOS'ta bağlantı düğmesi YOK, yalnız metin: App Store 3.1.1/3.1.3 uygulama
+  /// içi satın alma dışındaki ödeme yoluna (Hesabım → iyzico) giden bağlantıyı
+  /// yasaklıyor.
   void _showManageSubscriptionInfo(
     BuildContext context,
     AppLocalizations l10n,
     bool managedByStore,
   ) {
+    final showWebLink =
+        !managedByStore && Theme.of(context).platform != TargetPlatform.iOS;
     final isTr = Localizations.localeOf(context).languageCode == 'tr';
     final accountUrl = Uri.parse(isTr
         ? 'https://www.numistr.org/tr/hesabim'
@@ -1009,7 +1015,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
           style: secondaryTextStyle(size: 14, color: c.textMuted),
         ),
         actions: [
-          if (!managedByStore)
+          if (showWebLink)
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
