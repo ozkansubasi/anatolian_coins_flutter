@@ -39,5 +39,15 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    # Xcode 27 yalnız 15.0–27.0 hedeflerini destekliyor; pod'ların 9.0/12.0/13.0 hedefleri
+    # arşivi "Target Integrity" ile düşürüyordu (2026-10-10, M7 ile aynı belirti)
+    target.build_configurations.each do |config|
+      if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.0
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      end
+      # Xcode 27 lipo'su `-verify_arch arm64 x86_64` (çok mimari) kabul etmiyor; Flutter 3.35.6 simülatörde
+      # ikisini birden doğruladığı için debug_unpack_ios düşüyordu. Simülatör yalnız arm64 (Apple Silicon).
+      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64'
+    end
   end
 end
