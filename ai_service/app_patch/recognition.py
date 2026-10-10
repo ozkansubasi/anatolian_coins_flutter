@@ -46,6 +46,9 @@ Faz E (2026-09-29, AI1 — canlı) — coin-tuned embedding space:
   cosine-unit constants (TIE_EPS, attribute bonuses) are scaled by EMB_SCALE. PROJ_PATH = None and
   ENCODER_CKPT = None restore Faz D exactly.
 
+AI11 (2026-10-10) — the same face photographed twice: such a request is answered from the obverse photo
+alone, exactly as a single photo, and flagged quality.same_face (see SAME_FACE_* below).
+
 Interface (constructor, recognize(), response dict) stays backward compatible;
 new response keys are additive. Index paths hardcoded so a simple `docker
 restart` (no recreate) preserves pip installs + model caches.
@@ -160,6 +163,22 @@ IMG_DIR = "/app/index/images"   # hardlinks of /opt/ai_service/data/training/tra
 # uint8 on disk is lossless, 300/300 photos measured). A photo without a file (added after the last
 # precompute) is computed from the image exactly as before; LF_DIR = None restores Faz D.
 LF_DIR = "/app/index/lf"
+
+# ---- AI11 (2026-10-10): both photos show the same face ----
+# The app cannot skip the reverse shot, so whoever photographs one face twice (a worn reverse, a book or a screen,
+# a test) sends the same face in both slots. Faz C then judged "taken the other way round" on noise: the photo a
+# little closer to the catalog obverse became the obverse and the other was scored against the catalog REVERSE,
+# so the card read "Obverse 0% · Reverse 95%" one time and "Obverse 99% · Reverse 0%" the next (device test
+# 2026-10-10; reproduced on 9 of 18 same-face pairs, never on a real pair); the ruler card compared an obverse
+# photo with reverse dies ("may not be in our catalogue") and only one of the two photos was verified.
+# Such a request is now answered from the obverse photo alone, exactly as a single photo, and quality.same_face
+# tells the app that the second photo was not used. A real obverse + reverse pair must never be collapsed: (A) the
+# two photos' coin crops have to match each other geometrically (RANSAC inliers; two different faces cannot, and
+# the crop keeps a shared background or screen frame out — whole frames of real pairs reach 199), and unless that
+# match is overwhelming, (B) both photos must also prefer the same face of the obverse photo's leading candidate.
+SAME_FACE_INLIERS = 50          # A: inliers between the two photos' coin crops
+SAME_FACE_INLIERS_SURE = 150    # A alone is enough from here on
+SAME_FACE_GAP = 0.10            # B: cosine by which each photo prefers that face over the other one
 
 # ---- Hedef 2 (2026-10-09): what the photo still tells when the exact type is not verified ----
 # "No match" was the answer even when the portrait obviously showed, say, Marcus Aurelius (user). The nearest
@@ -534,6 +553,35 @@ class RecognitionService:
             return -1, None
         return max(self._lf_inliers(fq, fc) for fq in fqs), src
 
+    def _side_lf(self, s, key):
+        """SIFT features of a side's 'vimg' / 'vraw', computed once per request (AI11 check and _verify)."""
+        c = s.setdefault('lf', {})
+        if key not in c:
+            c[key] = self._lf_feats(s.get(key))
+        return c[key]
+
+    def _same_face(self, obv, rev, exclude=frozenset()) -> Optional[int]:
+        """AI11: -> inliers between the two photos when they show the same face of the coin, else None."""
+        if self._pool is not None:                  # every verification image at once: _verify reuses them
+            list(self._pool.map(lambda j: self._side_lf(*j),
+                                [(s, k) for s in (obv, rev) for k in ('vimg', 'vraw') if s.get(k) is not None]))
+        inl = self._lf_inliers(self._side_lf(obv, 'vimg'), self._side_lf(rev, 'vimg'))  # coin crops, not frames
+        if inl >= SAME_FACE_INLIERS_SURE:
+            return inl
+        if inl < SAME_FACE_INLIERS:
+            return None
+        # moderate evidence: both photos must also prefer one face of the obverse photo's leading candidate
+        best = self._search_side(obv['embs'], exclude)
+        if not best:
+            return None
+        a = max(best, key=best.get)
+        cache: Dict[int, np.ndarray] = {}
+        s = [self._face_score(x['embs'], a, face, exclude, cache) for x in (obv, rev) for face in ('on', 'arka')]
+        if None in s:
+            return None
+        go, gr = s[0] - s[1], s[2] - s[3]           # > 0: the photo looks like this article's obverse
+        return inl if go * gr > 0 and min(abs(go), abs(gr)) >= SAME_FACE_GAP else None
+
     def _verify(self, obv, rev, cand_ids, swapped, exclude=frozenset()):
         """Local-feature check of `cand_ids`. -> ({article: (obverse_photo_inliers, reverse_photo_inliers)},
         photos_checked, photos_missing, photos_with_precomputed_features)."""
@@ -543,8 +591,8 @@ class RecognitionService:
         # frame). The catalog features come from whole frames, so the whole frame is checked too and the
         # better of the two counts. Measured over 400 catalog photos: claudedocs/deploy/runbooks/
         # 2026-10-09-ai-kirpim-dogrulama.md
-        imgs = [(k, s[key]) for k, s in enumerate(sides) if s for key in ('vimg', 'vraw') if s.get(key) is not None]
-        feats = list(self._pool.map(lambda kv: self._lf_feats(kv[1]), imgs))
+        imgs = [(k, key) for k, s in enumerate(sides) if s for key in ('vimg', 'vraw') if s.get(key) is not None]
+        feats = list(self._pool.map(lambda kk: self._side_lf(sides[kk[0]], kk[1]), imgs))
         fq = [[f for (k2, _), f in zip(imgs, feats) if k2 == k and f is not None] for k in range(2)]
         q = [(s, f) if s else None for s, f in zip(sides, fq)]
         # A single photo says nothing about which face it shows (the app sends it as "obverse"), and the
@@ -791,6 +839,16 @@ class RecognitionService:
             if obv is None and rev is None:
                 return self._stub_response()
 
+            # AI11: the same face photographed twice -> answered from the obverse photo alone
+            same_face, rev_in = None, rev
+            if obv and rev:
+                try:
+                    same_face = self._same_face(obv, rev, exclude)
+                except Exception as e:                  # optional check: never fails the recognition
+                    logger.error("AI11 same-face check failed: %s" % e, exc_info=True)
+                if same_face is not None:
+                    rev = None
+
             fused, obv_best, rev_best, swapped = self._fuse(obv, rev, exclude, with_swap=True)
 
             if metal or weight_g or diameter_mm:
@@ -957,12 +1015,15 @@ class RecognitionService:
             quality = {}
             if obv:
                 quality['obverse'] = {'coin_detected': obv['detected'], 'sharpness': obv['sharpness']}
-            if rev:
-                quality['reverse'] = {'coin_detected': rev['detected'], 'sharpness': rev['sharpness']}
+            if rev_in:
+                quality['reverse'] = {'coin_detected': rev_in['detected'], 'sharpness': rev_in['sharpness']}
+            if same_face is not None:
+                quality['same_face'] = True             # AI11: the second photo shows the same face, not used
 
             end = datetime.utcnow()
             logger.info("recognize(faz%s%s): sides=%d top art=%s conf=%.3f reason=%s tie=%d "
-                        "verified=%d top_inl=%s checked=%d missing=%d lf=%d verify_ms=%d near=%d ident=%s:%s" %
+                        "verified=%d top_inl=%s checked=%d missing=%d lf=%d verify_ms=%d near=%d ident=%s:%s "
+                        "same=%s" %
                         ('C' if (obv and rev and FUSION_MODE == 'exact') else 'A',
                          'D' if verify_ran else '',
                          len(sides), matches[0]['article_id'] if matches else None, top, reason,
@@ -970,7 +1031,7 @@ class RecognitionService:
                          max(verified.values()) if verified else None, checked, missing, precomputed,
                          verify_ms, len(near), ident and ident['level'],
                          ident and ((ident.get('ruler') or {}).get('name') or (ident.get('dynasty') or {}).get('id')
-                                    or (ident.get('mint') or {}).get('name'))))
+                                    or (ident.get('mint') or {}).get('name')), same_face))
             return {
                 'matches': matches,
                 'confidence': top,
