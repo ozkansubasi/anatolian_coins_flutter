@@ -7,6 +7,7 @@
   "OIDC_CLIENT_ID": "5AFSce7JEdmyxBrwjwEI7IcnRnvXKF8c",
   "OIDC_REDIRECT_URL": "com.anatoliancoins.app://callback",
   "OIDC_LOGOUT_REDIRECT_URL": "com.anatoliancoins.app://logout",
+  "APPLE_SIGNIN_ENABLED": "true",
   "REVENUECAT_ANDROID_KEY": "goog_HqITgfhcdtQNphhibhFTMbQHjGg",
   "REVENUECAT_IOS_KEY": "appl_vwSyRXaCPEoHzVKxJSCeqMNCyyJ"
 }

@@ -26,10 +26,11 @@ class Env {
   );
 
   // ---- Auth0 (OIDC + PKCE) ----
-  /// "Apple ile devam et" düğmesi. Auth0'da `apple` bağlantısı açılana kadar
-  /// KAPALI: 2026-09-26 Play ön-yayın robotu düğmeye bastı, Auth0 "the connection
-  /// is not enabled" döndü — Android'de gerçek kullanıcı da aynı hatayı alırdı.
-  /// iOS yayınından önce açılmalı (App Store 4.8: Google girişi varsa Apple şart).
+  /// "Apple ile devam et" düğmesi (App Store 4.8: Google girişi varsa Apple şart).
+  /// Auth0 `apple` bağlantısı 2026-10-11'de açıldı (Services ID
+  /// org.numistr.anatoliancoins.signin); env/*.json `true` verir. Varsayılan
+  /// KAPALI kalır: bağlantı yokken düğmeye basan Play ön-yayın robotu Auth0'dan
+  /// "the connection is not enabled" almıştı (2026-09-26).
   static const appleSignInEnabled =
       bool.fromEnvironment('APPLE_SIGNIN_ENABLED', defaultValue: false);
 

@@ -476,7 +476,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
         12.height,
 
-        // Apple button — Auth0 bağlantısı açılana kadar gizli (Env.appleSignInEnabled)
+        // Apple button — Env.appleSignInEnabled (env/*.json; Auth0 `apple` bağlantısı)
         if (Env.appleSignInEnabled) ...[
           _SocialLoginButton(
             iconWidget: const Icon(Icons.apple, color: Colors.white, size: 24),
