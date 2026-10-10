@@ -32,3 +32,6 @@ Runner/GeneratedPluginRegistrant.*
 !default.mode2v3
 !default.pbxuser
 !default.perspectivev3
+
+# Google Maps iOS anahtarı (android/key.properties düzeni) — git DIŞI, Drive oturum yüküyle taşınır
+Flutter/Secrets.xcconfig

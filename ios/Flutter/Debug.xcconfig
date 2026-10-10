@@ -1,5 +1,7 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
 #include "Generated.xcconfig"
+// Google Maps iOS anahtarı (git dışı; yoksa derleme sürer, harita anahtarsız kalır)
+#include? "Secrets.xcconfig"
 
 // Xcode 27 lipo'su `-verify_arch arm64 x86_64` (çok mimari) kabul etmiyor; Flutter 3.35.6 simülatör derlemesinde
 // ikisini birden doğruladığı için debug_unpack_ios düşüyordu (2026-10-10). Simülatör yalnız arm64 (Apple Silicon);
