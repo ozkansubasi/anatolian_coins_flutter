@@ -563,6 +563,7 @@
   "ident_title_ruler_reverse": "Portre (diğer fotoğraftan)",
   "ident_ruler_line": "Büyük olasılıkla {name}",
   "ident_title_dynasty": "Muhtemel dönem",
+  "ident_title_dynasty_type": "Dönem",
   "ident_possible_rulers": "Olası hükümdarlar: {names}",
   "ident_title_mint": "Muhtemel darphane",
   "ident_title_date": "Tahmini tarih",

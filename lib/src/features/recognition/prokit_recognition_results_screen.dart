@@ -866,7 +866,9 @@ class _IdentificationCard extends StatelessWidget {
             ),
           // Hükümdar söylendiyse dönem yalnız notu varsa ayrıca gösterilir (tekrar olmasın).
           if (dynasty != null && (name == null || dynastyNote != null))
-            block(Icons.account_balance_outlined, l10n.translate('ident_title_dynasty'), dynasty, dynastySub),
+            // Doğrulanmış tipte dönem kesin: "muhtemel" denmez.
+            block(Icons.account_balance_outlined, l10n.translate(isType ? 'ident_title_dynasty_type' : 'ident_title_dynasty'),
+                dynasty, dynastySub),
           if (!isType && ident.mint != null)
             block(Icons.place_outlined, l10n.translate('ident_title_mint'), CoinFormat.titleCase(ident.mint!)),
           if (!isType && date != null)

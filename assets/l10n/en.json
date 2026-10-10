@@ -563,6 +563,7 @@
   "ident_title_ruler_reverse": "Portrait (from the other photo)",
   "ident_ruler_line": "Most likely {name}",
   "ident_title_dynasty": "Likely period",
+  "ident_title_dynasty_type": "Period",
   "ident_possible_rulers": "Possible rulers: {names}",
   "ident_title_mint": "Likely mint",
   "ident_title_date": "Estimated date",
