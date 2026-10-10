@@ -48,3 +48,7 @@ app.*.map.json
 android/key.properties
 **/*.jks
 **/*.keystore
+
+# Apple anahtarları (.p8: Sign in with Apple, App Store Connect API) — asla commit etme
+**/*.p8
+Apple_developer_Key/
