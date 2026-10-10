@@ -158,6 +158,39 @@ class _ProkitRecognitionResultsScreenState
   Widget _buildError(Object error, AppLocalizations l10n) {
     final t = context.numText;
     final c = context.numColors;
+    // M17: oturumsuz deneme reddi ya da oturum gereksinimi genel hata değil, ücretsiz hesap daveti.
+    if (error is RecognitionException && (error.isTrialEnded || error.isAuthRequired)) {
+      final exhausted = error.trialCode == 'TRIAL_EXHAUSTED';
+      return _StateMessage(
+        icon: Icons.person_add_alt_1_rounded,
+        iconColor: c.accent,
+        title: l10n.translate(exhausted ? 'scan_trial_ended_title' : 'sign_in_required'),
+        message: l10n.translate(exhausted
+            ? 'scan_trial_ended_detail'
+            : (error.trialCode == 'TRIAL_UNAVAILABLE'
+                ? 'scan_trial_unavailable_detail'
+                : 'sign_in_to_scan_detail')),
+        actions: [
+          OutlinedButton.icon(
+            onPressed: () => context.popOrGoHome(),
+            icon: const Icon(Icons.arrow_back),
+            label: Text(l10n.translate('go_back')),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: c.textMuted,
+              side: BorderSide(color: c.border),
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton.icon(
+            onPressed: () => context.push('/login'),
+            icon: const Icon(Icons.login),
+            label: Text(l10n.translate('sign_in')),
+            style: FilledButton.styleFrom(backgroundColor: numPrimary),
+          ),
+        ],
+        textStyle: t,
+      );
+    }
     // Ham istisna ("DioException [connection timeout]…") kullanıcıya gösterilmez.
     final s = error.toString().toLowerCase();
     final isNetwork = s.contains('socket') ||

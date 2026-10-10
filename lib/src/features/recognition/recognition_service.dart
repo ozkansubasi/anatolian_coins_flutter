@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
@@ -6,6 +7,7 @@ import '../../core/api_client.dart';
 import '../../core/env.dart';
 import '../../core/network_utils.dart';
 import '../../auth/auth_controller.dart';
+import '../../core/install_id.dart';
 import '../../core/subscription_provider.dart';
 
 /// Recognition service for coin identification
@@ -14,7 +16,17 @@ import '../../core/subscription_provider.dart';
 class RecognitionService {
   final ApiClient _client;
 
-  RecognitionService(this._client);
+  /// M17: oturum yokken kurulum kimliği (`X-Device-Id`), oturumluyken null.
+  final Future<String?> Function()? _anonymousDeviceId;
+
+  RecognitionService(this._client, {Future<String?> Function()? anonymousDeviceId})
+      : _anonymousDeviceId = anonymousDeviceId;
+
+  /// Oturumsuz deneme isteğinde kurulum kimliği başlığı; oturumluyken başlık yok.
+  Future<Map<String, dynamic>?> _trialHeaders() async {
+    final id = await _anonymousDeviceId?.call();
+    return id == null ? null : {'X-Device-Id': id};
+  }
 
   /// Pre-flight check before recognition
   /// Throws RecognitionException if service is not available
@@ -94,6 +106,7 @@ class RecognitionService {
         options: Options(
           contentType: 'multipart/form-data',
           receiveTimeout: const Duration(seconds: 60),
+          headers: await _trialHeaders(),
         ),
       );
 
@@ -116,25 +129,7 @@ class RecognitionService {
       debugPrint('❌ [RecognitionService] Error message: ${e.message}');
       debugPrint('❌ [RecognitionService] Response data: ${e.response?.data}');
 
-      if (e.response?.statusCode == 429) {
-        throw RecognitionException(
-          'Scan quota exceeded. Please upgrade to Pro or wait until next month.',
-          isQuotaExceeded: true,
-        );
-      }
-      if (e.response?.statusCode == 401) {
-        throw RecognitionException(
-          'Authentication required for recognition',
-          isAuthRequired: true,
-        );
-      }
-      if (e.response?.statusCode == 503) {
-        throw RecognitionException(
-          'Recognition service temporarily unavailable. Please try again later.',
-          isServiceUnavailable: true,
-        );
-      }
-      throw RecognitionException('Recognition failed: ${e.message}');
+      throw exceptionFor(e.response?.statusCode, e.response?.data, e.message);
     } catch (e, stack) {
       debugPrint('❌ [RecognitionService] Unexpected error: $e');
       debugPrint('❌ [RecognitionService] Stack trace: $stack');
@@ -185,6 +180,7 @@ class RecognitionService {
         options: Options(
           contentType: 'multipart/form-data',
           receiveTimeout: const Duration(seconds: 60),
+          headers: await _trialHeaders(),
         ),
       );
 
@@ -207,30 +203,68 @@ class RecognitionService {
       debugPrint('❌ [RecognitionService] Error message: ${e.message}');
       debugPrint('❌ [RecognitionService] Response data: ${e.response?.data}');
 
-      if (e.response?.statusCode == 429) {
-        throw RecognitionException(
-          'Scan quota exceeded. Please upgrade to Pro or wait until next month.',
-          isQuotaExceeded: true,
-        );
-      }
-      if (e.response?.statusCode == 401) {
-        throw RecognitionException(
-          'Authentication required for recognition',
-          isAuthRequired: true,
-        );
-      }
-      if (e.response?.statusCode == 503) {
-        throw RecognitionException(
-          'Recognition service temporarily unavailable. Please try again later.',
-          isServiceUnavailable: true,
-        );
-      }
-      throw RecognitionException('Recognition failed: ${e.message}');
+      throw exceptionFor(e.response?.statusCode, e.response?.data, e.message);
     } catch (e, stack) {
       debugPrint('❌ [RecognitionService] Unexpected error: $e');
       debugPrint('❌ [RecognitionService] Stack trace: $stack');
       if (e is RecognitionException) rethrow;
       throw RecognitionException('Recognition failed: $e');
+    }
+  }
+
+  /// HTTP hatasını [RecognitionException]'a çevirir (iki tanıma çağrısı ortak kullanır).
+  /// M17: oturumsuz denemede 429 gövdesindeki `error.code` deneme bitti / kullanılamıyor
+  /// ayrımını taşır; bunlar kota hatası değil, ücretsiz hesap davetidir.
+  @visibleForTesting
+  static RecognitionException exceptionFor(int? status, Object? body, String? message) {
+    final code = _errorCode(body);
+    if (code == 'TRIAL_EXHAUSTED' || code == 'TRIAL_UNAVAILABLE') {
+      return RecognitionException('Free trial: $code', trialCode: code);
+    }
+    if (status == 429) {
+      return RecognitionException(
+        'Scan quota exceeded. Please upgrade to Pro or wait until next month.',
+        isQuotaExceeded: true,
+      );
+    }
+    if (status == 401) {
+      return RecognitionException('Authentication required for recognition', isAuthRequired: true);
+    }
+    if (status == 503) {
+      return RecognitionException(
+        'Recognition service temporarily unavailable. Please try again later.',
+        isServiceUnavailable: true,
+      );
+    }
+    return RecognitionException('Recognition failed: $message');
+  }
+
+  static String? _errorCode(Object? body) {
+    var data = body;
+    if (data is String) {
+      try {
+        data = jsonDecode(data);
+      } catch (_) {
+        return null;
+      }
+    }
+    if (data is Map && data['error'] is Map) return (data['error'] as Map)['code']?.toString();
+    return null;
+  }
+
+  /// M17: oturumsuz deneme hakkı (kurulum kimliğiyle). Sunucu yalnız okur, hak düşmez.
+  Future<ScanQuota> getAnonQuota(String deviceId) async {
+    try {
+      final response = await _client.dio.get(
+        '/anon/scan-quota',
+        options: Options(headers: {'X-Device-Id': deviceId}),
+      );
+      final Map<String, dynamic> data = response.data is Map
+          ? response.data as Map<String, dynamic>
+          : {};
+      return ScanQuota.fromJson(data);
+    } catch (e) {
+      throw Exception('Failed to fetch trial quota: $e');
     }
   }
 
@@ -258,12 +292,18 @@ class RecognitionException implements Exception {
   final bool isAuthRequired;
   final bool isServiceUnavailable;
 
+  /// M17: oturumsuz deneme reddi (`TRIAL_EXHAUSTED` / `TRIAL_UNAVAILABLE`), yoksa null.
+  final String? trialCode;
+
   RecognitionException(
     this.message, {
     this.isQuotaExceeded = false,
     this.isAuthRequired = false,
     this.isServiceUnavailable = false,
+    this.trialCode,
   });
+
+  bool get isTrialEnded => trialCode != null;
 
   @override
   String toString() => message;
@@ -549,24 +589,35 @@ class ScanQuota {
   final bool isPro;
   final DateTime? resetDate;
 
+  /// M17: oturumsuz deneme kotası (sunucu `tier: anonymous`).
+  final bool isAnonymous;
+
+  /// Oturumsuz denemede sunucu denemeyi açık tutuyor mu (kapalı / ölçülemiyorsa false).
+  final bool trialEnabled;
+
   ScanQuota({
     required this.used,
     required this.limit,
     required int remaining,
     required this.isPro,
     this.resetDate,
+    this.isAnonymous = false,
+    this.trialEnabled = true,
   }) : _remaining = remaining;
 
   /// Returns remaining scans. -1 means unlimited (Pro users)
   int get remaining => _remaining;
 
   /// Check if user has scans available
-  bool get hasScansAvailable => isPro || _remaining > 0 || _remaining == -1;
+  bool get hasScansAvailable => isAnonymous
+      ? trialEnabled && _remaining > 0
+      : isPro || _remaining > 0 || _remaining == -1;
 
   factory ScanQuota.fromJson(Map<String, dynamic> json) {
     final isPro = json['is_pro'] as bool? ?? false;
-    final limit = json['scan_limit'] as int? ?? 10;
-    final used = json['scans_used'] as int? ?? 0;
+    // /user/scan-quota `scan_limit`/`scans_used`, tanıma yanıtındaki kota `limit`/`used` der.
+    final limit = (json['scan_limit'] ?? json['limit']) as int? ?? 10;
+    final used = (json['scans_used'] ?? json['used']) as int? ?? 0;
 
     // Use backend-provided remaining, or calculate if not provided
     int remaining;
@@ -584,6 +635,8 @@ class ScanQuota {
       resetDate: json['reset_date'] != null
           ? DateTime.tryParse(json['reset_date'] as String)
           : null,
+      isAnonymous: json['tier'] == 'anonymous',
+      trialEnabled: json['enabled'] as bool? ?? true,
     );
   }
 }
@@ -591,7 +644,13 @@ class ScanQuota {
 // Providers
 
 final recognitionServiceProvider = Provider<RecognitionService>((ref) {
-  return RecognitionService(ref.watch(apiClientProvider));
+  return RecognitionService(
+    ref.watch(apiClientProvider),
+    // M17: kurulum kimliği yalnız oturum yokken gider (oturumluyken gereksiz veri).
+    anonymousDeviceId: () async => ref.read(authControllerProvider).authenticated
+        ? null
+        : await ref.read(installIdProvider.future),
+  );
 });
 
 final recognitionControllerProvider =
@@ -609,12 +668,15 @@ final scanQuotaProvider = FutureProvider<ScanQuota>((ref) async {
 
   final authController = ref.watch(authControllerProvider.notifier);
   final token = await authController.getValidAccessToken();
+  final service = ref.watch(recognitionServiceProvider);
 
   if (token == null) {
-    throw Exception('Authentication required');
+    // M17: oturum yoksa kurulum kimliğiyle deneme hakkı okunur. Okunamazsa (deneme ucu
+    // olmayan eski sunucu, ağ) hata kalır ve kamera bugünkü giriş penceresini gösterir.
+    final deviceId = await ref.watch(installIdProvider.future);
+    return service.getAnonQuota(deviceId);
   }
 
-  final service = ref.watch(recognitionServiceProvider);
   return service.getQuota();
 });
 

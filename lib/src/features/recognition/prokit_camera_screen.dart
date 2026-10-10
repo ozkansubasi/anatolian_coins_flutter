@@ -358,10 +358,24 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
   }
 
   Future<bool> _checkQuota() async {
-    // Oturumsuz tanıma sunucuda 401 ile reddediliyor; eskiden kota hatası "devam" sayılıyor,
-    // kullanıcı iki fotoğrafı çekip genel bir hatayla karşılaşıyordu (cihaz, 2026-09-28).
+    // M17: oturum yoksa deneme hakkı (kurulum başına 3 tanıma) sorulur. Hak varsa çekime
+    // geçilir, bittiyse ücretsiz hesap daveti. Okunamıyorsa (deneme ucu olmayan eski sunucu,
+    // ağ) giriş penceresi: eskiden kota hatası "devam" sayılıyor, kullanıcı iki fotoğrafı
+    // çekip 401 ile genel bir hata görüyordu (cihaz, 2026-09-28).
     if (!ref.read(authControllerProvider).authenticated) {
-      _showSignInDialog();
+      ScanQuota? trial;
+      try {
+        trial = await ref.read(scanQuotaProvider.future);
+      } catch (e) {
+        debugPrint('Trial quota check error: $e');
+      }
+      if (trial != null && trial.isAnonymous && trial.hasScansAvailable) return true;
+      if (!mounted) return false;
+      if (trial != null && trial.isAnonymous && trial.trialEnabled) {
+        _showSignInDialog(titleKey: 'scan_trial_ended_title', detailKey: 'scan_trial_ended_detail');
+      } else {
+        _showSignInDialog();
+      }
       return false;
     }
     final quotaAsync = ref.read(scanQuotaProvider);
@@ -382,16 +396,19 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     );
   }
 
-  void _showSignInDialog() {
+  void _showSignInDialog({
+    String titleKey = 'sign_in_required',
+    String detailKey = 'sign_in_to_scan_detail',
+  }) {
     final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: numCardDark,
         shape: RoundedRectangleBorder(borderRadius: radius(16)),
-        title: Text(l10n.translate('sign_in_required'), style: boldTextStyle(size: 16, color: white)),
+        title: Text(l10n.translate(titleKey), style: boldTextStyle(size: 16, color: white)),
         content: Text(
-          l10n.translate('sign_in_to_scan_detail'),
+          l10n.translate(detailKey),
           style: secondaryTextStyle(size: 14, color: Colors.grey[400]),
         ),
         actions: [
@@ -728,9 +745,15 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                       Text(
                         // limit < 0 = Pro (kotasız). Ham "-1/-1" basılıyordu;
                         // "sınırsız" kelimesi K2 kararıyla kullanılmıyor.
-                        quota.limit < 0
-                            ? 'Pro'
-                            : '${quota.remaining}/${quota.limit}',
+                        // M17: oturumsuz denemede "Deneme 2/3".
+                        quota.isAnonymous
+                            ? AppLocalizations.of(context).translate('scan_trial_badge', params: {
+                                'remaining': '${quota.remaining}',
+                                'limit': '${quota.limit}',
+                              })
+                            : quota.limit < 0
+                                ? 'Pro'
+                                : '${quota.remaining}/${quota.limit}',
                         style: boldTextStyle(
                           size: 12,
                           color:
