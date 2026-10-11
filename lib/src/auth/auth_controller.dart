@@ -39,6 +39,10 @@ class AuthState {
 }
 
 class AuthController extends StateNotifier<AuthState> {
+  /// [signUpWithPassword] dönüşü: hesap açıldı ama e-posta doğrulanmadığı için
+  /// sunucu girişi kabul etmiyor. Kayıt ekranı "e-postanı doğrula" panelini açar.
+  static const signupVerifyEmail = 'signup_verify_email';
+
   final AuthRepository _repo;
 
   AuthController(this._repo) : super(const AuthState(loading: true, authenticated: false)) {
@@ -94,6 +98,7 @@ class AuthController extends StateNotifier<AuthState> {
   ///
   /// Dönüş: null = başarı; aksi hâlde l10n anahtarı (signup_user_exists,
   /// signup_weak_password, signup_failed) — UI çevirip gösterir.
+  /// [signupVerifyEmail]: hesap açıldı, e-posta doğrulanınca giriş yapılır.
   Future<String?> signUpWithPassword(String email, String password) async {
     debugPrint('🔵 AuthController.signUpWithPassword() started');
     state = state.copyWith(loading: true);
@@ -106,9 +111,10 @@ class AuthController extends StateNotifier<AuthState> {
     } on SignUpException catch (e) {
       state = state.copyWith(loading: false);
       return e.code;
-    } on AuthException {
+    } on AuthException catch (e) {
       // Hesap oluştu ama otomatik giriş başarısız — kullanıcı login'den girer.
       state = state.copyWith(loading: false);
+      if (e.message == 'login_email_not_verified') return signupVerifyEmail;
       return 'signup_login_failed';
     } catch (e) {
       state = state.copyWith(loading: false);

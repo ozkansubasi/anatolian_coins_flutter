@@ -26,6 +26,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscureConfirm = true;
   String? _errorMessage;
 
+  /// Hesap açıldı, e-posta doğrulanmayı bekliyor: form yerine doğrulama paneli.
+  String? _verifyEmail;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -48,6 +51,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     if (errorCode == null) {
       context.go('/');
+    } else if (errorCode == AuthController.signupVerifyEmail) {
+      setState(() => _verifyEmail = _emailController.text.trim());
     } else if (errorCode == 'signup_login_failed') {
       // Hesap oluştu ama otomatik giriş olmadı — login ekranına yönlendir.
       final l10n = AppLocalizations.of(context);
@@ -56,6 +61,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     } else {
       final l10n = AppLocalizations.of(context);
       setState(() => _errorMessage = l10n.translate(errorCode));
+    }
+  }
+
+  /// Kullanıcı bağlantıya dokunduğunu söylüyor: aynı bilgilerle yeniden giriş.
+  Future<void> _handleVerifiedSignIn() async {
+    setState(() => _errorMessage = null);
+
+    final errorKey = await ref.read(authControllerProvider.notifier).signInWithPassword(
+      _verifyEmail!,
+      _passwordController.text,
+    );
+
+    if (!mounted) return;
+
+    if (errorKey == null) {
+      context.go('/');
+    } else {
+      final l10n = AppLocalizations.of(context);
+      setState(() => _errorMessage = l10n.translate(
+            errorKey == 'login_email_not_verified' ? 'verify_email_still_pending' : errorKey,
+          ));
     }
   }
 
@@ -110,36 +136,40 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   16.height,
                 ],
 
-                _buildRegisterForm(l10n, authState.loading),
+                if (_verifyEmail != null)
+                  _buildVerifyEmailPanel(l10n, authState.loading)
+                else ...[
+                  _buildRegisterForm(l10n, authState.loading),
 
-                24.height,
+                  24.height,
 
-                // Terms notice
-                Text(
-                  l10n.translate('signup_terms_notice'),
-                  style: secondaryTextStyle(size: 12, color: c.textMuted),
-                  textAlign: TextAlign.center,
-                ),
+                  // Terms notice
+                  Text(
+                    l10n.translate('signup_terms_notice'),
+                    style: secondaryTextStyle(size: 12, color: c.textMuted),
+                    textAlign: TextAlign.center,
+                  ),
 
-                24.height,
+                  24.height,
 
-                // Login link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      l10n.translate('already_have_account'),
-                      style: secondaryTextStyle(color: c.textMuted),
-                    ),
-                    TextButton(
-                      onPressed: () => context.canPop() ? context.pop() : context.go('/login'),
-                      child: Text(
-                        l10n.translate('sign_in'),
-                        style: boldTextStyle(color: c.accent),
+                  // Login link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        l10n.translate('already_have_account'),
+                        style: secondaryTextStyle(color: c.textMuted),
                       ),
-                    ),
-                  ],
-                ),
+                      TextButton(
+                        onPressed: () => context.canPop() ? context.pop() : context.go('/login'),
+                        child: Text(
+                          l10n.translate('sign_in'),
+                          style: boldTextStyle(color: c.accent),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -177,14 +207,87 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         ),
         20.height,
         Text(
-          l10n.translate('register_title'),
+          l10n.translate(_verifyEmail == null ? 'register_title' : 'verify_email_title'),
           style: boldTextStyle(size: 22, color: c.text),
         ),
         6.height,
         Text(
-          l10n.translate('register_subtitle'),
+          _verifyEmail == null
+              ? l10n.translate('register_subtitle')
+              : l10n.translate('verify_email_body', params: {'email': _verifyEmail!}),
           style: secondaryTextStyle(size: 14, color: c.textMuted),
           textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  /// Hesap açıldıktan sonra: spam ipucu + "Doğruladım, giriş yap" + giriş ekranı.
+  Widget _buildVerifyEmailPanel(AppLocalizations l10n, bool loading) {
+    final c = context.numColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: boxDecorationWithRoundedCorners(
+            backgroundColor: c.surface,
+            borderRadius: radius(12),
+            border: Border.all(color: c.border),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.mark_email_unread_outlined, color: c.accent),
+              12.width,
+              Expanded(
+                child: Text(
+                  l10n.translate('verify_email_spam_hint'),
+                  style: secondaryTextStyle(size: 13, color: c.textMuted),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        24.height,
+
+        SizedBox(
+          height: 54,
+          child: ElevatedButton(
+            onPressed: loading ? null : _handleVerifiedSignIn,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: numPrimary,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              shadowColor: numPrimary.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: radius(12),
+              ),
+            ),
+            child: loading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  )
+                : Text(
+                    l10n.translate('verify_email_continue'),
+                    style: boldTextStyle(size: 16, color: Colors.white),
+                  ),
+          ),
+        ),
+
+        16.height,
+
+        TextButton(
+          onPressed: loading ? null : () => context.go('/login'),
+          child: Text(
+            l10n.translate('verify_email_back_to_login'),
+            style: boldTextStyle(color: c.accent),
+          ),
         ),
       ],
     );

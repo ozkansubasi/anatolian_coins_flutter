@@ -4,6 +4,7 @@ import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:dio/dio.dart';
+import '../core/env.dart';
 import '../core/secure_storage.dart';
 import 'auth_config.dart';
 
@@ -79,6 +80,11 @@ class AuthTokens {
   /// Extract Auth0 sub (stable user id) from JWT token payload
   static String? extractSubFromJwt(String jwt) =>
       decodeJwtClaims(jwt)?['sub'] as String?;
+
+  /// Auth0 e-postayı açıkça "doğrulanmadı" olarak mı bildiriyor?
+  /// Claim yoksa (ör. `email` kapsamı istenmemiş) doğrulanmamış SAYILMAZ.
+  static bool isEmailUnverified(String jwt) =>
+      decodeJwtClaims(jwt)?['email_verified'] == false;
 
   /// Görünen ad (Hesabım başlığı). Google girişinde `name` gerçek ad-soyaddır;
   /// şifreli (veritabanı) hesaplarda Auth0 `name`'e e-postayı yazar — o zaman
@@ -338,6 +344,18 @@ class AuthRepository {
           debugPrint('🔎 ROPG yanıtında idToken YOK — accessToken kullanılacak');
         }
 
+        // E-postası doğrulanmamış yeni hesap: sunucu (AuthHelper) eşleşen
+        // Joomla hesabı yoksa yenisini açmaz ve her isteğe 401 döner. Oturumu
+        // kaydedip ilk API çağrısında kullanıcıyı sessizce dışarı atmak yerine
+        // burada durup "e-postanı doğrula" deriz. Karar sunucuda: kimliği zaten
+        // bir Joomla hesabına bağlı eski kullanıcılar 200 alır ve girer.
+        if (idToken != null &&
+            AuthTokens.isEmailUnverified(idToken) &&
+            await _serverRejects(idToken)) {
+          debugPrint('⚠️ E-posta doğrulanmamış, sunucu 401 — oturum kaydedilmedi');
+          throw AuthException('login_email_not_verified');
+        }
+
         // Extract identity claims from ID token
         final extractedEmail = idToken != null
             ? AuthTokens.extractEmailFromJwt(idToken)
@@ -374,9 +392,32 @@ class AuthRepository {
         'too_many_attempts' => 'login_too_many_attempts',
         _ => 'login_failed',
       });
+    } on AuthException {
+      rethrow;
     } catch (e) {
       debugPrint('❌ Password login exception: $e');
       throw AuthException('login_failed');
+    }
+  }
+
+  /// Sunucu bu belirteci reddediyor mu (401)? Yalnız e-postası doğrulanmamış
+  /// girişte sorulur. TokenInterceptor'dan geçmeyen düz bir istek atılır ki
+  /// 401 "oturum düştü" akışını tetiklemesin. Ağ hatasında `false` döner:
+  /// geçici bir sorun yüzünden kullanıcı girişten alıkonmaz.
+  Future<bool> _serverRejects(String idToken) async {
+    try {
+      final response = await Dio().get(
+        '${Env.baseUrl}/user/profile',
+        options: Options(
+          headers: {'Authorization': 'Bearer $idToken'},
+          responseType: ResponseType.plain,
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+      return response.statusCode == 401;
+    } catch (e) {
+      debugPrint('! Doğrulama yoklaması başarısız: $e');
+      return false;
     }
   }
 
