@@ -181,9 +181,11 @@ class RevenueCatService {
     }
 
     try {
-      // purchases_flutter 9+ : purchasePackage artik CustomerInfo degil
-      // PurchaseResult donduruyor (customerInfo + storeTransaction).
-      final purchase = await Purchases.purchasePackage(package);
+      // purchases_flutter 10: purchasePackage deprecated → purchase(PurchaseParams).
+      // Ikisi de ayni yerel 'purchasePackage' yontemini paket kimligi + sunulan
+      // teklif baglamiyla cagirir (SDK 10.10.1 kaynagi, S13). Donus PurchaseResult
+      // (customerInfo + storeTransaction).
+      final purchase = await Purchases.purchase(PurchaseParams.package(package));
       final customerInfo = purchase.customerInfo;
       final isPro = customerInfo.entitlements.active.containsKey(RevenueCatConfig.proEntitlementId);
 
