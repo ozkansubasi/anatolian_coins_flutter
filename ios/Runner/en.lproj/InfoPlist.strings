@@ -1,0 +1,6 @@
+/* İzin metinlerinin İngilizcesi. Türkçesi tr.lproj'da; Info.plist'teki değerler yalnız yedek.
+   Her anahtar iki dosyada da olmalı (ITMS-90683, 5.1.1). */
+"NSCameraUsageDescription" = "The camera is used to photograph coins so they can be identified.";
+"NSPhotoLibraryUsageDescription" = "Used to choose a photo of the coin you want to identify, or your student document, from your photo library.";
+"NSMicrophoneUsageDescription" = "Anatolian Coins does not record audio and never asks for microphone access. This description is required because the camera component includes audio features.";
+"NSLocationWhenInUseUsageDescription" = "Anatolian Coins does not use your location and never asks for location access. This description is required because the map component in the app includes location features.";

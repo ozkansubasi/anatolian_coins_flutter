@@ -1,0 +1,5 @@
+/* İzin metinlerinin Türkçesi (Info.plist'teki değerlerle aynı). İngilizcesi en.lproj'da. */
+"NSCameraUsageDescription" = "Sikkeleri tanımlamak için kamera kullanımı gereklidir";
+"NSPhotoLibraryUsageDescription" = "Tanımak istediğiniz sikkenin fotoğrafını ya da öğrenci belgenizi galeriden seçmek için kullanılır.";
+"NSMicrophoneUsageDescription" = "Anatolian Coins ses kaydetmez ve mikrofon izni istemez. Bu açıklama, kamera bileşeni ses özelliği içerdiği için gereklidir.";
+"NSLocationWhenInUseUsageDescription" = "Anatolian Coins konumunuzu kullanmaz ve konum izni istemez. Bu açıklama, uygulamadaki harita bileşeni konum özelliği içerdiği için gereklidir.";

@@ -12,6 +12,13 @@
 	<string>Anatolian Coins konumunuzu kullanmaz ve konum izni istemez. Bu açıklama, uygulamadaki harita bileşeni konum özelliği içerdiği için gereklidir.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<!-- Uygulamanın dilleri (assets/l10n): iOS sistem pencerelerini ve izin metinlerini
+	     (en.lproj / tr.lproj InfoPlist.strings) bu listeye göre seçer. -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>tr</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Anatolian Coins</string>
 	<key>CFBundleExecutable</key>
