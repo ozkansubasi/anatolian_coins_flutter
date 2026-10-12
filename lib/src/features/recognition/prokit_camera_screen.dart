@@ -592,7 +592,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
   Widget _buildBenefitRow(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: numSuccess),
+        Icon(icon, size: 18, color: numAccent),
         8.width,
         Expanded(
           child: Text(text,
@@ -770,9 +770,10 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: boxDecorationWithRoundedCorners(
+                    // M22: kota var = bronz, bitti = krem (uyarıyı metin taşır).
                     backgroundColor: quota.hasScansAvailable
-                        ? numSuccess.withOpacity(0.2)
-                        : numError.withOpacity(0.2),
+                        ? numAccent.withOpacity(0.18)
+                        : numMarkOnDark.withOpacity(0.12),
                     borderRadius: radius(20),
                   ),
                   child: Row(
@@ -781,7 +782,9 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                       Icon(
                         Icons.qr_code_scanner,
                         size: 14,
-                        color: quota.hasScansAvailable ? numSuccess : numError,
+                        color: quota.hasScansAvailable
+                            ? numMarkQuota
+                            : numMarkOnDark,
                       ),
                       4.width,
                       Text(
@@ -798,8 +801,9 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                                 : '${quota.remaining}/${quota.limit}',
                         style: boldTextStyle(
                           size: 12,
-                          color:
-                              quota.hasScansAvailable ? numSuccess : numError,
+                          color: quota.hasScansAvailable
+                              ? numMarkQuota
+                              : numMarkOnDark,
                         ),
                       ),
                     ],
@@ -1073,7 +1077,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                       icon: Icons.arrow_forward_rounded,
                       onTap: _proceedToPreview,
                       size: 52,
-                      color: numSuccess,
+                      color: numAccent,
+                      borderColor: numMarkOnDark,
                     )
                   : const SizedBox(width: 52),
             ],
@@ -1178,7 +1183,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: boxDecorationWithRoundedCorners(
                 backgroundColor: imagePath != null
-                    ? numSuccess.withOpacity(0.9)
+                    ? numPrimary.withOpacity(0.92)
                     : (isActive
                         ? numPrimaryLight.withOpacity(0.9)
                         : black.withOpacity(0.6)),
@@ -1201,10 +1206,11 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: numError.withOpacity(0.9),
+                    color: numMarkClear.withOpacity(0.92),
                     shape: BoxShape.circle,
+                    border: Border.all(color: numAccent, width: 1.5),
                   ),
-                  child: const Icon(Icons.close, color: white, size: 16),
+                  child: const Icon(Icons.close, color: numMarkOnDark, size: 16),
                 ),
               ),
             ),
@@ -1216,9 +1222,10 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
               right: 8,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: numSuccess,
+                decoration: BoxDecoration(
+                  color: numPrimary,
                   shape: BoxShape.circle,
+                  border: Border.all(color: numMarkOnDark, width: 1.5),
                 ),
                 child: const Icon(Icons.check, color: white, size: 16),
               ),
@@ -1233,6 +1240,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     required VoidCallback onTap,
     required double size,
     Color? color,
+    Color? borderColor,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -1242,7 +1250,10 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
         decoration: BoxDecoration(
           color: color ?? numSurfaceDark,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey[700]!, width: 1),
+          // borderColor: M22 devam düğmesi krem çerçeve (galeri gri kalır).
+          border: borderColor != null
+              ? Border.all(color: borderColor, width: 1.5)
+              : Border.all(color: Colors.grey[700]!, width: 1),
         ),
         child: Icon(icon, color: white, size: size * 0.45),
       ),

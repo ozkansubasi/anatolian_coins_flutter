@@ -35,6 +35,14 @@ const Color numError = Color(0xFFE53935);          // Error red
 const Color numWarning = Color(0xFFFFA726);        // Warning orange
 const Color numInfo = Color(0xFF2196F3);           // Info blue
 
+// Belirteç renkleri (M22, "Altın ve bitüm"): Tara ekranındaki sil / çekildi /
+// devam işaretleri ve kota çipi. Hazır Material yeşili ve kırmızısı yerine
+// uygulamanın kendi tonları; anlamı renkten çok ikon şekli ve çerçeve taşır.
+// Çekildi = numPrimary, devam = numAccent.
+const Color numMarkClear = Color(0xFF2B2219);       // Bitüm kahvesi (sil)
+const Color numMarkOnDark = Color(0xFFF1E4C6);     // Krem (koyu zeminde ikon/çerçeve)
+const Color numMarkQuota = Color(0xFFE0A96B);      // Kota çipi metni (kota var)
+
 // Region Colors (for category chips)
 const Color numRegionLydia = Color(0xFFFFD700);    // Gold
 const Color numRegionIonia = Color(0xFF4169E1);    // Royal Blue
