@@ -316,6 +316,20 @@ void main() {
     });
   });
 
+  for (final lang in ['tr', 'en']) {
+    test('$lang: gizlilik metni uygulama içi silme yolunu arayüz etiketleriyle anar, Apple\'ı sayar',
+        () {
+      final t = (jsonDecode(File('assets/l10n/$lang.json').readAsStringSync()) as Map)
+          .cast<String, String>();
+      // "Hesabım → Hesabımı Sil" / "My Account → Delete My Account"
+      expect(t['pp_rights_application_content'],
+          contains('${t['account_title']} → ${t['delete_account']}'));
+      expect(t['pp_identity_data_content'], contains('Apple'));
+      expect(t['pp_transfer_technical'], contains('Apple (App Store'));
+      expect(t['kvkk_transfer_1'], contains('Apple (App Store'));
+    });
+  }
+
   test('Apple hesabı Auth0 sub önekinden anlaşılır', () {
     expect(const AuthState(loading: false, authenticated: true, userId: 'apple|001')
         .isAppleAccount, isTrue);

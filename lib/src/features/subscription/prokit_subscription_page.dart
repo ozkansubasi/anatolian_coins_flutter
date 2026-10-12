@@ -1013,9 +1013,12 @@ class ProkitSubscriptionPage extends ConsumerWidget {
           ],
         ),
         content: Text(
-          l10n.translate(managedByStore
-              ? 'manage_subscription_info'
-              : 'manage_subscription_info_web'),
+          // Mağaza aboneliğinde iOS'ta App Store, Android'de Google Play anlatılır.
+          l10n.translateForPlatform(
+              managedByStore
+                  ? 'manage_subscription_info'
+                  : 'manage_subscription_info_web',
+              Theme.of(context).platform),
           style: secondaryTextStyle(size: 14, color: c.textMuted),
         ),
         actions: [

@@ -10,7 +10,7 @@ class PrivacyPolicyPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProkitLegalPage(
       titleKey: 'privacy_policy',
-      lastUpdated: '30.08.2026',
+      lastUpdated: '13.10.2026',
       headerIcon: Icons.privacy_tip,
       headerColor: numSecondary,
       sections: const [

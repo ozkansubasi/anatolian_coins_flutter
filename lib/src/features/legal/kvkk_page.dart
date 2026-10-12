@@ -10,7 +10,7 @@ class KvkkPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProkitLegalPage(
       titleKey: 'kvkk_title',
-      lastUpdated: '30.08.2026',
+      lastUpdated: '13.10.2026',
       headerIcon: Icons.shield,
       headerColor: const Color(0xFF1565C0), // Deep blue for official/legal
       sections: const [

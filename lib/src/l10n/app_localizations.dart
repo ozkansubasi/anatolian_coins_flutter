@@ -64,6 +64,22 @@ class AppLocalizations {
     return translation;
   }
 
+  /// Platforma göre metin: iOS'ta `<key>_ios` anahtarı varsa o, yoksa [key].
+  ///
+  /// Mağaza adı geçen metinler için (abonelik yönetimi, sözleşme maddeleri):
+  /// iOS'ta "App Store", Android'de "Google Play" yazar. App Store 2.3.10
+  /// uygulamada başka bir mobil platformun ya da mağazanın adını istemiyor.
+  String translateForPlatform(String key, TargetPlatform platform,
+      {Map<String, String>? params}) {
+    if (platform == TargetPlatform.iOS) {
+      final iosKey = '${key}_ios';
+      if (_values.containsKey(iosKey) || _fallback.containsKey(iosKey)) {
+        return translate(iosKey, params: params);
+      }
+    }
+    return translate(key, params: params);
+  }
+
   // Convenience getters for common translations
   String get appName => translate('app_name');
   String get welcome => translate('welcome');

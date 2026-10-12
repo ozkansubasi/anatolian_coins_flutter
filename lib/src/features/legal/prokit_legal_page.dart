@@ -158,6 +158,8 @@ class ProkitLegalPage extends ConsumerWidget {
     int index,
   ) {
     final c = context.numColors;
+    // Mağaza adı geçen maddelerin iOS karşılığı (`<anahtar>_ios`) varsa o gösterilir.
+    final platform = Theme.of(context).platform;
     // Varsayılan marka altını ikon/nokta rengi olarak koyu zeminde okunmuyor → accent.
     final iconColor = section.iconColor == numPrimary ? c.accent : section.iconColor;
     return Container(
@@ -190,7 +192,7 @@ class ProkitLegalPage extends ConsumerWidget {
             // Section content
             if (section.contentKey != null)
               Text(
-                l10n.translate(section.contentKey!),
+                l10n.translateForPlatform(section.contentKey!, platform),
                 style: secondaryTextStyle(size: 14, height: 1.6, color: c.textMuted),
               ),
 
@@ -216,7 +218,7 @@ class ProkitLegalPage extends ConsumerWidget {
                         12.width,
                         Expanded(
                           child: Text(
-                            l10n.translate(key),
+                            l10n.translateForPlatform(key, platform),
                             style: secondaryTextStyle(size: 14, height: 1.5, color: c.textMuted),
                           ),
                         ),
@@ -247,7 +249,7 @@ class ProkitLegalPage extends ConsumerWidget {
                         ),
                         8.height,
                         Text(
-                          l10n.translate(sub.contentKey),
+                          l10n.translateForPlatform(sub.contentKey, platform),
                           style: secondaryTextStyle(size: 12, height: 1.5, color: c.textMuted),
                         ),
                       ],
