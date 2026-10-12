@@ -8,6 +8,7 @@ import '../../core/navigation.dart';
 import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import 'resend_verification_button.dart';
 
 /// Modern Login Screen with Email/Password + Social Login options
 /// Uses ProKit styling with NumisTR gold accents
@@ -125,6 +126,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Error message
                 if (_errorMessage != null) ...[
                   _buildErrorBanner(),
+                  16.height,
+                ],
+
+                // E-posta doğrulanmadı: bağlantı gelmediyse yeniden gönder (A23)
+                if (_errorMessage == 'login_email_not_verified') ...[
+                  ResendVerificationButton(
+                    email: () => _emailController.text,
+                    password: () => _passwordController.text,
+                    enabled: !authState.loading,
+                  ),
                   16.height,
                 ],
 

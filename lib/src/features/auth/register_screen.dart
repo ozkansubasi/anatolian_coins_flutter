@@ -7,6 +7,7 @@ import '../../core/navigation.dart';
 import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import 'resend_verification_button.dart';
 
 /// In-app Register Screen (Auth0 Database Connection signup)
 /// Mirrors LoginScreen styling: ProKit + NumisTR gold accents
@@ -222,7 +223,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     );
   }
 
-  /// Hesap açıldıktan sonra: spam ipucu + "Doğruladım, giriş yap" + giriş ekranı.
+  /// Hesap açıldıktan sonra: spam ipucu + "Doğruladım, giriş yap" +
+  /// "Yeniden gönder" (A23) + giriş ekranı.
   Widget _buildVerifyEmailPanel(AppLocalizations l10n, bool loading) {
     final c = context.numColors;
     return Column(
@@ -278,6 +280,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     style: boldTextStyle(size: 16, color: Colors.white),
                   ),
           ),
+        ),
+
+        12.height,
+
+        ResendVerificationButton(
+          email: () => _verifyEmail!,
+          password: () => _passwordController.text,
+          enabled: !loading,
         ),
 
         16.height,

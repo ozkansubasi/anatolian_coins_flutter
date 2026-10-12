@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_repository.dart';
+import 'resend_verification.dart';
 
 class AuthState {
   final bool loading;
@@ -152,6 +153,19 @@ class AuthController extends StateNotifier<AuthState> {
 
   /// Şifre değiştirme bağlantısını e-postaya gönderir (bkz. AuthRepository).
   Future<bool> requestPasswordReset(String email) => _repo.requestPasswordReset(email);
+
+  /// A23 — doğrulama iletisini yeniden gönderir; oturum durumu değişmez.
+  /// Yanlış şifre gibi hatalar `failed` + l10n anahtarı olarak döner.
+  Future<ResendVerificationResult> resendVerificationEmail(String email, String password) async {
+    try {
+      return await _repo.resendVerificationEmail(email, password);
+    } on AuthException catch (e) {
+      return ResendVerificationResult.failed(errorKey: e.message);
+    } catch (e) {
+      debugPrint('resendVerificationEmail failed: $e');
+      return const ResendVerificationResult.failed();
+    }
+  }
 
   Future<String?> getValidAccessToken() async {
     final t = await _repo.load();

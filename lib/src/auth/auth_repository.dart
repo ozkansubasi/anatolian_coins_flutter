@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import '../core/env.dart';
 import '../core/secure_storage.dart';
 import 'auth_config.dart';
+import 'resend_verification.dart';
 
 class AuthTokens {
   final String accessToken;
@@ -298,12 +299,83 @@ class AuthRepository {
     debugPrint('🔵 AuthRepository.signInWithPassword() started');
     debugPrint('🔵 Email: $email');
 
+    try {
+      final data = await _passwordGrant(email, password);
+      if (data == null) return null;
+
+      final accessToken = data['access_token'] as String?;
+      final idToken = data['id_token'] as String?;
+      final refreshToken = data['refresh_token'] as String?;
+      final expiresIn = data['expires_in'] as int?;
+
+      if (accessToken == null) {
+        throw Exception('No access token in response');
+      }
+
+      // Use ID token for API calls (same as social login)
+      final tokenToUse = idToken ?? accessToken;
+
+      // Tanı: sunucu 401 verdiğinde token'ın gerçekte ne taşıdığını görmek için
+      if (idToken != null) {
+        final c = AuthTokens.decodeJwtClaims(idToken);
+        debugPrint('🔎 ROPG idToken claims: email=${c?['email']} '
+            'email_verified=${c?['email_verified']} aud=${c?['aud']} '
+            'iss=${c?['iss']} sub=${c?['sub']}');
+      } else {
+        debugPrint('🔎 ROPG yanıtında idToken YOK — accessToken kullanılacak');
+      }
+
+      // E-postası doğrulanmamış yeni hesap: sunucu (AuthHelper) eşleşen
+      // Joomla hesabı yoksa yenisini açmaz ve her isteğe 401 döner. Oturumu
+      // kaydedip ilk API çağrısında kullanıcıyı sessizce dışarı atmak yerine
+      // burada durup "e-postanı doğrula" deriz. Karar sunucuda: kimliği zaten
+      // bir Joomla hesabına bağlı eski kullanıcılar 200 alır ve girer.
+      if (idToken != null &&
+          AuthTokens.isEmailUnverified(idToken) &&
+          await _serverRejects(idToken)) {
+        debugPrint('⚠️ E-posta doğrulanmamış, sunucu 401 — oturum kaydedilmedi');
+        throw AuthException('login_email_not_verified');
+      }
+
+      // Extract identity claims from ID token
+      final extractedEmail = idToken != null
+          ? AuthTokens.extractEmailFromJwt(idToken)
+          : email;
+      final sub = idToken != null
+          ? AuthTokens.extractSubFromJwt(idToken)
+          : null;
+
+      final t = AuthTokens(
+        accessToken: tokenToUse,
+        refreshToken: refreshToken,
+        expiresAt: expiresIn != null
+            ? DateTime.now().add(Duration(seconds: expiresIn))
+            : null,
+        email: extractedEmail,
+        sub: sub,
+        idToken: idToken,
+      );
+
+      await save(t);
+      debugPrint('✅ Password login successful');
+      return t;
+    } on AuthException {
+      rethrow;
+    } catch (e) {
+      debugPrint('❌ Password login exception: $e');
+      throw AuthException('login_failed');
+    }
+  }
+
+  /// Auth0 `/oauth/token` (grant_type=password) çağrısı. Başarıda yanıt
+  /// gövdesini döner; Auth0 hata kodu l10n anahtarına çevrilip [AuthException]
+  /// olarak fırlar — sunucunun İngilizce `error_description` metni gösterilmez.
+  Future<Map<String, dynamic>?> _passwordGrant(String email, String password) async {
     final issuer = Uri.parse(_cfg.issuer);
     final tokenUrl = 'https://${issuer.host}/oauth/token';
 
     try {
-      final dio = Dio();
-      final response = await dio.post(
+      final response = await Dio().post(
         tokenUrl,
         options: Options(
           contentType: Headers.formUrlEncodedContentType,
@@ -320,83 +392,55 @@ class AuthRepository {
 
       debugPrint('🔵 Token response: ${response.statusCode}');
 
-      if (response.statusCode == 200 && response.data != null) {
-        final data = response.data as Map<String, dynamic>;
-        final accessToken = data['access_token'] as String?;
-        final idToken = data['id_token'] as String?;
-        final refreshToken = data['refresh_token'] as String?;
-        final expiresIn = data['expires_in'] as int?;
-
-        if (accessToken == null) {
-          throw Exception('No access token in response');
-        }
-
-        // Use ID token for API calls (same as social login)
-        final tokenToUse = idToken ?? accessToken;
-
-        // Tanı: sunucu 401 verdiğinde token'ın gerçekte ne taşıdığını görmek için
-        if (idToken != null) {
-          final c = AuthTokens.decodeJwtClaims(idToken);
-          debugPrint('🔎 ROPG idToken claims: email=${c?['email']} '
-              'email_verified=${c?['email_verified']} aud=${c?['aud']} '
-              'iss=${c?['iss']} sub=${c?['sub']}');
-        } else {
-          debugPrint('🔎 ROPG yanıtında idToken YOK — accessToken kullanılacak');
-        }
-
-        // E-postası doğrulanmamış yeni hesap: sunucu (AuthHelper) eşleşen
-        // Joomla hesabı yoksa yenisini açmaz ve her isteğe 401 döner. Oturumu
-        // kaydedip ilk API çağrısında kullanıcıyı sessizce dışarı atmak yerine
-        // burada durup "e-postanı doğrula" deriz. Karar sunucuda: kimliği zaten
-        // bir Joomla hesabına bağlı eski kullanıcılar 200 alır ve girer.
-        if (idToken != null &&
-            AuthTokens.isEmailUnverified(idToken) &&
-            await _serverRejects(idToken)) {
-          debugPrint('⚠️ E-posta doğrulanmamış, sunucu 401 — oturum kaydedilmedi');
-          throw AuthException('login_email_not_verified');
-        }
-
-        // Extract identity claims from ID token
-        final extractedEmail = idToken != null
-            ? AuthTokens.extractEmailFromJwt(idToken)
-            : email;
-        final sub = idToken != null
-            ? AuthTokens.extractSubFromJwt(idToken)
-            : null;
-
-        final t = AuthTokens(
-          accessToken: tokenToUse,
-          refreshToken: refreshToken,
-          expiresAt: expiresIn != null
-              ? DateTime.now().add(Duration(seconds: expiresIn))
-              : null,
-          email: extractedEmail,
-          sub: sub,
-          idToken: idToken,
-        );
-
-        await save(t);
-        debugPrint('✅ Password login successful');
-        return t;
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
       }
-
       return null;
     } on DioException catch (e) {
-      debugPrint('❌ Password login failed: ${e.response?.data}');
+      debugPrint('❌ Password grant failed: ${e.response?.data}');
       final errorData = e.response?.data;
-      // Auth0 hata kodu → l10n anahtarı; sunucunun İngilizce
-      // `error_description` metni kullanıcıya gösterilmez.
       final code = errorData is Map<String, dynamic> ? errorData['error'] : null;
       throw AuthException(switch (code) {
         'invalid_grant' => 'login_invalid_credentials',
         'too_many_attempts' => 'login_too_many_attempts',
         _ => 'login_failed',
       });
-    } on AuthException {
-      rethrow;
+    }
+  }
+
+  /// A23 — doğrulama iletisini yeniden gönderir (`POST /v1/auth/resend-verification`).
+  ///
+  /// Sunucu kimliğin Auth0 id_token'ıyla kanıtlanmasını ister; bu yüzden önce
+  /// şifreyle belirteç alınır. Belirteç KAYDEDİLMEZ — kullanıcı oturumsuz kalır.
+  /// E-posta bu arada doğrulanmışsa sunucuya hiç gidilmez. Yanlış şifre vb.
+  /// [AuthException] olarak fırlar; ağ/sunucu hatası `failed` döner.
+  Future<ResendVerificationResult> resendVerificationEmail(String email, String password) async {
+    final data = await _passwordGrant(email, password);
+    final idToken = data?['id_token'] as String?;
+    if (idToken == null) return const ResendVerificationResult.failed();
+
+    if (AuthTokens.decodeJwtClaims(idToken)?['email_verified'] == true) {
+      return const ResendVerificationResult(ResendVerificationStatus.alreadyVerified);
+    }
+
+    try {
+      final response = await Dio().post(
+        '${Env.baseUrl}/auth/resend-verification',
+        options: Options(
+          headers: {'Authorization': 'Bearer $idToken'},
+          responseType: ResponseType.plain,
+          validateStatus: (status) => status != null,
+        ),
+      );
+      debugPrint('🔵 Resend verification: ${response.statusCode}');
+      return ResendVerificationResult.fromResponse(
+        response.statusCode ?? 0,
+        response.data?.toString() ?? '',
+        retryAfterHeader: response.headers.value('retry-after'),
+      );
     } catch (e) {
-      debugPrint('❌ Password login exception: $e');
-      throw AuthException('login_failed');
+      debugPrint('! Resend verification error: $e');
+      return const ResendVerificationResult.failed();
     }
   }
 
