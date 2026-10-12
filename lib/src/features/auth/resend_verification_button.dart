@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,8 +12,7 @@ import '../../l10n/app_localizations.dart';
 /// A23 — "Doğrulama e-postasını yeniden gönder" düğmesi.
 ///
 /// Kayıt sonrası doğrulama panelinde ve girişteki "e-posta doğrulanmadı"
-/// hatasında kullanılır. Gönderimden sonra sunucunun bildirdiği süre kadar
-/// geri sayar; sonuç düğmenin altında tek satır olarak gösterilir. Günlük
+/// hatasında kullanılır. Gönderimden sonra en az 4 dakika geri sayar; sonuç düğmenin altında tek satır olarak gösterilir. Günlük
 /// tavan dolduysa düğme bu ekran açık kaldıkça kapalı kalır.
 class ResendVerificationButton extends ConsumerStatefulWidget {
   const ResendVerificationButton({
@@ -34,6 +34,11 @@ class ResendVerificationButton extends ConsumerStatefulWidget {
 }
 
 class _ResendVerificationButtonState extends ConsumerState<ResendVerificationButton> {
+  /// Gönderimden sonra en az bu kadar beklenir (4 dk). Doğrulama iletileri
+  /// bazen birkaç dakika geç düşüyor; sunucu dakikada 1'e izin verse de
+  /// kullanıcı ilki gelmeden ikincisini istemesin. Sunucu daha uzun derse o geçerli.
+  static const _sentCooldownSeconds = 240;
+
   bool _busy = false;
   bool _blocked = false;
   int _cooldown = 0;
@@ -67,7 +72,7 @@ class _ResendVerificationButtonState extends ConsumerState<ResendVerificationBut
       case ResendVerificationStatus.sent:
         key = 'verify_email_resent';
         isError = false;
-        cooldown = r.retryAfterSeconds;
+        cooldown = math.max(r.retryAfterSeconds, _sentCooldownSeconds);
       case ResendVerificationStatus.alreadyVerified:
         key = 'verify_email_already_verified';
         isError = false;

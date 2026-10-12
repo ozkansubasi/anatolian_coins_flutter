@@ -267,7 +267,7 @@ void main() {
       expect(find.text('Hesabınıza giriş yapın'), findsOneWidget);
     });
 
-    testWidgets('A23: yeniden gönder → bilgi + 60 sn geri sayım, sonra yeniden açık', (tester) async {
+    testWidgets('A23: yeniden gönder → bilgi + 240 sn geri sayım, sonra yeniden açık', (tester) async {
       final repo = await pump(tester);
       expect(_resendEnabled(tester), isTrue);
 
@@ -277,14 +277,29 @@ void main() {
 
       expect(repo.resendCalls, ['yeni@ornek.com|Gizli123!']);
       expect(find.textContaining('yeniden gönderdik'), findsOneWidget);
-      expect(find.text('Yeniden gönder (60 sn)'), findsOneWidget);
+      // Sunucu 60 sn dese de e-postalar geç düşebildiği için en az 4 dk beklenir.
+      expect(find.text('Yeniden gönder (240 sn)'), findsOneWidget);
       expect(_resendEnabled(tester), isFalse);
 
-      await tester.pump(const Duration(seconds: 59));
+      await tester.pump(const Duration(seconds: 239));
       expect(find.text('Yeniden gönder (1 sn)'), findsOneWidget);
 
       await tester.pump(const Duration(seconds: 1));
       expect(find.text(_resendLabel), findsOneWidget);
+      expect(_resendEnabled(tester), isTrue);
+    });
+
+    testWidgets('A23: sunucu 4 dakikadan uzun bekleme isterse o geçerli', (tester) async {
+      final repo = await pump(tester);
+      repo.resendResult =
+          const ResendVerificationResult(ResendVerificationStatus.sent, retryAfterSeconds: 300);
+
+      await tester.tap(find.text(_resendLabel));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Yeniden gönder (300 sn)'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 300));
       expect(_resendEnabled(tester), isTrue);
     });
 
@@ -350,7 +365,7 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(repo.resendCalls, ['eski@ornek.com|Gizli123!']);
-      expect(find.text('Yeniden gönder (60 sn)'), findsOneWidget);
+      expect(find.text('Yeniden gönder (240 sn)'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
