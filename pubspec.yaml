@@ -69,6 +69,8 @@ dev_dependencies:
   flutter_launcher_icons: ^0.13.1
   # Harita testleri: Google haritasının yerel görünümü testte yok, sahte platform takılır
   google_maps_flutter_platform_interface: ^2.15.0
+  # Kamera testleri (M18): yerel kamera testte yok, sahte platform takılır
+  camera_platform_interface: ^2.13.0
   plugin_platform_interface: ^2.1.8
 
 

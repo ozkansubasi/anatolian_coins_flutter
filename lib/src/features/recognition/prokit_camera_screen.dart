@@ -59,6 +59,18 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
   Size _boxSize = Size.zero;
   bool _processing = false;
 
+  /// Kamera yalnız ekran görünürken açık (M18). StatefulShellRoute başka sekme
+  /// seçiliyken, üstte opak bir sayfa (önizleme, sonuçlar, abonelik) varken de
+  /// bu dalı ağaçta TickerMode(false) ile tutar; eskiden kamera o sırada açık
+  /// kalıyor, Android'de yeşil kamera göstergesi yanıyordu.
+  bool _visible = true;
+
+  /// Açılacak kamera (ilk açılışta arka kamera; çevirme düğmesi değiştirir).
+  CameraDescription? _selectedCamera;
+
+  /// [_syncCamera] çalışıyor; o sırada gelen değişiklikleri döngü görür.
+  bool _cameraBusy = false;
+
   @override
   void initState() {
     super.initState();
@@ -66,46 +78,85 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    _initializeCamera();
+    _syncCamera();
     Future.microtask(() => ref.refresh(scanQuotaProvider));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final visible = TickerMode.of(context);
+    if (visible != _visible) {
+      _visible = visible;
+      // Derleme sırasında setState olmasın: kare bitince eşitle.
+      scheduleMicrotask(_syncCamera);
+    }
   }
 
   bool get _canProceed => _obversePath != null && _reversePath != null;
 
-  Future<void> _initializeCamera() async {
+  /// Kamerayı istenen duruma getirir: ekran görünürse seçili kamera açık,
+  /// değilse kapalı. Aç/kapat sırayla yapılır; bir işlem sürerken görünürlük
+  /// ya da seçili kamera değişirse döngü bir sonraki turda onu uygular.
+  Future<void> _syncCamera() async {
+    if (_cameraBusy) return;
+    _cameraBusy = true;
     try {
-      _cameras = await availableCameras();
+      while (mounted && _error == null) {
+        final current = _controller;
+        if (current != null &&
+            (!_visible || current.description != _selectedCamera)) {
+          _controller = null;
+          setState(() => _isInitializing = true);
+          await current.dispose();
+        } else if (current == null && _visible) {
+          if (!await _openCamera()) break;
+        } else {
+          break;
+        }
+      }
+    } finally {
+      _cameraBusy = false;
+    }
+  }
 
-      if (_cameras == null || _cameras!.isEmpty) {
+  /// Seçili kamerayı açar (ilk açılışta arka kamera). Açılamazsa `_error`
+  /// dolar ve false döner.
+  Future<bool> _openCamera() async {
+    try {
+      final cameras = _cameras ??= await availableCameras();
+      if (!mounted) return false;
+      if (cameras.isEmpty) {
         setState(() {
           _error = 'no_camera';
           _isInitializing = false;
         });
-        return;
+        return false;
       }
 
-      final camera = _cameras!.firstWhere(
+      final camera = _selectedCamera ??= cameras.firstWhere(
         (camera) => camera.lensDirection == CameraLensDirection.back,
-        orElse: () => _cameras!.first,
+        orElse: () => cameras.first,
       );
 
-      await _startController(camera);
-
+      if (!await _startController(camera) || !mounted) return false;
+      setState(() => _isInitializing = false);
+      return true;
+    } catch (e) {
+      debugPrint('[Camera] open failed: $e');
       if (mounted) {
         setState(() {
+          _error = 'camera_error';
           _isInitializing = false;
         });
       }
-    } catch (e) {
-      setState(() {
-        _error = 'camera_error';
-        _isInitializing = false;
-      });
+      return false;
     }
   }
 
   /// En yüksek çözünürlük + sürekli otomatik odak + varsayılan 2x yakınlaştırma.
-  Future<void> _startController(CameraDescription camera) async {
+  /// Ekran bu arada kapandıysa denetleyiciyi hemen bırakır ve false döner.
+  Future<bool> _startController(CameraDescription camera) async {
     final controller = CameraController(
       camera,
       ResolutionPreset.max,
@@ -113,6 +164,10 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
     await controller.initialize();
+    if (!mounted) {
+      await controller.dispose();
+      return false;
+    }
     _controller = controller;
     try {
       await controller.setFocusMode(FocusMode.auto);
@@ -129,6 +184,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       debugPrint('[Camera] zoom unsupported: $e');
       _minZoom = _maxZoom = _zoom = 1;
     }
+    return true;
   }
 
   Future<void> _setZoom(double value) async {
@@ -555,34 +611,13 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     });
   }
 
-  void _switchCamera() async {
-    if (_cameras == null || _cameras!.length < 2) return;
-
-    final currentCamera = _controller!.description;
-    final currentIndex = _cameras!.indexOf(currentCamera);
-    final nextIndex = (currentIndex + 1) % _cameras!.length;
-
-    await _controller?.dispose();
-
-    setState(() {
-      _isInitializing = true;
-    });
-
-    try {
-      await _startController(_cameras![nextIndex]);
-
-      if (mounted) {
-        setState(() {
-          _isInitializing = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        debugPrint('Failed to switch camera: $e');
-        _error = 'camera_error';
-        _isInitializing = false;
-      });
-    }
+  /// Sıradaki kameraya geçer; kapatıp açmayı [_syncCamera] yapar.
+  void _switchCamera() {
+    final cameras = _cameras;
+    final current = _controller?.description;
+    if (cameras == null || cameras.length < 2 || current == null) return;
+    _selectedCamera = cameras[(cameras.indexOf(current) + 1) % cameras.length];
+    _syncCamera();
   }
 
   @override
