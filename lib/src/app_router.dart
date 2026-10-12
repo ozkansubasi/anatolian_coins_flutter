@@ -7,6 +7,7 @@ import 'features/home/prokit_home_screen.dart';
 import 'features/variants/prokit_variant_list_page.dart';
 import 'features/variants/prokit_variant_detail_page.dart';
 import 'features/account/account_screen.dart';
+import 'features/account/delete_account_screen.dart';
 import 'features/subscription/prokit_subscription_page.dart';
 import 'features/subscription/prokit_university_form_screen.dart';
 import 'features/recognition/prokit_camera_screen.dart';
@@ -141,6 +142,11 @@ GoRouter appRouter() {
             GoRoute(
               path: '/account',
               builder: (context, state) => const AccountScreen(),
+            ),
+            // App Store 5.1.1(v): hesabı uygulama içinden silme (Hesabım'dan push)
+            GoRoute(
+              path: '/delete-account',
+              builder: (context, state) => const DeleteAccountScreen(),
             ),
             GoRoute(
               path: '/settings',

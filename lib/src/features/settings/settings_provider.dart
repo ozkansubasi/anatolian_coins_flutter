@@ -10,6 +10,16 @@ class SettingsKeys {
   static const String recognitionFilterRegion = 'recognition_filter_region';
   static const String recognitionFilterMaterial = 'recognition_filter_material';
   static const String themeMode = 'theme_mode'; // 'light', 'dark', 'system'
+
+  /// Hesap silinince sıfırlanan tercihler (kullanıcının kullanımına bağlı).
+  /// Tema cihazın görünüm tercihidir, kalır.
+  static const List<String> userScoped = [
+    autoSyncFavorites,
+    recognitionConfidenceThreshold,
+    recognitionTopK,
+    recognitionFilterRegion,
+    recognitionFilterMaterial,
+  ];
 }
 
 /// Settings repository for managing app preferences

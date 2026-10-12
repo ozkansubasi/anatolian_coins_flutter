@@ -54,6 +54,10 @@ class DownloadProgress {
 }
 
 class OfflineService {
+  /// Çevrimdışı görsellerin klasörü: `{AppDocuments}/offline_images/{variantId}/`.
+  /// Hesap silinince bütünüyle kaldırılır (account_deletion_service).
+  static const imagesDirName = 'offline_images';
+
   final VariantsApi _api;
   final OfflineDatabase _db;
   final Dio _dio;
@@ -131,7 +135,7 @@ class OfflineService {
   /// Görseli indir ve local path döndür
   Future<String> _downloadImage(String url, int variantId, int imageId) async {
     final directory = await getApplicationDocumentsDirectory();
-    final imagesDir = Directory('${directory.path}/offline_images/$variantId');
+    final imagesDir = Directory('${directory.path}/$imagesDirName/$variantId');
     
     if (!await imagesDir.exists()) {
       await imagesDir.create(recursive: true);
@@ -172,7 +176,7 @@ class OfflineService {
   Future<void> deleteVariant(int articleId) async {
     // Dosyaları sil
     final directory = await getApplicationDocumentsDirectory();
-    final imagesDir = Directory('${directory.path}/offline_images/$articleId');
+    final imagesDir = Directory('${directory.path}/$imagesDirName/$articleId');
     
     if (await imagesDir.exists()) {
       await imagesDir.delete(recursive: true);
@@ -185,7 +189,7 @@ class OfflineService {
   /// Tüm çevrimdışı verileri sil
   Future<void> clearAll() async {
     final directory = await getApplicationDocumentsDirectory();
-    final imagesDir = Directory('${directory.path}/offline_images');
+    final imagesDir = Directory('${directory.path}/$imagesDirName');
     
     if (await imagesDir.exists()) {
       await imagesDir.delete(recursive: true);
@@ -200,7 +204,7 @@ class OfflineService {
     
     // Disk kullanımını hesapla
     final directory = await getApplicationDocumentsDirectory();
-    final imagesDir = Directory('${directory.path}/offline_images');
+    final imagesDir = Directory('${directory.path}/$imagesDirName');
     
     int totalSize = 0;
     if (await imagesDir.exists()) {

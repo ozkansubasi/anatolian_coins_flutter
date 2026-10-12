@@ -37,6 +37,11 @@ class SubscriptionState {
   bool get isPro => tier == SubscriptionTier.pro && isActive;
   bool get isFree => tier == SubscriptionTier.free;
 
+  /// Süren bir web (iyzico) aboneliği var mı? Mağaza aboneliği değil ve bitiş
+  /// tarihi backend'den geliyor (`expires_at` yalnız web aboneliğinde dolu;
+  /// üniversite grubundan gelen Pro'da tarih yoktur).
+  bool get hasWebSubscription => isPro && !managedByStore && expiryDate != null;
+
   SubscriptionState copyWith({
     SubscriptionTier? tier,
     bool? isActive,
@@ -180,6 +185,7 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
         state = SubscriptionState(
           tier: _backendPro ? SubscriptionTier.pro : SubscriptionTier.free,
           isActive: true,
+          expiryDate: _backendExpiry,
           isLoading: false,
           managedByStore: false,
         );

@@ -28,6 +28,10 @@ class AuthState {
   /// bunlarda anlamlı; Google girişli hesabın şifresi yoktur.
   bool get isPasswordAccount => userId?.startsWith('auth0|') ?? false;
 
+  /// "Apple ile giriş"le açılmış hesap mı (Auth0 `apple` bağlantısı)? Hesap
+  /// silinirken Apple Kimliği bağlantısının ayrıca kaldırılabileceği söylenir.
+  bool get isAppleAccount => userId?.startsWith('apple|') ?? false;
+
   AuthState copyWith({bool? loading, bool? authenticated, String? accessToken, String? email, String? userId, String? name}) =>
       AuthState(
         loading: loading ?? this.loading,
@@ -147,6 +151,15 @@ class AuthController extends StateNotifier<AuthState> {
   /// Browser logout açmadan yalnızca lokal oturumu kapatır.
   Future<void> sessionExpired() async {
     debugPrint('⚠️ AuthController.sessionExpired() — clearing local session');
+    await signOutLocally();
+  }
+
+  /// Yalnız bu cihazdaki oturumu kapatır: saklı belirteçler (`auth_tokens`)
+  /// silinir, tarayıcıda Auth0 çıkış penceresi AÇILMAZ. Hesap silindikten sonra
+  /// da kullanılır — Auth0 kullanıcısı artık yok, çıkış sayfasına gerek yok.
+  /// Kurulum kimliği ve dil tercihi aynı depoda durur ama ayrı anahtarlardır;
+  /// dokunulmaz.
+  Future<void> signOutLocally() async {
     await _repo.save(null);
     state = const AuthState(loading: false, authenticated: false, accessToken: null);
   }

@@ -16,16 +16,17 @@ Uri faqWebUrl(String languageCode) => languageCode == 'en'
     ? Uri.https('numistr.org', '/en/faq')
     : Uri.https('numistr.org', '/tr/sikca-sorulan-sorular');
 
-/// Hesap silme sayfası — Play Console'a kayıtlı adres (iki dil de 2026-09-27'de 200).
-Uri accountDeletionWebUrl(String languageCode) => languageCode == 'en'
-    ? Uri.https('www.numistr.org', '/en/delete-account')
-    : Uri.https('www.numistr.org', '/tr/hesap-silme');
+/// Play'deki paket adı (android/app/build.gradle.kts `applicationId`; geliştirme
+/// sürümünün `.dev` eki satın almada kullanılmaz).
+const androidPackageName = 'com.anatoliancoins.app';
 
-/// Web Hesabım'daki "Hesabımı sil" bağlantısıyla aynı hazır e-posta
-/// (`mod_numistr_account`). `Uri(queryParameters:)` boşluğu `+` yapar, bazı
-/// e-posta uygulamaları onu olduğu gibi gösterir; bu yüzden elle kodlanır.
-Uri accountDeletionMailUrl({required String subject, required String body}) => Uri.parse(
-    'mailto:bilgi@numistr.org?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}');
+/// App Store aboneliklerini yönetme (iptal) sayfası — hesap silinirken mağaza
+/// aboneliği iptal edilmediği için kullanıcı buraya yönlendirilir.
+Uri appStoreSubscriptionsUrl() => Uri.https('apps.apple.com', '/account/subscriptions');
+
+/// Google Play'de bu uygulamanın aboneliğini yönetme (iptal) sayfası.
+Uri playSubscriptionsUrl() => Uri.https(
+    'play.google.com', '/store/account/subscriptions', {'package': androidPackageName});
 
 /// Kullanım Koşulları — abonelik sayfasında satın alma düğmelerinin altında
 /// (App Store 3.1.2(a)). İki dil de 2026-10-13'te 200.

@@ -19,6 +19,7 @@ const _homeOf = <String, NavTab>{
   '/collection': NavTab.favorites,
   '/history': NavTab.favorites,
   '/account': NavTab.menu,
+  '/delete-account': NavTab.menu,
   '/settings': NavTab.menu,
   '/assistant': NavTab.menu,
   '/regions': NavTab.menu,

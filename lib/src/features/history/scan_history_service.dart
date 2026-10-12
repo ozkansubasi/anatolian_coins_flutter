@@ -63,6 +63,10 @@ class ScanRecord {
 /// Tanıma sonuçlarını kalıcı tarama geçmişine yazar/okur.
 /// Görseller silinen temp dosyalardan {docs}/scan_images/ altına kopyalanır.
 class ScanHistoryService {
+  /// Tarama görsellerinin klasörü: `{AppDocuments}/scan_images/`. Hesap silinince
+  /// bütünüyle kaldırılır (account_deletion_service).
+  static const imagesDirName = 'scan_images';
+
   final OfflineDatabase _db;
 
   ScanHistoryService(this._db);
@@ -123,7 +127,7 @@ class ScanHistoryService {
 
   Future<Directory> _scanImagesDir() async {
     final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory(p.join(docs.path, 'scan_images'));
+    final dir = Directory(p.join(docs.path, imagesDirName));
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
