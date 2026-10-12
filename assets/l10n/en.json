@@ -91,6 +91,7 @@
   "scan_trial_badge": "Trial {remaining}/{limit}",
   "scan_trial_ended_title": "Create an account to keep scanning coins",
   "scan_trial_ended_detail": "With a free account you can scan 10 coins every month. For more, you can subscribe to Pro.",
+  "scan_trial_create_account": "Create account",
   "scan_trial_unavailable_detail": "Trial scans without an account are not available right now. Continue with a free account: 10 recognitions every month.",
   "regions": "Regions",
   "mints": "Mints",

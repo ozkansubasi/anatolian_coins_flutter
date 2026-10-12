@@ -181,10 +181,11 @@ class _ProkitRecognitionResultsScreenState
             ),
           ),
           const SizedBox(width: 12),
+          // Deneme bittiyse metin hesap açmaya davet ediyor: düğme de kayıt ekranına.
           FilledButton.icon(
-            onPressed: () => context.push('/login'),
-            icon: const Icon(Icons.login),
-            label: Text(l10n.translate('sign_in')),
+            onPressed: () => context.push(exhausted ? '/register' : '/login'),
+            icon: Icon(exhausted ? Icons.person_add_alt_1_rounded : Icons.login),
+            label: Text(l10n.translate(exhausted ? 'scan_trial_create_account' : 'sign_in')),
             style: FilledButton.styleFrom(backgroundColor: numPrimary),
           ),
         ],

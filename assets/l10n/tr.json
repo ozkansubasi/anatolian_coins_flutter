@@ -90,6 +90,7 @@
   "scan_trial_badge": "Deneme {remaining}/{limit}",
   "scan_trial_ended_title": "Sikke taramaya devam etmek için hesap açabilirsiniz",
   "scan_trial_ended_detail": "Ücretsiz bir hesap açarak her ay 10 sikke taraması yapabilirsiniz. Daha fazlası için Pro abonelik alabilirsiniz.",
+  "scan_trial_create_account": "Hesap Aç",
   "scan_trial_unavailable_detail": "Oturum açmadan deneme taraması şu anda kullanılamıyor. Ücretsiz hesapla devam edebilirsiniz: her ay 10 tanıma.",
   "regions": "Bölgeler",
   "mints": "Darphaneler",

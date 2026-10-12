@@ -428,7 +428,11 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       if (trial != null && trial.isAnonymous && trial.hasScansAvailable) return true;
       if (!mounted) return false;
       if (trial != null && trial.isAnonymous && trial.trialEnabled) {
-        _showSignInDialog(titleKey: 'scan_trial_ended_title', detailKey: 'scan_trial_ended_detail');
+        _showSignInDialog(
+          titleKey: 'scan_trial_ended_title',
+          detailKey: 'scan_trial_ended_detail',
+          createAccount: true,
+        );
       } else {
         _showSignInDialog();
       }
@@ -452,9 +456,12 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     );
   }
 
+  /// [createAccount]: deneme bitti — metin hesap açmaya davet ediyor, düğme de
+  /// "Hesap Aç" olup kayıt ekranını açar (orada "Giriş Yap" bağlantısı var).
   void _showSignInDialog({
     String titleKey = 'sign_in_required',
     String detailKey = 'sign_in_to_scan_detail',
+    bool createAccount = false,
   }) {
     final l10n = AppLocalizations.of(context);
     showDialog(
@@ -475,14 +482,14 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              context.push('/login');
+              context.push(createAccount ? '/register' : '/login');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: numPrimaryLight,
               foregroundColor: numTextPrimary,
               shape: RoundedRectangleBorder(borderRadius: radius(8)),
             ),
-            child: Text(l10n.translate('sign_in')),
+            child: Text(l10n.translate(createAccount ? 'scan_trial_create_account' : 'sign_in')),
           ),
         ],
       ),
