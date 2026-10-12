@@ -26,3 +26,15 @@ Uri accountDeletionWebUrl(String languageCode) => languageCode == 'en'
 /// e-posta uygulamaları onu olduğu gibi gösterir; bu yüzden elle kodlanır.
 Uri accountDeletionMailUrl({required String subject, required String body}) => Uri.parse(
     'mailto:bilgi@numistr.org?subject=${Uri.encodeComponent(subject)}&body=${Uri.encodeComponent(body)}');
+
+/// Kullanım Koşulları — abonelik sayfasında satın alma düğmelerinin altında
+/// (App Store 3.1.2(a)). İki dil de 2026-10-13'te 200.
+Uri termsOfUseWebUrl(String languageCode) => languageCode == 'en'
+    ? Uri.https('www.numistr.org', '/en/terms-of-use')
+    : Uri.https('www.numistr.org', '/tr/kullanim-kosullari');
+
+/// Gizlilik Politikası (TR: KVKK ve Gizlilik Politikası) — abonelik sayfası,
+/// App Store 3.1.2(a). İki dil de 2026-10-13'te 200.
+Uri privacyPolicyWebUrl(String languageCode) => languageCode == 'en'
+    ? Uri.https('www.numistr.org', '/en/privacy-policy-gdpr')
+    : Uri.https('www.numistr.org', '/tr/kvkk-ve-gizlilik-politikasi');

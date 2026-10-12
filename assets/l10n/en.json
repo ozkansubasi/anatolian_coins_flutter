@@ -633,6 +633,8 @@
   "trial_weeks": "{count}-week free trial",
   "trial_months": "{count}-month free trial",
   "trial_terms": "After the trial, {price}{period} will be charged. Cancel anytime during the trial.",
+  "subscription_auto_renew_ios": "Your subscription renews automatically unless it is cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple ID account; you can manage and cancel your subscription in your App Store account settings.",
+  "subscription_auto_renew_android": "Your subscription renews automatically unless it is cancelled before the renewal date. Payment is charged to your Google Play account; you can manage and cancel your subscription under Subscriptions in Google Play.",
   "monthly": "Monthly",
   "yearly": "Yearly",
   "weekly": "Weekly",

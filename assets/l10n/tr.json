@@ -633,6 +633,8 @@
   "trial_weeks": "{count} hafta ücretsiz",
   "trial_months": "{count} ay ücretsiz",
   "trial_terms": "Deneme bitince {price}{period} ücretlendirilir. Deneme süresince istediğiniz zaman iptal edebilirsiniz.",
+  "subscription_auto_renew_ios": "Abonelik, dönem bitmeden en az 24 saat önce iptal edilmezse otomatik olarak yenilenir. Ödeme Apple ID hesabınızdan alınır; aboneliğinizi App Store hesap ayarlarından yönetebilir ve iptal edebilirsiniz.",
+  "subscription_auto_renew_android": "Abonelik, yenileme tarihinden önce iptal edilmezse otomatik olarak yenilenir. Ödeme Google Play hesabınızdan alınır; aboneliğinizi Google Play'deki Abonelikler bölümünden yönetebilir ve iptal edebilirsiniz.",
   "monthly": "Aylık",
   "yearly": "Yıllık",
   "weekly": "Haftalık",

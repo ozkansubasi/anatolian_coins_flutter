@@ -10,6 +10,7 @@ import '../../core/free_trial.dart';
 import '../../core/subscription_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import 'subscription_legal_notice.dart';
 
 /// ProKit-styled subscription/pricing page
 /// Modern design with gradient cards and premium aesthetics
@@ -373,6 +374,9 @@ class ProkitSubscriptionPage extends ConsumerWidget {
             onTap: () => _handlePurchase(context, ref, l10n, packages[i]),
           ),
         ],
+        // App Store 3.1.2(a): yenileme koşulu + Koşullar / Gizlilik bağlantıları.
+        12.height,
+        const SubscriptionLegalNotice(),
       ],
     );
   }
