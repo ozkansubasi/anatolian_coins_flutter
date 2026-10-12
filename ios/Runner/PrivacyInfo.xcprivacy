@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- Uygulamanın kendi gizlilik bildirimi (A18 madde 4). Yalnız uygulamanın ve sunucumuzun
-     topladıkları; SDK'lar (GoogleMaps, RevenueCat, eklentiler) kendi bildirimlerini taşır.
+     topladıkları (claudedocs/ios/magaza-basvuru-taslak.md §2d); SDK'lar (GoogleMaps, RevenueCat, eklentiler) kendi bildirimlerini taşır.
      App Store Connect gizlilik etiketleri bunların birleşimidir: claudedocs/ios/magaza-basvuru-taslak.md
-     Fotoğraflar listede YOK: /recognize görseli bellekte işler, saklamaz (Apple'ın "collected" tanımı dışında). -->
+     Sikke fotoğrafı sayılmaz: /recognize görseli bellekte işler, saklamaz (Apple'ın "collected" tanımı dışında);
+     PhotosorVideos yalnız saklanan öğrenci kimliği fotoğrafı içindir. -->
 <plist version="1.0">
 <dict>
 	<key>NSPrivacyTracking</key>
@@ -14,19 +15,7 @@
 	<array/>
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
-		<!-- Hesap (Auth0 → Joomla): e-posta, ad, kullanıcı kimliği -->
-		<dict>
-			<key>NSPrivacyCollectedDataType</key>
-			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
-			<key>NSPrivacyCollectedDataTypeLinked</key>
-			<true/>
-			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<false/>
-			<key>NSPrivacyCollectedDataTypePurposes</key>
-			<array>
-				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
-			</array>
-		</dict>
+		<!-- Hesap (Auth0 → Joomla) ve öğrenci başvurusu: ad -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeName</string>
@@ -39,6 +28,20 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
+		<!-- Hesap, doğrulama, öğrenci başvurusu: e-posta -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- Auth0 sub / Joomla kullanıcısı / RevenueCat app user id -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeUserID</string>
@@ -51,10 +54,50 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- Abonelik durumu (RevenueCat → sunucu, hesaba bağlı) -->
+		<!-- Yalnız öğrenci kimliği fotoğrafı (≤6 ay saklanır); sikke fotoğrafı bellekte işlenir, toplanmaz -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePhotosorVideos</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- Asistan mesajları; öğrenci başvurusundaki üniversite/bölüm/ilgi alanları -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- Abonelik durumu (RevenueCat rehberi: iki amaç) -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypePurchaseHistory</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<!-- Favoriler ve tanıma kayıtları (özet + sonuç), hesaba bağlı -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>
