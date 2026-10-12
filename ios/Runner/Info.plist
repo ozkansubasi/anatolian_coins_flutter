@@ -3,11 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Görselleri kaydetmek için gerekli</string>
+	<string>Tanımak istediğiniz sikkenin fotoğrafını ya da öğrenci belgenizi galeriden seçmek için kullanılır.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Sikkeleri tanımlamak için kamera kullanımı gereklidir</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Kamera kullanımı için mikrofon erişimi gereklidir</string>
+	<string>Anatolian Coins ses kaydetmez ve mikrofon izni istemez. Bu açıklama, kamera bileşeni ses özelliği içerdiği için gereklidir.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Anatolian Coins konumunuzu kullanmaz ve konum izni istemez. Bu açıklama, uygulamadaki harita bileşeni konum özelliği içerdiği için gereklidir.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
