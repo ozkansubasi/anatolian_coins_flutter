@@ -139,8 +139,23 @@ class AuthRepository {
   /// Ayni depo okunur ki Auth0'a gonderilen dil ile uygulamanin dili ayrismasin.
   static const _localeKey = 'app_locale';
 
-  final _appAuth = const FlutterAppAuth();
+  AuthRepository({FlutterAppAuth appAuth = const FlutterAppAuth()}) : _appAuth = appAuth;
+
+  final FlutterAppAuth _appAuth;
   final _cfg = AuthConfig();
+
+  /// Süren belirteç yenilemesi (tek uçuş). flutter_appauth'un Android eklentisi
+  /// (6.0.7) aynı anda iki `token` çağrısını kaldıramıyor: ikincisi "Concurrent
+  /// operations detected" hatasını İLK çağrıya teslim ediyor, ikinci çağrının
+  /// Future'ı hiç tamamlanmıyor. Belirteç süresi dolmuşken açılışta ana sayfanın
+  /// istekleri aynı anda yenileme istiyor, biri sonsuza kadar bekliyordu
+  /// ("Editör'den" kartı iskelette kalıyordu, 10 + 12 Eki). Aynı anda gelen
+  /// yenileme istekleri bu tek çağrıyı paylaşır.
+  Future<AuthTokens?>? _refreshing;
+
+  /// Yerel yenileme çağrısı bundan uzun sürerse bırakılır (eklenti yanıtı hiç
+  /// vermezse istek sonsuza kadar beklemesin).
+  static const _refreshTimeout = Duration(seconds: 30);
 
   /// Auth0'a gonderilecek dil kodu. Kullanici dil secmemisse Turkce.
   ///
@@ -183,17 +198,29 @@ class AuthRepository {
     if (current == null) return null;
     if (!force && !_isExpired(current)) return current;
     if ((current.refreshToken ?? '').isEmpty) return force ? null : current;
+
+    final refresh = _refreshing ??= _refresh(current);
     try {
-      final token = await _appAuth.token(TokenRequest(
-        _cfg.clientId,
-        _cfg.redirectUrl,
-        issuer: _cfg.issuer,
-        refreshToken: current.refreshToken,
-        scopes: _cfg.scopes,
-      ));
-      if (token == null || token.accessToken == null) {
-        return force ? null : current;
-      }
+      final fresh = await refresh;
+      return fresh ?? (force ? null : current);
+    } finally {
+      if (identical(_refreshing, refresh)) _refreshing = null;
+    }
+  }
+
+  /// Yenileme belirteciyle yeni belirteç alır ve kaydeder; başarısızsa null.
+  Future<AuthTokens?> _refresh(AuthTokens current) async {
+    try {
+      final token = await _appAuth
+          .token(TokenRequest(
+            _cfg.clientId,
+            _cfg.redirectUrl,
+            issuer: _cfg.issuer,
+            refreshToken: current.refreshToken,
+            scopes: _cfg.scopes,
+          ))
+          .timeout(_refreshTimeout);
+      if (token == null || token.accessToken == null) return null;
 
       // Girişteki gibi ID token'ı tercih et: Joomla backend şifreli access
       // token'ı (JWE) çözemiyor. Eski kod burada access token kaydettiği için
@@ -218,7 +245,7 @@ class AuthRepository {
       return fresh;
     } catch (e) {
       debugPrint('refresh failed: $e');
-      return force ? null : current;
+      return null;
     }
   }
 

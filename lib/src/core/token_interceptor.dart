@@ -11,8 +11,14 @@ class TokenInterceptor extends Interceptor {
 
   @override
   Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
-    final notifier = ref.read(authControllerProvider.notifier);
-    final token = await notifier.getValidAccessToken();
+    // async bir ekleyicide fırlayan hata Dio'ya ulaşmaz, handler hiç çağrılmaz
+    // ve istek sonsuza kadar bekler — belirteç alınamazsa jetonsuz devam edilir.
+    String? token;
+    try {
+      token = await ref.read(authControllerProvider.notifier).getValidAccessToken();
+    } catch (e) {
+      debugPrint('! [TokenInterceptor] token unavailable for ${options.path}: $e');
+    }
 
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
@@ -32,7 +38,12 @@ class TokenInterceptor extends Interceptor {
       debugPrint('⚠️ [TokenInterceptor] 401 on ${err.requestOptions.path} — forcing token refresh');
 
       final notifier = ref.read(authControllerProvider.notifier);
-      final freshToken = await notifier.forceRefreshToken();
+      String? freshToken;
+      try {
+        freshToken = await notifier.forceRefreshToken();
+      } catch (e) {
+        debugPrint('! [TokenInterceptor] forced refresh threw: $e');
+      }
 
       if (freshToken != null && freshToken.isNotEmpty) {
         // Yeni token'la isteği bir kez tekrarla
