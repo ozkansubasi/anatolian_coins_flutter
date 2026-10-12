@@ -94,7 +94,7 @@
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
 		</dict>
-		<!-- Favoriler ve tanıma kayıtları (özet + sonuç), hesaba bağlı -->
+		<!-- Tanıma kayıtları (özet + sonuç), hesaba bağlı. Favoriler yalnız cihazda (sqflite), toplanmaz -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
