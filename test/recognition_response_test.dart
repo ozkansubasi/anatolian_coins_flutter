@@ -150,4 +150,21 @@ void main() {
     expect(r({'same_face': 'evet'}).sameFace, isFalse); // yalnız gerçek true
     expect(r(null).sameFace, isFalse); // eklenti quality göndermiyor
   });
+
+  test('AI10: görünen başlık dile göre; eski sunucuda title; geçmiş kaydında korunur', () {
+    final m = CoinMatch.fromJson({'article_id': 3739, 'confidence': 0.8,
+      'title': 'T. Ampius, governor of Asia Laodiceia ad Lycum Metcalf 2017 I',
+      'title_tr': 'T. Ampius Balbus Laodiceia ad Lycum Metcalf 2017 I',
+      'title_en': 'T. Ampius Balbus Laodiceia ad Lycum Metcalf 2017 I'});
+    expect(m.displayTitle(false), 'T. Ampius Balbus Laodiceia ad Lycum Metcalf 2017 I');
+    final lyk = CoinMatch.fromJson({'article_id': 1, 'confidence': 0.8, 'title': 'Lycian League Olympus',
+      'title_tr': 'Likya Birliği Olympus', 'title_en': 'Lycian League Olympus'});
+    expect(lyk.displayTitle(false), 'Likya Birliği Olympus');
+    expect(lyk.displayTitle(true), 'Lycian League Olympus');
+    final eski = CoinMatch.fromJson({'article_id': 2, 'confidence': 0.8, 'title': 'Price 1342'});
+    expect(eski.displayTitle(false), 'Price 1342');
+    expect(eski.displayTitle(true), 'Price 1342');
+    expect(CoinMatch.fromJson(lyk.toJson()).displayTitle(false), 'Likya Birliği Olympus');
+    expect(eski.toJson().containsKey('title_tr'), isFalse);
+  });
 }

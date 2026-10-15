@@ -688,7 +688,7 @@ class _TopMatchCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(match.title, style: t.section, maxLines: 3, overflow: TextOverflow.ellipsis),
+                        Text(match.displayTitle(l10n.locale.languageCode == 'en'), style: t.section, maxLines: 3, overflow: TextOverflow.ellipsis),
                         if (meta.isNotEmpty) ...[
                           const SizedBox(height: 6),
                           Text(meta, style: t.caption),
@@ -768,7 +768,7 @@ class _CandidateRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(match.title, style: t.value, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Text(match.displayTitle(l10n.locale.languageCode == 'en'), style: t.value, maxLines: 2, overflow: TextOverflow.ellipsis),
                   if (meta.isNotEmpty) ...[
                     const SizedBox(height: 3),
                     Text(meta, style: t.caption, maxLines: 1, overflow: TextOverflow.ellipsis),

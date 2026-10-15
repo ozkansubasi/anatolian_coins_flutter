@@ -690,6 +690,18 @@ class RecognitionService:
     def _alt_names(self, names, lang):
         return [(self.notes.get(x) or {}).get('name_' + lang, x) for x in names]
 
+    def _display_title(self, title, prefixes, canonical, lang):
+        # AI10 (3): catalog titles are the same in both languages and start with the English authority field
+        # ("T. Ampius, governor of Asia Laodiceia ad Lycum Metcalf 2017 I"); the card shows the display name instead
+        # ("T. Ampius Balbus Laodiceia ad Lycum Metcalf 2017 I"). Titles not starting with the authority are kept.
+        name = (self.notes.get(canonical) or {}).get('name_' + lang) if canonical else None
+        if not name:
+            return title
+        for p in prefixes:
+            if p and title.startswith(p + ' '):
+                return name + title[len(p):]
+        return title
+
     def _dynasty_info(self, gid, share=None):
         d = self.dynasties.get(gid) or {}
         n = self.notes.get('dynasty:' + gid) or {}
@@ -934,12 +946,16 @@ class RecognitionService:
                 h = self.hier.get(a, {})                # Hedef 2: catalog ruler / mint / dates
                 oc = _conf(obv_best[a]) if a in obv_best else None
                 rc = _conf(rev_best[a]) if a in rev_best else None
+                title = m.get('title_tr') or m.get('title_en') or 'Unknown'
+                pre = (m.get('authority_name'), h.get('a'))
                 # While tied, confidence states how sure we are of the IDENTIFICATION,
                 # not of the visual match; visual_score keeps the unmodified value.
                 return {
                     'rank': rank,
                     'article_id': int(a),
-                    'title': m.get('title_tr') or m.get('title_en') or 'Unknown',
+                    'title': title,
+                    'title_tr': self._display_title(title, pre, h.get('a'), 'tr'),
+                    'title_en': self._display_title(title, pre, h.get('a'), 'en'),
                     'confidence': min(conf, TIE_CONF_CAP) if in_tie else conf,
                     'visual_score': conf,
                     'tied_with': [int(x) for x in tied_ids if x != a] if in_tie else None,

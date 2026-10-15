@@ -490,6 +490,10 @@ class CoinIdentification {
 class CoinMatch {
   final int articleId;
   final String title;
+
+  /// AI10: başlığın başındaki katalog otorite adı görünen adla değişmiş hali
+  /// ("T. Ampius, governor of Asia …" → "T. Ampius Balbus …"); eski sunucuda yok → [title].
+  final String? titleTr, titleEn;
   final double confidence;
   final String? region;
   final String? mintName; // Mint name
@@ -515,6 +519,8 @@ class CoinMatch {
   CoinMatch({
     required this.articleId,
     required this.title,
+    this.titleTr,
+    this.titleEn,
     required this.confidence,
     this.region,
     this.mintName,
@@ -528,6 +534,8 @@ class CoinMatch {
     this.verified = false,
     this.basis,
   });
+
+  String displayTitle(bool en) => (en ? titleEn : titleTr) ?? title;
 
   factory CoinMatch.fromJson(Map<String, dynamic> json) {
     final regionAlias = json['region'] as String?;
@@ -545,6 +553,8 @@ class CoinMatch {
           int.tryParse('${json['article_id']}') ??
           0,
       title: json['title'] as String? ?? 'Unknown Coin',
+      titleTr: json['title_tr'] as String?,
+      titleEn: json['title_en'] as String?,
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
       region: regionAlias, // Alias (for compatibility)
       mintName: json['mint_name'] as String?,
@@ -566,6 +576,8 @@ class CoinMatch {
   Map<String, dynamic> toJson() => {
         'article_id': articleId,
         'title': title,
+        if (titleTr != null) 'title_tr': titleTr,
+        if (titleEn != null) 'title_en': titleEn,
         'confidence': confidence,
         'region': region,
         'mint_name': mintName,
