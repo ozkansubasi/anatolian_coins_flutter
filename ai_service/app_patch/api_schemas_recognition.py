@@ -73,8 +73,12 @@ class RecognitionResponse(BaseModel):
                           "it), ruler {name, share, reign_tr, reign_en, note_tr, note_en}, ruler_alternatives, dynasty {id, name_tr, "
                           "name_en, share, note_tr, note_en}, mint {name, share}, date {estimate, from, to}, reverse "
                           "{status verified|unverified|not_sent, candidates [{article_id, title, score}]}")
+    # AI12 / ADR-009 (2026-10-15)
+    modern_coin: Optional[Dict[str, Any]] = Field(
+        None, description="no_match_reason=modern_coin: the photo is a modern Turkish coin (legend OCR) - {country, unit "
+                          "lira|kurus|null, denomination|null, year|null}; information only, no authenticity or value claim")
     no_match: bool = Field(False, description="True when no confident match was found")
-    no_match_reason: Optional[str] = Field(None, description="no_coin_detected | low_detail_surface | below_confidence | ambiguous_match | service_unavailable")
+    no_match_reason: Optional[str] = Field(None, description="no_coin_detected | low_detail_surface | below_confidence | ambiguous_match | modern_coin | service_unavailable")
     quality: Optional[Dict[str, Any]] = Field(None, description="Per-side input quality metrics")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Response timestamp")
 

@@ -72,6 +72,12 @@ import torch
 logger = logging.getLogger(__name__)
 cv2.setNumThreads(1)            # Faz D: parallelism comes from the verification workers
 
+try:                            # AI12 / ADR-009: modern Turkish coin gate (off unless its flag file exists)
+    from app.services import modern_kapi
+except Exception as e:          # optional layer: a missing module must never break recognition
+    modern_kapi = None
+    logger.warning("AI12: modern_kapi not loaded, gate off: %s" % e)
+
 IMN = np.array([0.485, 0.456, 0.406], np.float32)
 IST = np.array([0.229, 0.224, 0.225], np.float32)
 META_PATH = "/app/index/metadata_dinov3.json"
@@ -152,6 +158,9 @@ UNVERIFIED_REASON = 'ambiguous_match'   # app shows "best match may not be certa
 # face that carries it: 'basis' both | obverse | reverse.
 NEAR_N = 5
 NEAR_MIN_CONF = 0.10            # below this even a "near" candidate is noise
+MODERN_UNVERIFIED_MAX = 0.45    # AI12 K2-(ii): the modern-coin gate also runs on an UNVERIFIED top match below this
+                                # (Ö1: a single modern-coin photo came back unverified 54%, top 0.30-0.58, median 0.38;
+                                # gate capture on single photos 34.5% -> 72%; ~10% of live scans pay its +3-4 s)
 BASIS_GAP = 0.30                # face-confidence gap that makes one face the basis
 IMG_DIR = "/app/index/images"   # hardlinks of /opt/ai_service/data/training/train/images (same fs)
 
@@ -995,9 +1004,22 @@ class RecognitionService:
             if verify_ran and matches and not verified and reason is None:
                 reason = UNVERIFIED_REASON
 
+            # AI12 / ADR-009 K2: nothing matched, or only an unverified weak candidate -> is the photo a modern Turkish
+            # coin (legend OCR)? Never on a verified match, so a false alarm (0 / 2,359 ancient photos measured) can at
+            # worst hide a "may not be certain" candidate below MODERN_UNVERIFIED_MAX. When it fires the ancient
+            # candidates and the identification card are withheld (wrong information for a modern coin).
+            modern_coin = None
+            if modern_kapi is not None and (no_match or (not verified and top < MODERN_UNVERIFIED_MAX)):
+                modern_coin = modern_kapi.kontrol(
+                    [s['vraw'] if s.get('vraw') is not None else s['vimg'] for s in (obv, rev) if s is not None])
+                if modern_coin:
+                    reason = 'modern_coin'
+                    matches, no_match, top = [], True, 0.0
+                    is_tied, tied_ids = False, []
+
             # AI4: nothing reached MIN_CONF -> still offer the closest candidates, separately
             near = []
-            if no_match and reason != 'no_coin_detected':
+            if no_match and reason not in ('no_coin_detected', 'modern_coin'):
                 for a, d in ranked[:NEAR_N]:
                     conf = min(_conf(d), UNVERIFIED_CAP)
                     if conf < NEAR_MIN_CONF:
@@ -1006,7 +1028,7 @@ class RecognitionService:
 
             # Hedef 2: what the photo still tells (never for a frame without a coin)
             ident = None
-            if reason != 'no_coin_detected':
+            if reason not in ('no_coin_detected', 'modern_coin'):
                 try:
                     ident = self._identify(obv, rev, matches, exclude)
                 except Exception as e:                  # optional layer: never fails the recognition
@@ -1043,6 +1065,7 @@ class RecognitionService:
                 'verified': bool(verified),
                 'near_matches': near,
                 'identification': ident,
+                'modern_coin': modern_coin,             # AI12: {country, unit, denomination, year} or None
                 'processing_time_ms': int((end - start).total_seconds() * 1000),
                 'ocr_extracted': None,
                 'no_match': no_match,
