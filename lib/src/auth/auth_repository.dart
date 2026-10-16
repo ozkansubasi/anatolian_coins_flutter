@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:dio/dio.dart';
 import '../core/env.dart';
 import '../core/secure_storage.dart';
@@ -19,11 +18,8 @@ class AuthTokens {
   /// RevenueCat appUserID olarak kullanılır (cihaz/yeniden kurulum bağımsız).
   final String? sub;
 
-  /// OIDC `id_token`.
-  ///
-  /// Çıkışta gerekiyor: `EndSessionRequest`, `postLogoutRedirectUrl` verildiğinde
-  /// `idTokenHint`'i ZORUNLU kılıyor (paket içinde assert var). Hint olmadan
-  /// uygulamaya geri dönüş yapılamaz, dolayısıyla oturum kapatma akışı tamamlanmaz.
+  /// OIDC `id_token` — saklanıyor; çıkış artık tarayıcısız olduğundan
+  /// (`EndSessionRequest` kaldırıldı, M29) orada kullanılmıyor.
   final String? idToken;
 
   AuthTokens({
@@ -139,9 +135,14 @@ class AuthRepository {
   /// Ayni depo okunur ki Auth0'a gonderilen dil ile uygulamanin dili ayrismasin.
   static const _localeKey = 'app_locale';
 
-  AuthRepository({FlutterAppAuth appAuth = const FlutterAppAuth()}) : _appAuth = appAuth;
+  AuthRepository({FlutterAppAuth appAuth = const FlutterAppAuth(), Dio? httpClient})
+      : _appAuth = appAuth,
+        _http = httpClient;
 
   final FlutterAppAuth _appAuth;
+
+  /// Belirteç iptali için HTTP istemcisi (testte sahtesi verilir; yoksa yeni Dio).
+  final Dio? _http;
   final _cfg = AuthConfig();
 
   /// Süren belirteç yenilemesi (tek uçuş). flutter_appauth'un Android eklentisi
@@ -601,62 +602,40 @@ class AuthRepository {
     }
   }
 
-  /// Oturumu kapat.
+  /// Oturumu kapat — tarayıcı açmadan (M29, 2026-10-17).
   ///
-  /// OIDC `endSession` kullanılıyor: iOS'ta `ASWebAuthenticationSession` içinde
-  /// açılıp kendiliğinden kapanır. Eski yol (`/v2/logout` + harici Safari) boş bir
-  /// sayfa gösterip iOS'un "uygulamaya dönülsün mü?" onayını tetikliyordu.
-  ///
-  /// Bilinçli takas (kullanıcı kararı, 2026-09-13): `endSession` **federated**
-  /// çıkış yapmaz — Auth0 oturumu kapanır, Google oturumu cihazda kalır. Tekrar
-  /// girişte "Google ile devam et" şifre sormadan geçer. Tek kişilik cihazda
-  /// istenen davranış bu; kullanıcı uygulamadan çıkmak istiyor, Google
-  /// hesabından çıkmak istemiyor.
-  ///
-  /// Yedek yol korunuyor: `id_token` yoksa (bu sürümden ÖNCE giriş yapmış
-  /// kullanıcılarda saklanmıyordu) `EndSessionRequest` kurulamaz — paket
-  /// `postLogoutRedirectUrl` ile `idTokenHint`'i birlikte zorunlu kılıyor —
-  /// o durumda eski tarayıcı akışına düşülür.
+  /// Uygulama tarayıcıda kalıcı Auth0 oturumu bırakmıyor: e-posta/şifre girişi
+  /// tarayıcısız (`/oauth/token`), Google/Apple girişleri `preferEphemeralSession`
+  /// ile çerezsiz. Eski `endSession` yolu kapatacak oturum bulamadığı hâlde
+  /// iOS/macOS'ta "…giriş yapmak için auth0.com'u kullanmak istiyor" onayını ve
+  /// Auth0'nun adı boş "Merhaba , … çıkış yapmak istediğinizden emin misiniz?"
+  /// sayfasını açıyordu — kullanıcı çıkış için 3 kez onaylıyordu (TestFlight Mac
+  /// denemesi, 17 Eki). Artık yenileme belirteci Auth0'da iptal edilir (en iyi
+  /// çaba: ağ yoksa ya da hata dönerse geçilir) ve yerel belirteçler silinir.
   Future<void> signOut() async {
-    debugPrint('🔵 AuthRepository.signOut() started');
+    final refresh = (await load())?.refreshToken;
 
-    final current = await load();
-    final idToken = current?.idToken;
-
-    if (idToken != null && idToken.isNotEmpty) {
+    if (refresh != null && refresh.isNotEmpty) {
       try {
-        await _appAuth.endSession(EndSessionRequest(
-          issuer: _cfg.issuer,
-          idTokenHint: idToken,
-          postLogoutRedirectUrl: _cfg.logoutRedirectUrl,
-        ));
-        debugPrint('✅ endSession completed');
+        await _revokeRefreshToken(refresh).timeout(const Duration(seconds: 6));
       } catch (e) {
-        // Kullanıcı sistem sayfasını kapatmış olabilir; yerel oturum yine kapanır.
-        debugPrint('⚠️ endSession failed/cancelled: $e');
-      }
-    } else {
-      debugPrint('🔵 No id_token stored — falling back to browser logout');
-      final issuer = Uri.parse(_cfg.issuer);
-      final logoutUrl = Uri.https(issuer.host, '/v2/logout', {
-        'client_id': _cfg.clientId,
-        'returnTo': _cfg.logoutRedirectUrl,
-      });
-
-      try {
-        await launchUrl(
-          logoutUrl,
-          mode: LaunchMode.externalApplication,
-          webOnlyWindowName: '_self',
-        );
-      } catch (e) {
-        debugPrint('⚠️ Failed to launch logout URL: $e');
+        debugPrint('⚠️ refresh token revoke failed: $e');
       }
     }
 
-    // Clear local tokens
     await save(null);
     debugPrint('✅ Local tokens cleared');
+  }
+
+  /// Auth0 `/oauth/revoke` — yerel (gizli anahtarsız) uygulama için `client_id`
+  /// ile çağrılır; iptal edilen yenileme belirteciyle yeni erişim belirteci alınamaz.
+  Future<void> _revokeRefreshToken(String token) async {
+    final issuer = Uri.parse(_cfg.issuer);
+    await (_http ?? Dio()).post(
+      'https://${issuer.host}/oauth/revoke',
+      options: Options(contentType: Headers.jsonContentType),
+      data: {'client_id': _cfg.clientId, 'token': token},
+    );
   }
 }
 
