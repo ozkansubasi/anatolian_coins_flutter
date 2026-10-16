@@ -337,6 +337,12 @@ class RecognitionResponse {
   /// darphane / tarih). null = sunucu göndermiyor (eklenti < 1.17.0) ya da söylenecek bir şey yok.
   final CoinIdentification? identification;
 
+  /// AI12 / M28 (ADR-009 K4): `no_match_reason == 'modern_coin'` iken fotoğraftaki günümüz
+  /// Türk parasının okunabilen bilgisi. null = kapı kapalı ya da sunucu göndermiyor.
+  final ModernCoin? modernCoin;
+
+  bool get isModernCoin => noMatchReason == 'modern_coin';
+
   RecognitionResponse({
     required this.matches,
     this.quota,
@@ -349,6 +355,7 @@ class RecognitionResponse {
     this.verified,
     this.nearMatches = const [],
     this.identification,
+    this.modernCoin,
   });
 
   /// Convenience getter for remaining scans (backward compatibility)
@@ -388,6 +395,30 @@ class RecognitionResponse {
           .map(CoinMatch.fromJson)
           .toList(),
       identification: CoinIdentification.tryParse(data['identification']),
+      modernCoin: ModernCoin.tryParse(data['modern_coin']),
+    );
+  }
+}
+
+/// AI12 / M28: kapsam dışı günümüz Türk parası (ADR-009 K4). Alanlar OCR'dan okunabildiği kadar
+/// dolu gelir (`unit` çoğu zaman, `denomination` / `year` seyrek); değer ve yıl yalnız bilgi amaçlı —
+/// orijinallik ya da piyasa değeri iddiası yok.
+class ModernCoin {
+  final String? unit; // lira | kurus | para
+  final num? denomination;
+  final int? year;
+
+  const ModernCoin({this.unit, this.denomination, this.year});
+
+  static ModernCoin? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final unit = raw['unit'];
+    final den = raw['denomination'];
+    final year = raw['year'];
+    return ModernCoin(
+      unit: unit is String && unit.isNotEmpty ? unit : null,
+      denomination: den is num ? den : num.tryParse('${den ?? ''}'),
+      year: year is int ? year : int.tryParse('${year ?? ''}'),
     );
   }
 }

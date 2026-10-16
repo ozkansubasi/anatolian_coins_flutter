@@ -9,6 +9,7 @@ import '../../core/navigation.dart';
 import '../../core/num_colors.dart';
 import '../../core/num_text.dart';
 import '../../core/region_data.dart';
+import 'modern_coin_text.dart';
 import 'recognition_service.dart';
 import '../history/scan_history_service.dart';
 import '../../widgets/coin_list.dart';
@@ -258,6 +259,27 @@ class _ProkitRecognitionResultsScreenState
     );
   }
 
+  /// M28 (ADR-009 K5): kapsam dışı — fotoğraftaki para günümüz Türk parası.
+  Widget _buildModernCoin(AppLocalizations l10n, ModernCoin? coin) {
+    final seen = modernCoinSentence(l10n, coin);
+    final intro = l10n.translate('modern_coin_desc');
+    return _StateMessage(
+      icon: Icons.currency_lira,
+      iconColor: context.numColors.hint,
+      title: l10n.translate('modern_coin_title'),
+      message: seen == null ? intro : '$intro $seen',
+      actions: [
+        FilledButton.icon(
+          onPressed: _scanAnother,
+          icon: const Icon(Icons.photo_camera_outlined),
+          label: Text(l10n.translate('modern_coin_scan_another')),
+          style: FilledButton.styleFrom(backgroundColor: numPrimary),
+        ),
+      ],
+      textStyle: context.numText,
+    );
+  }
+
   /// Kameraya dön: Tara dalının köküne git. Eski çift `pop()` yığına bağlıydı.
   void _scanAnother() => context.go('/recognition');
 
@@ -292,6 +314,8 @@ class _ProkitRecognitionResultsScreenState
     // Hedef 2: aday kalmasa da fotoğraf hükümdar/dönem/darphane/tarih söylüyorsa "sonuç yok" denmez.
     final ident = results.identification;
     final showIdent = uncertain && ident != null && ident.level != 'type' && ident.hasContent;
+    // M28: günümüz Türk parası — antik aday gösterilmez, sunucu zaten boş liste döner.
+    if (results.isModernCoin) return _buildModernCoin(l10n, results.modernCoin);
     if (matches.isEmpty && !showIdent) return _buildNoResults(l10n, results.noMatchReason, results.sameFace);
 
     final t = context.numText;

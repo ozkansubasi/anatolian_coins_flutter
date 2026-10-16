@@ -1030,5 +1030,15 @@
   "pp_changes_title": "Changes",
   "pp_changes_content": "This policy may be updated in line with changes in legislation or in our services. We will notify you through the app of material changes; the current text is always published together with its update date.",
   "kvkk_visual_data_title": "Visual Data",
-  "kvkk_visual_data_content": "The coin photos you upload for recognition. These images are never written to disk; they are held in memory only and discarded as soon as processing finishes. All that remains is an irreversible digest (SHA-256) together with the recognition result."
+  "kvkk_visual_data_content": "The coin photos you upload for recognition. These images are never written to disk; they are held in memory only and discarded as soon as processing finishes. All that remains is an irreversible digest (SHA-256) together with the recognition result.",
+  "modern_coin_title": "This looks like a modern Turkish coin",
+  "modern_coin_desc": "NumisTR identifies ancient Anatolian coins.",
+  "modern_coin_seen_full": "The coin in the photo appears to be a {value} {unit} dated {year}.",
+  "modern_coin_seen_value": "The coin in the photo appears to be a {value} {unit}.",
+  "modern_coin_seen_year": "The coin in the photo appears to be dated {year}; its unit appears to be {unit}.",
+  "modern_coin_seen_unit": "The unit of the coin in the photo appears to be {unit}.",
+  "modern_coin_scan_another": "Scan another coin",
+  "modern_unit_lira": "lira",
+  "modern_unit_kurus": "kuruş",
+  "modern_unit_para": "para"
 }

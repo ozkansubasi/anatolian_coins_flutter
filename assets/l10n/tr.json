@@ -1030,5 +1030,15 @@
   "pp_changes_title": "Değişiklikler",
   "pp_changes_content": "Bu politika, mevzuattaki değişiklikler veya hizmetlerimizdeki yenilikler doğrultusunda güncellenebilir. Önemli değişikliklerde uygulama üzerinden bilgilendirme yapılır; güncel metin her zaman güncelleme tarihiyle birlikte yayımlanır.",
   "kvkk_visual_data_title": "Görsel Veriler",
-  "kvkk_visual_data_content": "Tanıma için yüklediğiniz sikke fotoğrafları. Bu görseller diske yazılmaz; yalnızca bellekte işlenir ve işlem biter bitmez silinir. Geriye yalnızca geri döndürülemez bir özet (SHA-256) ile tanıma sonucu kalır."
+  "kvkk_visual_data_content": "Tanıma için yüklediğiniz sikke fotoğrafları. Bu görseller diske yazılmaz; yalnızca bellekte işlenir ve işlem biter bitmez silinir. Geriye yalnızca geri döndürülemez bir özet (SHA-256) ile tanıma sonucu kalır.",
+  "modern_coin_title": "Bu bir günümüz Türk parası",
+  "modern_coin_desc": "NumisTR antik Anadolu sikkelerini tanır.",
+  "modern_coin_seen_full": "Fotoğraftaki para {year} tarihli {value} {unit} gibi görünüyor.",
+  "modern_coin_seen_value": "Fotoğraftaki para {value} {unit} gibi görünüyor.",
+  "modern_coin_seen_year": "Fotoğraftaki para {year} tarihli, birimi {unit} gibi görünüyor.",
+  "modern_coin_seen_unit": "Fotoğraftaki paranın birimi {unit} gibi görünüyor.",
+  "modern_coin_scan_another": "Başka bir sikke tara",
+  "modern_unit_lira": "lira",
+  "modern_unit_kurus": "kuruş",
+  "modern_unit_para": "para"
 }
