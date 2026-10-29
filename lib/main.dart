@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'src/core/app_log.dart';
+import 'src/core/crash_reporting.dart';
 import 'src/app_router.dart';
 import 'src/l10n/app_localizations.dart';
 import 'src/core/locale_provider.dart';
@@ -77,14 +79,23 @@ void main() async {
   // Initialize SharedPreferences
   final sharedPreferences = await SharedPreferences.getInstance();
 
-  runApp(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
-      ],
-      child: const AnatolianCoinsApp(),
-    ),
+  final app = ProviderScope(
+    overrides: [
+      sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+    ],
+    child: const AnatolianCoinsApp(),
   );
+
+  if (!crashReportingEnabled) {
+    runApp(app);
+    return;
+  }
+  // Sentry yukarıdaki FlutterError / PlatformDispatcher işleyicilerini zincirler (appLog sürer).
+  await SentryFlutter.init(configureCrashReporting, appRunner: () => runApp(app));
+  // Kurulum denemesi: --dart-define=SENTRY_SELFTEST=true ile panelde tek olay görünür.
+  if (const bool.fromEnvironment('SENTRY_SELFTEST')) {
+    await Sentry.captureException(StateError('Sentry kurulum denemesi'));
+  }
 }
 
 class AnatolianCoinsApp extends ConsumerWidget {

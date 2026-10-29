@@ -25,6 +25,10 @@ class Env {
     defaultValue: 'https://ai.numistr.org',
   );
 
+  /// Sentry (AB bölgesi) çökme raporlama DSN'i — gizli değil, uygulamaya gömülür.
+  /// Boşsa (dev derlemesi, testler) çökme raporlama hiç başlatılmaz. Bkz. crash_reporting.dart.
+  static const sentryDsn = String.fromEnvironment('SENTRY_DSN');
+
   // ---- Auth0 (OIDC + PKCE) ----
   /// "Apple ile devam et" düğmesi (App Store 4.8: Google girişi varsa Apple şart).
   /// Auth0 `apple` bağlantısı 2026-10-11'de açıldı (Services ID
