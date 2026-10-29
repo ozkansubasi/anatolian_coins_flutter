@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:dio/dio.dart';
 import '../core/env.dart';
 import '../core/secure_storage.dart';
@@ -164,6 +165,24 @@ class AuthRepository {
   /// - `ui_locales` → Auth0 Universal Login **sayfalarinin** dili
   /// - signup `user_metadata.locale` → Auth0 **e-postalarinin** dili
   ///   (sablonlar Liquid ile bu alana bakar; bkz. claudedocs/auth0/README.md)
+  static final _iosCancelPattern = RegExp(r'org\.openid\.appauth\.general\D*-3\b');
+
+  /// Kullanıcı giriş sayfasını kapattı mı? AppAuth bunu `null` sonuç olarak değil hata olarak bildirir:
+  /// iOS `OIDErrorCodeUserCanceledAuthorizationFlow` (-3) — mesaj cihaz diline çevrilir
+  /// ("…(org.openid.appauth.general hatası -3.)"); Android "description: User cancelled flow".
+  /// İptal sessiz geçer (giriş ekranında "Giriş yapılamadı" çıkmaz).
+  static bool isUserCancellation(Object e) {
+    if (e is! PlatformException) return false;
+    if (e.code != 'authorize_and_exchange_code_failed' && e.code != 'authorize_failed') {
+      return false;
+    }
+    final message = e.message ?? '';
+    final lower = message.toLowerCase();
+    return _iosCancelPattern.hasMatch(message) ||
+        lower.contains('user cancelled') ||
+        lower.contains('user canceled');
+  }
+
   Future<String> _localeCode() async {
     try {
       final saved = await SecureStore.read(_localeKey);
@@ -314,6 +333,10 @@ class AuthRepository {
 
       return t;
     } catch (e, stack) {
+      if (isUserCancellation(e)) {
+        debugPrint('⚠️ Sign in cancelled by user');
+        return null;
+      }
       debugPrint('❌ Sign in exception: $e');
       debugPrint('❌ Stack trace: $stack');
       rethrow;
@@ -597,6 +620,10 @@ class AuthRepository {
       debugPrint('✅ Social login successful');
       return t;
     } catch (e) {
+      if (isUserCancellation(e)) {
+        debugPrint('⚠️ Social sign in cancelled by user');
+        return null;
+      }
       debugPrint('❌ Social login exception: $e');
       rethrow;
     }

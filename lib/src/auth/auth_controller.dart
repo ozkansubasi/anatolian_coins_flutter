@@ -74,10 +74,15 @@ class AuthController extends StateNotifier<AuthState> {
     debugPrint('🔵 AuthController.signIn() started');
     state = state.copyWith(loading: true);
 
-    final t = await _repo.signIn();
-    debugPrint('🔵 AuthController.signIn() returned: token=${t != null}');
-
-    state = _stateFromTokens(t);
+    try {
+      final t = await _repo.signIn();
+      debugPrint('🔵 AuthController.signIn() returned: token=${t != null}');
+      state = _stateFromTokens(t);
+    } catch (e) {
+      // Hata yukarı gider ama giriş düğmeleri "yükleniyor"da takılı kalmaz.
+      state = state.copyWith(loading: false);
+      rethrow;
+    }
   }
 
   /// Sign in with email/password (in-app, no browser)
