@@ -3,7 +3,7 @@ import GoogleMaps
 import UIKit
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterPluginRegistrant {
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -16,7 +16,13 @@ import UIKit
     } else {
       NSLog("[NumisTR] GMSApiKey yok: ios/Flutter/Secrets.xcconfig eksik, harita açılamaz")
     }
-    GeneratedPluginRegistrant.register(with: self)
+    // Sahne düzeninde (Info.plist UIApplicationSceneManifest) AppDelegate'in penceresi yok; eklentiler
+    // Main.storyboard'dan gelen FlutterViewController'ın motoruna register(with:) üzerinden kaydedilir.
+    pluginRegistrant = self
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  func register(with registry: FlutterPluginRegistry) {
+    GeneratedPluginRegistrant.register(with: registry)
   }
 }
