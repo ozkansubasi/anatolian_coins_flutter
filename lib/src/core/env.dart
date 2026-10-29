@@ -34,9 +34,11 @@ class Env {
   static const appleSignInEnabled =
       bool.fromEnvironment('APPLE_SIGNIN_ENABLED', defaultValue: false);
 
+  // Auth0 custom domain (2026-10-29): Google onay ekranı "numistr.org" gösterir. Google istemcisi,
+  // Apple Services ID ve Joomla issuers[] bu alanı tanıyor (claudedocs/auth0/custom-domain-login-numistr.md).
   static const oidcIssuer = String.fromEnvironment(
     'OIDC_ISSUER',
-    defaultValue: 'https://dev-ja5k8sumb7005j4n.us.auth0.com',
+    defaultValue: 'https://login.numistr.org',
   );
   static const oidcClientId = String.fromEnvironment(
     'OIDC_CLIENT_ID',
