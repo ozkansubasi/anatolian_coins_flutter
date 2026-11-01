@@ -364,7 +364,8 @@ class _ProkitRecognitionResultsScreenState
     final showIdent = uncertain && ident != null && ident.level != 'type' && ident.hasContent;
     // M28: günümüz Türk parası — antik aday gösterilmez, sunucu zaten boş liste döner.
     if (results.isModernCoin) return _buildModernCoin(l10n, results.modernCoin);
-    if (matches.isEmpty && !showIdent) return _buildNoResults(l10n, results.noMatchReason, results.sameFace);
+    final legend = uncertain ? results.legend : null;
+    if (matches.isEmpty && !showIdent && legend == null) return _buildNoResults(l10n, results.noMatchReason, results.sameFace);
 
     final t = context.numText;
     final c = context.numColors;
@@ -414,6 +415,10 @@ class _ProkitRecognitionResultsScreenState
                   ),
                 ),
                 const SizedBox(height: 16),
+                if (legend != null) ...[
+                  LegendCard(legend: legend, l10n: l10n),
+                  const SizedBox(height: 16),
+                ],
                 if (showIdent) ...[
                   _IdentificationCard(ident: ident, l10n: l10n),
                   const SizedBox(height: 16),
@@ -919,6 +924,58 @@ class _StateMessage extends StatelessWidget {
 /// (hükümdar + kısa not), dönem, darphane, tahmini tarih ve arka yüzün o hükümdarın varyantlarıyla
 /// karşılaştırması. Doğrulanmış tipte yalnız "hükümdar hakkında" notu. Sunucu eşikleri: hükümdar
 /// iddiası tip dışlı ölçümde %98 kesin (claudedocs/ai-hukumdar-fizibilite-2026-10-09.md).
+/// AI15: sikkenin üzerinde okunan yazı ve adı. Tanıma adaylarını değiştirmez, ayrı bilgi olarak durur;
+/// yapay zekâ okuması olduğu hep yazar çünkü ölçümde nadir de olsa yanlış okuma var.
+class LegendCard extends StatelessWidget {
+  final LegendReading legend;
+  final AppLocalizations l10n;
+  const LegendCard({super.key, required this.legend, required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.numColors;
+    final t = context.numText;
+    Widget yazi(String yuz, String metin) => Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text('${l10n.translate(yuz)}: $metin', style: t.value.copyWith(color: c.text)),
+        );
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.text_fields_rounded, color: c.accent, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (legend.obverse != null || legend.reverse != null) ...[
+                  Text(l10n.translate('legend_title'), style: t.tag),
+                  if (legend.obverse != null) yazi('obverse', legend.obverse!),
+                  if (legend.reverse != null) yazi('reverse', legend.reverse!),
+                  const SizedBox(height: 10),
+                ],
+                Text(l10n.translate('legend_person'), style: t.tag),
+                const SizedBox(height: 2),
+                Text(legend.nameFor(l10n.locale.languageCode), style: t.value.copyWith(color: c.text)),
+                const SizedBox(height: 6),
+                Text(l10n.translate('legend_disclaimer'), style: t.caption),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _IdentificationCard extends StatelessWidget {
   final CoinIdentification ident;
   final AppLocalizations l10n;

@@ -7,6 +7,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:anatolian_coins/src/features/recognition/recognition_service.dart';
 
 void main() {
+  group('AI15 lejant', () {
+    Map<String, dynamic> yanit(Object? identification) => {
+          'data': {'verified': false, 'matches': [], 'near_matches': [], 'identification': identification},
+        };
+
+    test('sunucu göndermiyorsa ya da kapalıysa null', () {
+      expect(RecognitionResponse.fromJson(yanit(null)).legend, isNull);
+      expect(RecognitionResponse.fromJson(yanit({'level': 'date'})).legend, isNull);
+    });
+
+    test('düzeysiz identification içinde de okunur, kart adı dile göre', () {
+      final r = RecognitionResponse.fromJson(yanit({
+        'level': null,
+        'legend': {
+          'obverse': 'IMP C CLAVDIVS AVG',
+          'reverse': null,
+          'person': 'Claudius II Gothicus',
+          'person_tr': 'II. Claudius',
+          'person_en': 'Claudius II',
+        },
+      }));
+      expect(r.identification, isNull);
+      expect(r.legend!.obverse, 'IMP C CLAVDIVS AVG');
+      expect(r.legend!.reverse, isNull);
+      expect(r.legend!.nameFor('tr'), 'II. Claudius');
+      expect(r.legend!.nameFor('en'), 'Claudius II');
+    });
+
+    test('yerel ad yoksa okunan ad gösterilir', () {
+      final r = RecognitionResponse.fromJson(yanit({
+        'legend': {'person': 'Antiochus', 'reverse': 'ΒΑΣΙΛΕΩΣ ΑΝΤΙΟΧΟΥ'},
+      }));
+      expect(r.legend!.nameFor('tr'), 'Antiochus');
+    });
+
+    test('bozuk veri uygulamayı kırmaz', () {
+      for (final b in <Object?>['x', 3, {'person': 5}, {'person': '  '}, {}]) {
+        expect(RecognitionResponse.fromJson(yanit({'legend': b})).legend, isNull);
+      }
+    });
+  });
+
   test('verified alanı yoksa (eski eklenti) null ve yakın aday listesi boş', () {
     final r = RecognitionResponse.fromJson({
       'data': {
