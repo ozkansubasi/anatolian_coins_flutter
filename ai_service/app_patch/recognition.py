@@ -173,6 +173,18 @@ IMG_DIR = "/app/index/images"   # hardlinks of /opt/ai_service/data/training/tra
 # precompute) is computed from the image exactly as before; LF_DIR = None restores Faz D.
 LF_DIR = "/app/index/lf"
 
+# ---- AI14 (2026-11-01): second pass with the coin turned ----
+# The embedding is not rotation invariant and the catalog is upright, so a coin photographed at an angle can miss the
+# candidate list while SIFT (rotation invariant) would verify it at once. When the first pass verifies nothing, the
+# search and the verification run once more with the coin crop's embeddings at ROT_ANGLES added. Only a verified
+# second pass replaces the answer (ROT_ADOPT): an unverified one is not evidence, the angles merely reshuffle look-alikes.
+# Measurements: claudedocs/deploy/runbooks/2026-11-01-ai-aci-ikinci-tur.md
+ROT_ENABLED = True
+ROT_ANGLES = (45, 90, 135, 180, 225, 270, 315)
+ROT_ADOPT = 'verified'          # 'verified' | 'always' (evaluation only)
+ROT_MAX_ELAPSED = 15.0          # seconds already spent -> no second pass (the Joomla proxy gives up at 30)
+ROT_FILL = (235, 235, 235)      # same as the background _segment paints
+
 # ---- AI11 (2026-10-10): both photos show the same face ----
 # The app cannot skip the reverse shot, so whoever photographs one face twice (a worn reverse, a book or a screen,
 # a test) sends the same face in both slots. Faz C then judged "taken the other way round" on noise: the photo a
@@ -870,6 +882,58 @@ class RecognitionService:
                 if same_face is not None:
                     rev = None
 
+            resp = self._answer(obv, rev, rev_in, same_face, metal, weight_g, diameter_mm, exclude, start)
+            if ROT_ENABLED:
+                try:
+                    resp = self._rotation_pass(resp, obv, rev, rev_in, same_face, metal, weight_g, diameter_mm,
+                                               exclude, start)
+                except Exception as e:          # optional layer: the first answer stands
+                    logger.error("AI14 rotation pass failed: %s" % e, exc_info=True)
+            return resp
+        except Exception as e:
+            logger.error("Recognition failed: %s" % e, exc_info=True)
+            return self._stub_response()
+
+    def _rotated_side(self, side):
+        """AI14: the side with its coin crop's embeddings at ROT_ANGLES added (photos and SIFT features are shared)."""
+        if side is None:
+            return None
+        crop = side['vimg']
+        h, w = crop.shape[:2]
+        turned = dict(side)
+        turned['embs'] = list(side['embs'])
+        for deg in ROT_ANGLES:
+            M = cv2.getRotationMatrix2D((w / 2, h / 2), -deg, 1.0)
+            c, n = abs(M[0, 0]), abs(M[0, 1])
+            nw, nh = int(h * n + w * c), int(h * c + w * n)
+            M[0, 2] += nw / 2 - w / 2
+            M[1, 2] += nh / 2 - h / 2
+            turned['embs'].append(self._embed(cv2.warpAffine(crop, M, (nw, nh), borderValue=ROT_FILL)))
+        return turned
+
+    def _rotation_pass(self, resp, obv, rev, rev_in, same_face, metal, weight_g, diameter_mm, exclude, start):
+        """AI14: -> the second-pass answer when it verified a candidate (ROT_ADOPT), else `resp` untouched."""
+        if resp.get('verified') or resp.get('modern_coin') or resp.get('method') == 'stub' \
+                or resp.get('no_match_reason') in ('no_coin_detected', 'low_detail_surface', 'modern_coin'):
+            return resp
+        if (datetime.utcnow() - start).total_seconds() > ROT_MAX_ELAPSED:
+            logger.info("AI14: second pass skipped, over the time budget")
+            return resp
+        t0 = time.time()
+        again = self._answer(self._rotated_side(obv), self._rotated_side(rev), rev_in, same_face, metal, weight_g,
+                             diameter_mm, exclude, start, modern_gate=False)
+        adopted = bool(again.get('verified')) or ROT_ADOPT == 'always'
+        logger.info("AI14: second pass %d ms verified=%s adopted=%s top art=%s" %
+                    ((time.time() - t0) * 1000, again.get('verified'), adopted,
+                     again['matches'][0]['article_id'] if again.get('matches') else None))
+        if not adopted:
+            return resp
+        again['quality']['rotation_pass'] = True
+        return again
+
+    def _answer(self, obv, rev, rev_in, same_face, metal, weight_g, diameter_mm, exclude, start, modern_gate=True):
+        """Search, verify and build the response for prepared sides (AI14: run again with the coin turned)."""
+        try:
             fused, obv_best, rev_best, swapped = self._fuse(obv, rev, exclude, with_swap=True)
 
             if metal or weight_g or diameter_mm:
@@ -1025,7 +1089,7 @@ class RecognitionService:
             # worst hide a "may not be certain" candidate below MODERN_UNVERIFIED_MAX. When it fires the ancient
             # candidates and the identification card are withheld (wrong information for a modern coin).
             modern_coin = None
-            if modern_kapi is not None and (no_match or (not verified and top < MODERN_UNVERIFIED_MAX)):
+            if modern_gate and modern_kapi is not None and (no_match or (not verified and top < MODERN_UNVERIFIED_MAX)):
                 modern_coin = modern_kapi.kontrol(
                     [s['vraw'] if s.get('vraw') is not None else s['vimg'] for s in (obv, rev) if s is not None])
                 if modern_coin:
