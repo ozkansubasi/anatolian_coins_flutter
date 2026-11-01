@@ -71,19 +71,19 @@ void main() {
 
   testWidgets('iki parmak yakınlaştırır, ipucu kalkar; küçültünce başa döner', (tester) async {
     await pumpScreen(tester, on);
-    expect(find.text('İki parmakla yakınlaştırıp sikkeyi ortalayın'), findsOneWidget);
+    expect(find.text('İki parmağınızı kullanarak sikke görselini yakınlaştırın'), findsOneWidget);
     expect(viewerOf(tester).panEnabled, isFalse);
 
     final center = tester.getCenter(find.byType(InteractiveViewer).first);
     await pinch(tester, center, 40, 120);
     expect(scaleOf(tester), greaterThan(1.5));
-    expect(find.text('İki parmakla yakınlaştırıp sikkeyi ortalayın'), findsNothing);
+    expect(find.text('İki parmağınızı kullanarak sikke görselini yakınlaştırın'), findsNothing);
     expect(viewerOf(tester).panEnabled, isTrue);
 
     await pinch(tester, center, 120, 10);
     expect(scaleOf(tester), 1);
     expect(viewerOf(tester).panEnabled, isFalse);
-    expect(find.text('İki parmakla yakınlaştırıp sikkeyi ortalayın'), findsOneWidget);
+    expect(find.text('İki parmağınızı kullanarak sikke görselini yakınlaştırın'), findsOneWidget);
   });
 
   testWidgets('tam ölçekte tek parmak diğer yüze geçer; yakınken sayfa kaymaz', (tester) async {
