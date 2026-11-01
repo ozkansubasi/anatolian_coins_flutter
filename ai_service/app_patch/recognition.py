@@ -58,10 +58,9 @@ import json
 import logging
 import math
 import os
-import re
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
 
@@ -78,12 +77,6 @@ try:                            # AI12 / ADR-009: modern Turkish coin gate (off 
 except Exception as e:          # optional layer: a missing module must never break recognition
     modern_kapi = None
     logger.warning("AI12: modern_kapi not loaded, gate off: %s" % e)
-
-try:                            # AI15: legend reading (off unless its flag file and key file exist)
-    from app.services import lejant
-except Exception as e:          # optional layer: a missing module must never break recognition
-    lejant = None
-    logger.warning("AI15: lejant not loaded, off: %s" % e)
 
 IMN = np.array([0.485, 0.456, 0.406], np.float32)
 IST = np.array([0.229, 0.224, 0.225], np.float32)
@@ -192,11 +185,6 @@ ROT_ADOPT = 'verified'          # 'verified' | 'always' (evaluation only)
 ROT_MAX_ELAPSED = 15.0          # seconds already spent -> no second pass (the Joomla proxy gives up at 30)
 ROT_FILL = (235, 235, 235)      # same as the background _segment paints
 
-# ---- AI15 (2026-11-01): legend reading on an unverified scan ----
-# Runs beside the second pass; a slow answer is dropped. The app shows it as a separate card, it does not reorder candidates.
-LEGEND_NUMERALS = {'i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x', 'xi', 'xii'}
-LEGEND_WAIT_S = 9.0             # after the answer is ready; lejant.TIMEOUT_S bounds the call itself
-
 # ---- AI11 (2026-10-10): both photos show the same face ----
 # The app cannot skip the reverse shot, so whoever photographs one face twice (a worn reverse, a book or a screen,
 # a test) sends the same face in both slots. Faz C then judged "taken the other way round" on noise: the photo a
@@ -297,7 +285,6 @@ class RecognitionService:
         self.rows_by_face = {}
         self._tl = threading.local()
         self._pool = ThreadPoolExecutor(VERIFY_WORKERS) if VERIFY_ENABLED else None
-        self._legend_pool = ThreadPoolExecutor(2, thread_name_prefix="lejant-is")
         self.proj = None
         try:
             torch.set_num_threads(4)
@@ -896,71 +883,16 @@ class RecognitionService:
                     rev = None
 
             resp = self._answer(obv, rev, rev_in, same_face, metal, weight_g, diameter_mm, exclude, start)
-            legend_job = self._legend_start(resp, obv, rev)
             if ROT_ENABLED:
                 try:
                     resp = self._rotation_pass(resp, obv, rev, rev_in, same_face, metal, weight_g, diameter_mm,
                                                exclude, start)
                 except Exception as e:          # optional layer: the first answer stands
                     logger.error("AI14 rotation pass failed: %s" % e, exc_info=True)
-            return self._legend_attach(resp, legend_job)
+            return resp
         except Exception as e:
             logger.error("Recognition failed: %s" % e, exc_info=True)
             return self._stub_response()
-
-    def _legend_start(self, resp, obv, rev):
-        """AI15: the legend read as a background job, only when enabled and nothing was verified."""
-        try:
-            if lejant is None or not lejant.etkin():
-                return None
-            if resp.get('verified') or resp.get('modern_coin') or resp.get('method') == 'stub' \
-                    or resp.get('no_match_reason') in ('no_coin_detected', 'low_detail_surface', 'modern_coin'):
-                return None
-            yuzler = [(s['vraw'] if s.get('vraw') is not None else s['vimg']) if s else None for s in (obv, rev)]
-            return self._legend_pool.submit(lejant.oku_yuzler, yuzler)
-        except Exception as e:                      # optional layer: never fails the recognition
-            logger.error("AI15: legend start failed: %s" % e, exc_info=True)
-            return None
-
-    def _legend_names(self, person):
-        """Display names from the ruler notes. "Claudius II Gothicus" -> the most specific note all of whose words it holds;
-        a bare "Antiochus" fits many notes -> None, the app shows the name as read."""
-        w = set(re.findall(r"[a-z]+", person.lower()))
-        if {'alexander', 'great'} <= w:             # the notes know him by his catalog name
-            w = {'alexander', 'iii', 'of', 'macedon'}
-        sayi = w & LEGEND_NUMERALS                  # "Claudius II" must never land on the note for Claudius
-        kisa, uzun = [], []                         # note name inside the read name / read name inside the note name
-        for key, n in self.notes.items():
-            k = set(re.findall(r"[a-z]+", key.lower()))
-            if k and k <= w and sayi <= k:
-                kisa.append((len(k), n))
-            elif k and w <= k:
-                uzun.append(n)
-        if kisa:
-            en = max(c for c, _ in kisa)
-            fit = [n for c, n in kisa if c == en]
-        else:
-            fit = uzun
-        return (fit[0].get('name_tr'), fit[0].get('name_en')) if len(fit) == 1 else (None, None)
-
-    def _legend_attach(self, resp, job):
-        """AI15: the card goes inside `identification` (a free dict the schema and the plugin pass through unchanged)."""
-        if job is None:
-            return resp
-        try:
-            if resp.get('verified') or resp.get('modern_coin'):
-                return resp
-            kart = job.result(timeout=LEGEND_WAIT_S)
-            if not kart:
-                return resp
-            kart['person_tr'], kart['person_en'] = self._legend_names(kart['person'])
-            resp['identification'] = dict(resp.get('identification') or {'level': None}, legend=kart)
-            logger.info("AI15: legend person=%s conf=%s" % (kart['person'], kart['confidence']))
-        except FuturesTimeout:
-            logger.warning("AI15: legend dropped, too slow")
-        except Exception as e:
-            logger.error("AI15: legend attach failed: %s" % e, exc_info=True)
-        return resp
 
     def _rotated_side(self, side):
         """AI14: the side with its coin crop's embeddings at ROT_ANGLES added (photos and SIFT features are shared)."""

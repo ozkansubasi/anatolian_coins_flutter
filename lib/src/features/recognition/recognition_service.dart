@@ -341,10 +341,6 @@ class RecognitionResponse {
   /// Türk parasının okunabilen bilgisi. null = kapı kapalı ya da sunucu göndermiyor.
   final ModernCoin? modernCoin;
 
-  /// AI15: doğrulanmayan taramada sikkenin üzerinden okunan yazı ve adı. null = sunucuda kapalı,
-  /// okunamadı ya da doğrulanmış tarama.
-  final LegendReading? legend;
-
   bool get isModernCoin => noMatchReason == 'modern_coin';
 
   RecognitionResponse({
@@ -360,7 +356,6 @@ class RecognitionResponse {
     this.nearMatches = const [],
     this.identification,
     this.modernCoin,
-    this.legend,
   });
 
   /// Convenience getter for remaining scans (backward compatibility)
@@ -401,7 +396,6 @@ class RecognitionResponse {
           .toList(),
       identification: CoinIdentification.tryParse(data['identification']),
       modernCoin: ModernCoin.tryParse(data['modern_coin']),
-      legend: LegendReading.fromIdentification(data['identification']),
     );
   }
 }
@@ -433,36 +427,6 @@ class ModernCoin {
 /// type (doğrulanmış tip) > ruler > dynasty > mint > date. Hükümdarın kanonik adı katalogdaki gibi
 /// (İngilizce) gelir, gösterilecek ad `name_tr` / `name_en`; darphane küçük harf anahtar; not ve dönem
 /// metni TR/EN ikisi birden. `kind` (ruler | family | official | community) kart başlığını seçer.
-/// AI15: sikkenin üzerinden okunan lejant. Sunucu `identification.legend` içinde gönderir; `identification`
-/// düzeysiz olsa da (tanıma bir şey söyleyemese de) gösterilir. Bozuk veri uygulamayı kırmaz: null.
-class LegendReading {
-  final String? obverse, reverse;
-  final String person;
-  final String? personTr, personEn;
-
-  const LegendReading({this.obverse, this.reverse, required this.person, this.personTr, this.personEn});
-
-  /// Kart adı arayüz dilinden; bilinmeyen kişide okunan ad.
-  String nameFor(String languageCode) =>
-      (languageCode == 'en' ? personEn : personTr) ?? person;
-
-  static LegendReading? fromIdentification(Object? identification) {
-    if (identification is! Map) return null;
-    final raw = identification['legend'];
-    if (raw is! Map) return null;
-    final person = raw['person'];
-    if (person is! String || person.trim().isEmpty) return null;
-    String? metin(Object? v) => v is String && v.trim().isNotEmpty ? v.trim() : null;
-    return LegendReading(
-      obverse: metin(raw['obverse']),
-      reverse: metin(raw['reverse']),
-      person: person.trim(),
-      personTr: metin(raw['person_tr']),
-      personEn: metin(raw['person_en']),
-    );
-  }
-}
-
 class CoinIdentification {
   final String level; // type | ruler | dynasty | mint | date
   final String? basis; // obverse | reverse — portreyi taşıyan fotoğraf
