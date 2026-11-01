@@ -298,6 +298,7 @@
   "skip": "Skip",
   "preview": "Preview",
   "rotate": "Rotate",
+  "preview_zoom_hint": "Pinch to zoom and center the coin",
   "image_not_found": "Image not found",
   "image_load_failed": "Could not load image",
   "image_counter": "Image {current} / {total}",

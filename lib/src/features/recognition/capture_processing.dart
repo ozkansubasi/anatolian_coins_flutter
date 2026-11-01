@@ -67,25 +67,116 @@ ProcessedCapture processCaptureBytes(Uint8List bytes, double sideFraction, {int 
 }
 
 /// Görüntüyü [degrees] kadar SAAT YÖNÜNDE döndürür (önizlemedeki `Transform.rotate` ile aynı
-/// yön), özgün boyuta ortadan kırpar; köşelerde açılan boşluk kenarların ortalama rengiyle
-/// doldurulur (siyah köşe sunucudaki sikke bölütlemesini ve ham-kare gömmesini şaşırtmasın).
-/// Önizlemede 15°'lik adımlarla hizalanan sikke sunucuya hizalı gider. `compute` ile çağrılır.
+/// yön). Döndürülmüş karenin tamamı korunur ve görüntü merkezi çıktının merkezinde kalır:
+/// sunucu sikke bölütlemesini karenin ortasından başlatır, uygulama küçük resimleri de ortadan
+/// gösterir. Köşelerde açılan boşluk kenarların ortalama rengiyle doldurulur (siyah köşe
+/// bölütlemeyi ve ham-kare gömmesini şaşırtmasın). `compute` ile çağrılır.
+///
+/// 2026-11-01 kök neden: eskiden özgün boyuta kırpılıyordu. Dikey fotoğraf ~90° dönünce kırpma
+/// başlangıcı negatif oluyor, `copyCrop` bunu 0'a sıkıştırıyor ve sikke karenin üstüne kayıyordu.
 Uint8List rotateImageBytes(Uint8List bytes, double degrees, {int quality = 92}) {
   final decoded = img.decodeImage(bytes);
   if (decoded == null) throw const FormatException('image decode failed');
-  final src = img.bakeOrientation(decoded);
+  final out = _rotatedFrame(img.bakeOrientation(decoded), degrees);
+  return Uint8List.fromList(img.encodeJpg(out, quality: quality));
+}
+
+img.Image _rotatedFrame(img.Image src, double degrees) {
   final d = degrees % 360;
-  if (d == 0) return Uint8List.fromList(img.encodeJpg(src, quality: quality));
-  final w = src.width;
-  final h = src.height;
+  if (d == 0) return src;
   final rot = img.copyRotate(src.convert(numChannels: 4),
       angle: d, interpolation: img.Interpolation.linear);
-  final cropped = img.copyCrop(rot,
-      x: ((rot.width - w) / 2).round(), y: ((rot.height - h) / 2).round(), width: w, height: h);
-  final canvas = img.Image(width: w, height: h);
+  final canvas = img.Image(width: rot.width, height: rot.height);
   img.fill(canvas, color: _borderMean(src));
-  img.compositeImage(canvas, cropped);
-  return Uint8List.fromList(img.encodeJpg(canvas, quality: quality));
+  img.compositeImage(canvas, rot);
+  return canvas;
+}
+
+/// Önizlemedeki yakınlaştırma durumu: görüntü kutusunun boyutu ve `InteractiveViewer`
+/// dönüşümü (görünüm = içerik × [scale] + ([tx], [ty])).
+class PreviewViewport {
+  final double viewWidth;
+  final double viewHeight;
+  final double scale;
+  final double tx;
+  final double ty;
+
+  const PreviewViewport({
+    required this.viewWidth,
+    required this.viewHeight,
+    required this.scale,
+    required this.tx,
+    required this.ty,
+  });
+}
+
+/// Ekranda görünen bölgenin, döndürülmüş tam karedeki piksel dikdörtgeni.
+///
+/// Görsel kutuya döndürülmeden "contain" ile oturur ve kutu merkezi çevresinde döner; bu yüzden
+/// kutu merkezi döndürülmüş karenin merkezine, bir görünüm birimi 1/k piksele karşılık gelir.
+/// Görünen bölge görselin dışında kalıyorsa ya da çok küçükse `null` döner (tam kare gider).
+({int x, int y, int width, int height})? viewportCropRect({
+  required int srcWidth,
+  required int srcHeight,
+  required int frameWidth,
+  required int frameHeight,
+  required PreviewViewport viewport,
+  int minSide = 64,
+}) {
+  final v = viewport;
+  final k = math.min(v.viewWidth / srcWidth, v.viewHeight / srcHeight);
+  double toFrameX(double viewX) =>
+      ((viewX - v.tx) / v.scale - v.viewWidth / 2) / k + frameWidth / 2;
+  double toFrameY(double viewY) =>
+      ((viewY - v.ty) / v.scale - v.viewHeight / 2) / k + frameHeight / 2;
+  final x0 = toFrameX(0).clamp(0.0, frameWidth.toDouble()).round();
+  final x1 = toFrameX(v.viewWidth).clamp(0.0, frameWidth.toDouble()).round();
+  final y0 = toFrameY(0).clamp(0.0, frameHeight.toDouble()).round();
+  final y1 = toFrameY(v.viewHeight).clamp(0.0, frameHeight.toDouble()).round();
+  if (x1 - x0 < minSide || y1 - y0 < minSide) return null;
+  return (x: x0, y: y0, width: x1 - x0, height: y1 - y0);
+}
+
+/// Yakınlaştırılmış görünümde görsel [deltaDegrees] dönerken ekran ortasındaki noktanın yerinde
+/// kalması için gereken yeni öteleme. Sikke yakınlaştırılmışken döndürülünce ekrandan kaçmasın.
+({double tx, double ty}) translationAfterRotation({
+  required double viewWidth,
+  required double viewHeight,
+  required double scale,
+  required double tx,
+  required double ty,
+  required double deltaDegrees,
+}) {
+  final cx = viewWidth / 2;
+  final cy = viewHeight / 2;
+  final rx = (cx - tx) / scale - cx;
+  final ry = (cy - ty) / scale - cy;
+  final a = deltaDegrees * math.pi / 180;
+  final nx = rx * math.cos(a) - ry * math.sin(a);
+  final ny = rx * math.sin(a) + ry * math.cos(a);
+  return (tx: cx - scale * (cx + nx), ty: cy - scale * (cy + ny));
+}
+
+/// Taranacak görseli önizlemedeki hale getirir: döndürür, [viewport] verilmişse yalnız ekranda
+/// görünen bölgeyi bırakır. Kırpma sıkıştırmadan önce yapıldığı için çözünürlük kaybolmaz.
+/// `compute` ile çağrılır.
+Uint8List prepareScanImage(Uint8List bytes, double degrees, PreviewViewport? viewport,
+    {int quality = 92}) {
+  final decoded = img.decodeImage(bytes);
+  if (decoded == null) throw const FormatException('image decode failed');
+  final src = img.bakeOrientation(decoded);
+  final frame = _rotatedFrame(src, degrees);
+  if (viewport == null) return Uint8List.fromList(img.encodeJpg(frame, quality: quality));
+  final r = viewportCropRect(
+    srcWidth: src.width,
+    srcHeight: src.height,
+    frameWidth: frame.width,
+    frameHeight: frame.height,
+    viewport: viewport,
+  );
+  final out =
+      r == null ? frame : img.copyCrop(frame, x: r.x, y: r.y, width: r.width, height: r.height);
+  return Uint8List.fromList(img.encodeJpg(out, quality: quality));
 }
 
 img.Color _borderMean(img.Image im) {

@@ -12,8 +12,8 @@ import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import 'capture_processing.dart';
 
-Uint8List _rotateEntry(List<Object> args) =>
-    rotateImageBytes(args[0] as Uint8List, args[1] as double);
+Uint8List _prepareEntry(List<Object?> args) =>
+    prepareScanImage(args[0] as Uint8List, args[1] as double, args[2] as PreviewViewport?);
 
 /// ProKit-styled preview screen for captured/selected image(s)
 /// Modern card-based layout with gradient accents
@@ -41,6 +41,13 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
   // Kalici controller + animateToPage ile senkron.
   final PageController _pageController = PageController();
 
+  // Yakınlaştırma (2026-11-01): ekranda görünen bölge sunucuya gider. Yüz başına ayrı durum.
+  static const double _zoomedAbove = 1.02;
+  final List<TransformationController> _zoom = [TransformationController(), TransformationController()];
+  final List<Size> _viewSize = [Size.zero, Size.zero];
+  final List<bool> _zoomed = [false, false];
+  int _pointers = 0; // iki parmak değerken sayfa kaydırması yakınlaştırmayla yarışmasın
+
   // Faz B: istege bagli koleksiyoner nitelikleri
   String? _metal;
   final TextEditingController _weightCtrl = TextEditingController();
@@ -63,6 +70,9 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
   @override
   void dispose() {
     _pageController.dispose();
+    for (final c in _zoom) {
+      c.dispose();
+    }
     _weightCtrl.dispose();
     _diameterCtrl.dispose();
     super.dispose();
@@ -98,10 +108,50 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
       } else {
         _reverseRotation = norm(_reverseRotation);
       }
+      if (_zoomed[tab]) {
+        final m = _zoom[tab].value;
+        final scale = m.getMaxScaleOnAxis();
+        final t = translationAfterRotation(
+          viewWidth: _viewSize[tab].width,
+          viewHeight: _viewSize[tab].height,
+          scale: scale,
+          tx: m.storage[12],
+          ty: m.storage[13],
+          deltaDegrees: delta,
+        );
+        _zoom[tab].value = Matrix4.diagonal3Values(scale, scale, 1)
+          ..setTranslationRaw(t.tx, t.ty, 0);
+      }
     });
   }
 
-  Future<File?> _compressImage(File imageFile, double rotation, String suffix) async {
+  void _syncZoomState(int tab) {
+    final zoomed = _zoom[tab].value.getMaxScaleOnAxis() > _zoomedAbove;
+    if (zoomed != _zoomed[tab]) setState(() => _zoomed[tab] = zoomed);
+  }
+
+  /// Parmaklar kalkınca neredeyse tam ölçekteyse başa döner: görünüm yine tam kare gönderir.
+  void _settleZoom(int tab) {
+    if (_zoom[tab].value.getMaxScaleOnAxis() <= _zoomedAbove) {
+      _zoom[tab].value = Matrix4.identity();
+    }
+    _syncZoomState(tab);
+  }
+
+  PreviewViewport? _viewportFor(int tab) {
+    if (!_zoomed[tab]) return null;
+    final m = _zoom[tab].value;
+    return PreviewViewport(
+      viewWidth: _viewSize[tab].width,
+      viewHeight: _viewSize[tab].height,
+      scale: m.getMaxScaleOnAxis(),
+      tx: m.storage[12],
+      ty: m.storage[13],
+    );
+  }
+
+  Future<File?> _compressImage(
+      File imageFile, double rotation, PreviewViewport? viewport, String suffix) async {
     try {
       final dir = await getTemporaryDirectory();
       final targetPath = path.join(
@@ -109,22 +159,25 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
         'compressed_${suffix}_${DateTime.now().millisecondsSinceEpoch}.jpg',
       );
 
-      // FlutterImageCompress yalnız 90'ın katlarını döndürür; 15°'lik adımlar için görüntü
-      // önce isolate'te döndürülür (yön önizlemedeki Transform.rotate ile aynı).
+      // FlutterImageCompress yalnız 90'ın katlarını döndürür; 15°'lik adımlar ve yakınlaştırma için
+      // görüntü önce isolate'te hazırlanır (yön önizlemedeki Transform.rotate ile aynı).
       var source = imageFile.absolute.path;
       final turn = rotation % 360;
-      if (turn != 0) {
-        final rotated = await compute(_rotateEntry, <Object>[await imageFile.readAsBytes(), turn]);
+      final transformed = turn != 0 || viewport != null;
+      if (transformed) {
+        final prepared = await compute(
+            _prepareEntry, <Object?>[await imageFile.readAsBytes(), turn, viewport]);
         source = path.join(dir.path, 'rotated_${suffix}_${DateTime.now().millisecondsSinceEpoch}.jpg');
-        await File(source).writeAsBytes(rotated, flush: true);
+        await File(source).writeAsBytes(prepared, flush: true);
       }
 
       final result = await FlutterImageCompress.compressAndGetFile(
         source,
         targetPath,
         quality: 85,
-        minWidth: 800,
-        minHeight: 800,
+        // Döndürülmüş kare boşluk payıyla büyür; 800'e inerse sikke döndürülmemişe göre küçülür.
+        minWidth: transformed ? 1200 : 800,
+        minHeight: transformed ? 1200 : 800,
       );
 
       if (result == null) return null;
@@ -142,7 +195,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
     });
 
     try {
-      final compressedObverse = await _compressImage(_obverseFile!, _obverseRotation, 'obverse');
+      final compressedObverse = await _compressImage(_obverseFile!, _obverseRotation, _viewportFor(0), 'obverse');
 
       if (compressedObverse == null) {
         throw Exception('Failed to process obverse image');
@@ -157,7 +210,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
 
       File? compressedReverse;
       if (_reverseFile != null) {
-        compressedReverse = await _compressImage(_reverseFile!, _reverseRotation, 'reverse');
+        compressedReverse = await _compressImage(_reverseFile!, _reverseRotation, _viewportFor(1), 'reverse');
 
         if (compressedReverse == null) {
           throw Exception('Failed to process reverse image');
@@ -326,11 +379,18 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
   }
 
   Widget _buildDualImagePreview(AppLocalizations l10n) {
-    return PageView(
+    final pageLocked = _pointers >= 2 || _zoomed[_selectedTab];
+    return Listener(
+      onPointerDown: (_) => setState(() => _pointers++),
+      onPointerUp: (_) => setState(() => _pointers--),
+      onPointerCancel: (_) => setState(() => _pointers--),
+      child: PageView(
       controller: _pageController,
+      physics: pageLocked ? const NeverScrollableScrollPhysics() : null,
       onPageChanged: (index) => setState(() => _selectedTab = index),
       children: [
         _buildImageCard(
+          tab: 0,
           file: _obverseFile!,
           rotation: _obverseRotation,
           label: l10n.translate('obverse'),
@@ -338,6 +398,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
           rotateText: l10n.translate('rotate'),
         ),
         _buildImageCard(
+          tab: 1,
           file: _reverseFile!,
           rotation: _reverseRotation,
           label: l10n.translate('reverse'),
@@ -345,11 +406,13 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
           rotateText: l10n.translate('rotate'),
         ),
       ],
+      ),
     );
   }
 
   Widget _buildSingleImagePreview(AppLocalizations l10n) {
     return _buildImageCard(
+      tab: 0,
       file: _obverseFile!,
       rotation: _obverseRotation,
       label: l10n.translate('obverse'),
@@ -359,6 +422,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
   }
 
   Widget _buildImageCard({
+    required int tab,
     required File file,
     required double rotation,
     required String label,
@@ -390,18 +454,33 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
               child: Stack(
                 children: [
                   // Image
-                  ClipRRect(
+                  Positioned.fill(
+                    child: ClipRRect(
                     borderRadius: radius(20),
                     child: file.existsSync()
-                        ? Transform.rotate(
-                            angle: rotation * math.pi / 180,
-                            child: Image.file(
-                              file,
-                              width: double.infinity,
-                              height: double.infinity,
-                              fit: BoxFit.contain,
-                            ),
-                          )
+                        ? LayoutBuilder(builder: (context, box) {
+                            _viewSize[tab] = box.biggest;
+                            return InteractiveViewer(
+                              transformationController: _zoom[tab],
+                              minScale: 1,
+                              maxScale: 8,
+                              // Tam ölçekte tek parmak sayfa değiştirir; yakınlaşınca sikke kaydırılır.
+                              panEnabled: _zoomed[tab],
+                              // Döndürülmüş görselin kutu dışına taşan kısmına da gidilebilsin.
+                              boundaryMargin: EdgeInsets.all(box.biggest.longestSide),
+                              onInteractionUpdate: (_) => _syncZoomState(tab),
+                              onInteractionEnd: (_) => _settleZoom(tab),
+                              child: Transform.rotate(
+                                angle: rotation * math.pi / 180,
+                                child: Image.file(
+                                  file,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            );
+                          })
                         : Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -415,6 +494,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
                               ],
                             ),
                           ),
+                    ),
                   ),
 
                   // Label badge
@@ -437,6 +517,29 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
                       ),
                     ),
                   ),
+
+                  if (!_zoomed[tab] && file.existsSync())
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 12,
+                      child: IgnorePointer(
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: boxDecorationWithRoundedCorners(
+                              backgroundColor: black.withOpacity(0.6),
+                              borderRadius: radius(12),
+                            ),
+                            child: Text(
+                              AppLocalizations.of(context).translate('preview_zoom_hint'),
+                              textAlign: TextAlign.center,
+                              style: primaryTextStyle(size: 12, color: white),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
 
                   // Rotation indicator
                   if (rotation != 0)

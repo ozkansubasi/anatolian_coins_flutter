@@ -298,6 +298,7 @@
   "skip": "Atla",
   "preview": "Önizleme",
   "rotate": "Döndür",
+  "preview_zoom_hint": "İki parmakla yakınlaştırıp sikkeyi ortalayın",
   "image_not_found": "Görsel bulunamadı",
   "image_load_failed": "Görsel yüklenemedi",
   "image_counter": "Görsel {current} / {total}",
