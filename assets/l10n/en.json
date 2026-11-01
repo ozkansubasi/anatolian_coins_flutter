@@ -150,6 +150,8 @@
   "take_photo": "Take Photo",
   "select_from_gallery": "Select from Gallery",
   "analyzing_coin": "Analyzing coin...",
+  "analyzing_angles": "Comparing the coin from different angles...",
+  "analyzing_angles_wait": "This may take a few more seconds",
   "recognition_results": "Recognition Results",
   "confidence_score": "Confidence Score",
   "view_details": "View Details",

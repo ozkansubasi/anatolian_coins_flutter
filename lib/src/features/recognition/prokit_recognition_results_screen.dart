@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +15,56 @@ import 'recognition_service.dart';
 import '../history/scan_history_service.dart';
 import '../../widgets/coin_list.dart';
 import '../settings/settings_provider.dart';
+
+/// Tarama bekleme metni. Sunucu ilk turda doğrulayamazsa sikkeyi farklı açılarla yeniden arar (AI14,
+/// doğrulanmayan tarama ~14 sn); yanıt tek parça geldiği için geçiş süreye bağlıdır: ilk turda
+/// doğrulanan tarama genelde bu süreden önce biter ve ikinci metni görmez.
+class ScanProgressMessage extends StatefulWidget {
+  const ScanProgressMessage({super.key});
+
+  static const Duration secondStageAfter = Duration(seconds: 8);
+
+  @override
+  State<ScanProgressMessage> createState() => _ScanProgressMessageState();
+}
+
+class _ScanProgressMessageState extends State<ScanProgressMessage> {
+  Timer? _timer;
+  bool _secondStage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(ScanProgressMessage.secondStageAfter, () {
+      if (mounted) setState(() => _secondStage = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final t = context.numText;
+    return Semantics(
+      liveRegion: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(l10n.translate(_secondStage ? 'analyzing_angles' : 'analyzing_coin'),
+              style: t.section, textAlign: TextAlign.center),
+          const SizedBox(height: 6),
+          Text(l10n.translate(_secondStage ? 'analyzing_angles_wait' : 'analyzing_wait'),
+              style: t.caption, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+}
 
 /// Tanıma sonuçları (2026-09-21 yeniden tasarım, sikke detayıyla aynı dil).
 ///
@@ -118,7 +169,6 @@ class _ProkitRecognitionResultsScreenState
   // --- Durumlar --------------------------------------------------------------
 
   Widget _buildLoading(AppLocalizations l10n) {
-    final t = context.numText;
     final c = context.numColors;
     return Center(
       child: Padding(
@@ -147,9 +197,7 @@ class _ProkitRecognitionResultsScreenState
               ),
             ),
             const SizedBox(height: 28),
-            Text(l10n.translate('analyzing_coin'), style: t.section, textAlign: TextAlign.center),
-            const SizedBox(height: 6),
-            Text(l10n.translate('analyzing_wait'), style: t.caption, textAlign: TextAlign.center),
+            const ScanProgressMessage(),
           ],
         ),
       ),

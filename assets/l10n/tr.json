@@ -150,6 +150,8 @@
   "take_photo": "Fotoğraf Çek",
   "select_from_gallery": "Galeriden Seç",
   "analyzing_coin": "Sikke analiz ediliyor...",
+  "analyzing_angles": "Sikke farklı açılardan karşılaştırılıyor...",
+  "analyzing_angles_wait": "Bu birkaç saniye daha sürebilir",
   "recognition_results": "Tanıma Sonuçları",
   "confidence_score": "Güven Skoru",
   "view_details": "Detayları Gör",
