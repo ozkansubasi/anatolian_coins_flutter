@@ -29,7 +29,7 @@ class CoinMatch(BaseModel):
     distinguish: Optional[Dict[str, Any]] = Field(
         None, description="ADR-012: {group, same_as [article_id], fields [{key, class mark|legend|description|authority|"
                           "material|denomination|mint|date, info?, value?, value_tr?, uri?, text_tr?, text_en?, "
-                          "highlight_tr?, highlight_en? [[start, end]], state? none|unknown}]} - only the fields that differ "
+                          "highlight_tr?, highlight_en? [[start, end]], state? none|unknown}], attribution? (ODbL, show it)} - only the fields that differ "
                           "between the returned candidates; the same group = our data cannot tell them apart")
     distance: Optional[float] = Field(None, description="FAISS L2 distance")
 

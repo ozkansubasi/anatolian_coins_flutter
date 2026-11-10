@@ -12,6 +12,7 @@ Kurallar (ölçüm ve gerekçe: ADR-012):
 - Satırlar: yalnız gruplar arasında değişen alanlar; sınıf önceliği mark > legend > description > authority >
   material > denomination; mint ve date bilgi satırı (info), ayrım kanıtı sayılmaz.
 - Tanım vurgusu: metni farklı adaylar içinde en benzeyeniyle eşleşmeyen sözcükler (karakter aralıkları, TR ve EN ayrı).
+- Açık veriden (mark / legend / denomination) satır varsa çıktıda "attribution" bulunur; ekranda gösterilmelidir (ODbL).
 
 Kullanım (servis):
     D = Distinguisher("/app/index/ayirt_veri.json")
@@ -28,6 +29,8 @@ CLASSES = {"mark": (1, True), "legend": (2, True), "description": (3, True), "au
 POSITIONS = ("exergue", "leftField", "rightField", "beneathThrone", "underThrone", "outerLeftField", "outerRightField",
              "innerLeftField", "innerRightField", "leftWing", "rightWing", "above", "below", "officina", "controlMark")
 FACE_ORDER = {"reverse": 0, "obverse": 1}
+OPEN_DATA_CLASSES = ("mark", "legend", "denomination")   # yalnız açık veriden gelen alanlar → kaynak atfı (ODbL)
+ATTRIBUTION = "ANS PELLA / OCRE / SCO (ODbL)"
 _NO_NONE = ("legend", "description", "officina")   # bu alanların yokluğu "işaret yok" demek değildir
 
 
@@ -195,10 +198,13 @@ class Distinguisher:
             return entries
         res = self.compare(ids)
         gi_of = {a: gi for gi, g in enumerate(res["groups"]) for a in g}
+        acik = any(row["class"] in OPEN_DATA_CLASSES for row in res["rows"])
         for e in entries:
             a = int(e[key])
             gi = gi_of[a]
             g = res["groups"][gi]
             e["distinguish"] = {"group": gi + 1, "same_as": [x for x in g if x != a],
                                 "fields": [self._field(row, gi) for row in res["rows"]]}
+            if acik:
+                e["distinguish"]["attribution"] = ATTRIBUTION   # açık veriden satır gösteriliyorsa atıf zorunlu
         return entries
