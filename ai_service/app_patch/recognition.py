@@ -230,8 +230,9 @@ NOTES_PATH = "/app/index/hukumdar_notlari.json"   # optional {name: {name_tr, na
 # ---- ADR-012 (2026-11): shortlist comparison ----
 # Each returned candidate gets `distinguish`: the fields that tell it apart from the other returned candidates (mint
 # mark, field marks, legend from ANS open data; catalog description words), and a group number for candidates our data
-# cannot separate. Data: NumisTR scripts/ai1/ayirt_veri.py -> AYIRT_PATH (loaded at start). The layer answers only
-# while AYIRT_FLAG exists (checked per request: delete = off, no restart). It never fails a recognition.
+# cannot separate. Data: NumisTR scripts/ai1/ayirt_veri.py -> AYIRT_PATH, loaded at start and reloaded on the next
+# request after the file changes (replace it with an atomic mv; no restart). The layer answers only while AYIRT_FLAG
+# exists (checked per request: delete = off, no restart). It never fails a recognition.
 AYIRT_PATH = "/app/index/ayirt_veri.json"
 AYIRT_FLAG = "/app/index/ayirt.on"
 HIER_T = 0.05
@@ -368,15 +369,25 @@ class RecognitionService:
         except Exception as e:                      # the layer is optional: recognition must not depend on it
             logger.error("Hedef 2: hierarchy load failed: %s" % e, exc_info=True)
             self.hier, self.dynasties, self.notes, self.by_ruler = {}, {}, {}, {}
-        self.ayirt = None                           # ADR-012
+        self.ayirt, self.ayirt_mtime = None, None   # ADR-012
+        self._ayirt_load()
+
+    def _ayirt_load(self):
+        """ADR-012 data: (re)load when the file is new or its mtime changed. A broken file keeps the previous data and is
+        not retried until the file changes again (atomic mv gives a new mtime). Optional layer: never raises."""
+        m = None
         try:
-            if Distinguisher is not None and os.path.exists(AYIRT_PATH):
-                self.ayirt = Distinguisher(AYIRT_PATH)
-                logger.info("ADR-012: distinguish data v%s (%s), %d types"
-                            % (self.ayirt.version, self.ayirt.created, len(self.ayirt.types)))
-        except Exception as e:                      # optional layer: recognition must not depend on it
-            logger.error("ADR-012: distinguish load failed: %s" % e, exc_info=True)
-            self.ayirt = None
+            if Distinguisher is None or not os.path.exists(AYIRT_PATH):
+                return
+            m = os.path.getmtime(AYIRT_PATH)
+            if m == self.ayirt_mtime:
+                return
+            d = Distinguisher(AYIRT_PATH)
+            self.ayirt, self.ayirt_mtime = d, m
+            logger.info("ADR-012: distinguish data v%s (%s), %d types" % (d.version, d.created, len(d.types)))
+        except Exception as e:
+            self.ayirt_mtime = m
+            logger.error("ADR-012: distinguish load failed (previous data kept): %s" % e, exc_info=True)
 
     # ---- pipeline ----
     def _to_bgr(self, b: bytes):
@@ -1129,11 +1140,13 @@ class RecognitionService:
                     near.append(_entry(a, d, conf, len(near) + 1, False))
 
             # ADR-012: what tells the shown candidates apart (optional layer, never fails the recognition)
-            if self.ayirt is not None and os.path.exists(AYIRT_FLAG):
-                try:
-                    self.ayirt.annotate(matches if matches else near)
-                except Exception as e:
-                    logger.error("ADR-012: distinguish failed: %s" % e, exc_info=True)
+            if os.path.exists(AYIRT_FLAG):
+                self._ayirt_load()                  # cheap mtime check; reloads only after the data file changed
+                if self.ayirt is not None:
+                    try:
+                        self.ayirt.annotate(matches if matches else near)
+                    except Exception as e:
+                        logger.error("ADR-012: distinguish failed: %s" % e, exc_info=True)
 
             # Hedef 2: what the photo still tells (never for a frame without a coin)
             ident = None

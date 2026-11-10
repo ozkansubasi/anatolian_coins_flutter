@@ -12,5 +12,6 @@
 - **ADR-012 kısa liste ayırt edici ayrıntı (2026-11, dal `feature/ai-ayirt-edici`, CANLI DEĞİL):** `distinguish.py` → container İÇİNDE
   `/app/app/services/distinguish.py` (mount değil, `docker cp`); NumisTR `scripts/ai1/distinguish.py` ile **birebir aynı** olmalı
   (md5 karşılaştır; ölçüm orada). Veri `/opt/ai_service/index/ayirt_veri.json` (NumisTR `scripts/ai1/ayirt_veri.py` üretir; açılışta
-  yüklenir → veri değişince restart). Katman **bayrak dosyasıyla** açılır: `/opt/ai_service/index/ayirt.on` (her istekte bakılır;
+  yüklenir, dosya değişince sonraki istekte kendiliğinden yeniden yüklenir → **atomik `mv` ile koy, restart gerekmez**; bozuk dosyada
+  önceki veri kalır). Katman **bayrak dosyasıyla** açılır: `/opt/ai_service/index/ayirt.on` (her istekte bakılır;
   silmek = kapatmak, restart gerekmez). Şemada `CoinMatch.distinguish`. Joomla `formatResults` adayı olduğu gibi geçirir.
