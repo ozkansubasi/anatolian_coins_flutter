@@ -152,7 +152,8 @@ class Distinguisher:
             if not any(self._differs(cls, vals[i], vals[j]) for i in range(len(vals)) for j in range(i + 1, len(vals))):
                 continue
             rows.append({"key": key, "class": cls, "info": not CLASSES[cls][1],
-                         "values": [r["f"].get(key) if v != () else {"_none": True} for r, v in zip(reps, vals)]})
+                         "values": [{"_none": True} if key not in r["f"] and v == () else r["f"].get(key)
+                                    for r, v in zip(reps, vals)]})   # "yok" yalnız alan kayıtta hiç yokken
 
         def order(row):
             face, _, pos = row["key"].partition(".")
