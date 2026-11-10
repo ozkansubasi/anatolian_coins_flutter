@@ -9,3 +9,8 @@
   VPS kalıcı kaynağı `/opt/ai_service/pylib_ocr`). Kapı **bayrak dosyasıyla** açılır: `/opt/ai_service/index/modern_gate.on` (container'da
   `/app/index/…`, her istekte bakılır — restart gerekmez; silmek = kapatmak). Ortam değişkeni `MODERN_GATE=1` yalnız atılabilir
   sınama konteynerinde. Kurallar `scripts/ai_eval/modern_kapi/kapi.py` v2 ile birebir (`esdeger_denetim.py`); kuralı önce orada ölç.
+- **ADR-012 kısa liste ayırt edici ayrıntı (2026-11, dal `feature/ai-ayirt-edici`, CANLI DEĞİL):** `distinguish.py` → container İÇİNDE
+  `/app/app/services/distinguish.py` (mount değil, `docker cp`); NumisTR `scripts/ai1/distinguish.py` ile **birebir aynı** olmalı
+  (md5 karşılaştır; ölçüm orada). Veri `/opt/ai_service/index/ayirt_veri.json` (NumisTR `scripts/ai1/ayirt_veri.py` üretir; açılışta
+  yüklenir → veri değişince restart). Katman **bayrak dosyasıyla** açılır: `/opt/ai_service/index/ayirt.on` (her istekte bakılır;
+  silmek = kapatmak, restart gerekmez). Şemada `CoinMatch.distinguish`. Joomla `formatResults` adayı olduğu gibi geçirir.

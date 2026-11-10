@@ -78,6 +78,12 @@ except Exception as e:          # optional layer: a missing module must never br
     modern_kapi = None
     logger.warning("AI12: modern_kapi not loaded, gate off: %s" % e)
 
+try:                            # ADR-012 (2026-11): what tells the shortlist candidates apart (off unless its flag file exists)
+    from app.services.distinguish import Distinguisher
+except Exception as e:          # optional layer: a missing module must never break recognition
+    Distinguisher = None
+    logger.warning("ADR-012: distinguish not loaded, layer off: %s" % e)
+
 IMN = np.array([0.485, 0.456, 0.406], np.float32)
 IST = np.array([0.229, 0.224, 0.225], np.float32)
 META_PATH = "/app/index/metadata_dinov3.json"
@@ -221,6 +227,13 @@ SAME_FACE_GAP = 0.10            # B: cosine by which each photo prefers that fac
 HIER_PATH = "/app/index/hiyerarsi.json"
 NOTES_PATH = "/app/index/hukumdar_notlari.json"   # optional {name: {name_tr, name_en, kind, reign_tr, reign_en, tr, en} |
                                                   #           "dynasty:<id>": {tr, en}}
+# ---- ADR-012 (2026-11): shortlist comparison ----
+# Each returned candidate gets `distinguish`: the fields that tell it apart from the other returned candidates (mint
+# mark, field marks, legend from ANS open data; catalog description words), and a group number for candidates our data
+# cannot separate. Data: NumisTR scripts/ai1/ayirt_veri.py -> AYIRT_PATH (loaded at start). The layer answers only
+# while AYIRT_FLAG exists (checked per request: delete = off, no restart). It never fails a recognition.
+AYIRT_PATH = "/app/index/ayirt_veri.json"
+AYIRT_FLAG = "/app/index/ayirt.on"
 HIER_T = 0.05
 BASIS_K = 20                    # rows looked at to tell which photo is the portrait (obverse) side
 RULER_K, RULER_SHARE, RULER_MIN_COS = 10, 0.70, 0.60
@@ -355,6 +368,15 @@ class RecognitionService:
         except Exception as e:                      # the layer is optional: recognition must not depend on it
             logger.error("Hedef 2: hierarchy load failed: %s" % e, exc_info=True)
             self.hier, self.dynasties, self.notes, self.by_ruler = {}, {}, {}, {}
+        self.ayirt = None                           # ADR-012
+        try:
+            if Distinguisher is not None and os.path.exists(AYIRT_PATH):
+                self.ayirt = Distinguisher(AYIRT_PATH)
+                logger.info("ADR-012: distinguish data v%s (%s), %d types"
+                            % (self.ayirt.version, self.ayirt.created, len(self.ayirt.types)))
+        except Exception as e:                      # optional layer: recognition must not depend on it
+            logger.error("ADR-012: distinguish load failed: %s" % e, exc_info=True)
+            self.ayirt = None
 
     # ---- pipeline ----
     def _to_bgr(self, b: bytes):
@@ -1105,6 +1127,13 @@ class RecognitionService:
                     if conf < NEAR_MIN_CONF:
                         break
                     near.append(_entry(a, d, conf, len(near) + 1, False))
+
+            # ADR-012: what tells the shown candidates apart (optional layer, never fails the recognition)
+            if self.ayirt is not None and os.path.exists(AYIRT_FLAG):
+                try:
+                    self.ayirt.annotate(matches if matches else near)
+                except Exception as e:
+                    logger.error("ADR-012: distinguish failed: %s" % e, exc_info=True)
 
             # Hedef 2: what the photo still tells (never for a frame without a coin)
             ident = None

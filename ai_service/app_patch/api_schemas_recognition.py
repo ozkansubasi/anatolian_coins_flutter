@@ -25,6 +25,12 @@ class CoinMatch(BaseModel):
     inliers_reverse: Optional[int] = Field(None, description="Geometric inliers, reverse photo")
     basis: Optional[str] = Field(None, description="Photo carrying the candidate: both | obverse | reverse")
     tied_with: Optional[List[int]] = Field(None, description="Article IDs this match is indistinguishable from (identical photograph)")
+    # ADR-012 (2026-11): what tells this candidate apart from the other returned candidates
+    distinguish: Optional[Dict[str, Any]] = Field(
+        None, description="ADR-012: {group, same_as [article_id], fields [{key, class mark|legend|description|authority|"
+                          "material|denomination|mint|date, info?, value?, value_tr?, uri?, text_tr?, text_en?, "
+                          "highlight_tr?, highlight_en? [[start, end]], state? none|unknown}]} - only the fields that differ "
+                          "between the returned candidates; the same group = our data cannot tell them apart")
     distance: Optional[float] = Field(None, description="FAISS L2 distance")
 
     # Coin metadata
