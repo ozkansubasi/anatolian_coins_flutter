@@ -13,6 +13,10 @@
 	<!-- Reklam kimliği YOK (kullanıcı kararı 12 Kas 2026): firebase_analytics (play-services-measurement)
 	     AD_ID iznini birleştirmeyle ekliyor; Play beyanı "AD_ID kullanılmıyor" aynı kalsın diye silinir. -->
 	<uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
+	<!-- Aynı karar: Privacy Sandbox reklam kimliği / atıf izinleri de (play-services-measurement ekliyor).
+	     Play Install Referrer (BIND_GET_INSTALL_REFERRER_SERVICE) reklam kimliği değil, kalır. -->
+	<uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" tools:node="remove"/>
+	<uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" tools:node="remove"/>
 	<uses-feature android:name="android.hardware.camera" android:required="false"/>
 	<uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
 	<!-- camera_android_camerax, camera.any'yi zorunlu bildiriyor: kamerasız 117 cihaz (tablet/Chromebook)

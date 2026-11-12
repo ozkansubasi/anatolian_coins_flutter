@@ -19,7 +19,9 @@ pluginManagement {
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "8.7.3" apply false
-    id("org.jetbrains.kotlin.android") version "2.1.0" apply false
+    // 2.1.0 → 2.3.21 (12 Kas 2026): firebase_analytics'in play-services-measurement 24.0.0'ı
+    // Kotlin 2.4 meta verisiyle derlenmiş; 2.1 okuyamıyor, 2.3 bir sonraki sürümü okur.
+    id("org.jetbrains.kotlin.android") version "2.3.21" apply false
 }
 
 include(":app")
