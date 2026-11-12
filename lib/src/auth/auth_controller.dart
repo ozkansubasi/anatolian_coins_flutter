@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/analytics/app_analytics.dart';
 import 'auth_repository.dart';
 import 'resend_verification.dart';
 
@@ -78,6 +79,7 @@ class AuthController extends StateNotifier<AuthState> {
       final t = await _repo.signIn();
       debugPrint('🔵 AuthController.signIn() returned: token=${t != null}');
       state = _stateFromTokens(t);
+      if (t != null) AppAnalytics.instance.login('auth0');
     } catch (e) {
       // Hata yukarı gider ama giriş düğmeleri "yükleniyor"da takılı kalmaz.
       state = state.copyWith(loading: false);
@@ -93,6 +95,7 @@ class AuthController extends StateNotifier<AuthState> {
     try {
       final t = await _repo.signInWithPassword(email, password);
       state = _stateFromTokens(t);
+      if (t != null) AppAnalytics.instance.login('password');
       return null; // Success, no error
     } on AuthException catch (e) {
       state = state.copyWith(loading: false);
@@ -115,6 +118,7 @@ class AuthController extends StateNotifier<AuthState> {
 
     try {
       await _repo.signUp(email, password);
+      AppAnalytics.instance.signUp('password');
       final t = await _repo.signInWithPassword(email, password);
       state = _stateFromTokens(t);
       return null;
@@ -140,6 +144,8 @@ class AuthController extends StateNotifier<AuthState> {
     try {
       final t = await _repo.signInWithSocial(connection);
       state = _stateFromTokens(t);
+      // Yöntem adı Auth0 bağlantısıdır (google-oauth2, apple); kişisel veri değil.
+      if (t != null) AppAnalytics.instance.login(connection);
     } catch (e) {
       state = state.copyWith(loading: false);
       rethrow;

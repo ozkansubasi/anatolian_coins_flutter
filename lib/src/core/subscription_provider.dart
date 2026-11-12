@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../auth/auth_controller.dart';
+import 'analytics/app_analytics.dart';
 import 'api_client.dart';
 import 'revenuecat_service.dart';
 
@@ -244,6 +245,13 @@ class SubscriptionController extends StateNotifier<SubscriptionState> {
           isActive: true,
           expiryDate: result.expirationDate,
           isLoading: false,
+        );
+        // Analitik `purchase`: deneme/giriş fiyatı varsa ilk tahsilat odur (0 olabilir).
+        final product = package.storeProduct;
+        AppAnalytics.instance.purchase(
+          productId: product.identifier,
+          value: product.introductoryPrice?.price ?? product.price,
+          currency: product.currencyCode,
         );
       } else {
         state = state.copyWith(

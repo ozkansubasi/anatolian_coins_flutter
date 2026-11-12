@@ -50,7 +50,8 @@ flutter test test/widget_test.dart
 flutter build apk
 
 # Build App Bundle (Android) — PROD config (store releases)
-flutter build appbundle --dart-define-from-file=env/prod.json
+flutter build appbundle --dart-define-from-file=env/prod.json --dart-define-from-file=env/firebase.json
+# iOS mağaza derlemesi de AYNI iki dosyayla (flutter build ipa ... --dart-define-from-file=env/firebase.json)
 
 # Build iOS
 flutter build ios
@@ -61,6 +62,7 @@ flutter build ios
 The app uses **Auth0 OIDC with PKCE** for secure authentication:
 
 - **Auth Configuration:** `lib/src/core/env.dart` reads Auth0 issuer, client ID, and redirect URLs from `--dart-define` (defaults = dev environment). Prod builds MUST pass `--dart-define-from-file=env/prod.json`; dev values live in `env/dev.json`.
+- **Firebase Analytics (0.6.3+):** store builds MUST also pass `--dart-define-from-file=env/firebase.json` (gitignored — repo is public; source: Drive `OTURUM/numistr_firebase/firebase.json`, template `env/firebase.example.json`). Without it Firebase never starts and no consent prompt appears (dev default). Consent: asked to everyone on first launch; nothing is sent before consent (native defaults in AndroidManifest/Info.plist); ad_personalization always off; no AD_ID/IDFA (`tools:node="remove"`, Podfile `$FirebaseAnalyticsWithoutAdIdSupport`). Code: `lib/src/core/analytics/`. Plugin versions are pinned (firebase_core 5.0.0 / firebase_analytics 13.0.0): FirebaseAnalytics stopped at 12.19.0 on CocoaPods.
 - **Auth Repository:** `lib/src/auth/auth_repository.dart` handles login, logout, token refresh
 - **Auth Controller:** `lib/src/auth/auth_controller.dart` manages auth state (StateNotifier)
 - **Token Storage:** Uses `flutter_secure_storage` via `lib/src/core/secure_storage.dart`

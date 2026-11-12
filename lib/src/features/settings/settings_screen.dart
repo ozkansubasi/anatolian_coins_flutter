@@ -8,6 +8,7 @@ import '../../core/app_version.dart';
 import '../../core/locale_provider.dart';
 import '../../core/subscription_provider.dart';
 import '../../core/region_data.dart';
+import '../../core/analytics/app_analytics.dart';
 import 'settings_provider.dart';
 
 /// Settings screen for app configuration
@@ -128,6 +129,22 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const Divider(),
 
+          // Gizlilik: analitik onayı (yalnız Firebase yapılandırılmış derlemede).
+          if (AppAnalytics.instance.isAvailable) ...[
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                l10n.translate('privacy'),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            _buildUsageStatsTile(context, ref, l10n),
+            const Divider(),
+          ],
+
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
@@ -233,6 +250,22 @@ class SettingsScreen extends ConsumerWidget {
       SnackBar(
         content: Text(l10n.translate('coming_soon')),
         behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Widget _buildUsageStatsTile(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    final granted = ref.watch(analyticsConsentProvider) == AnalyticsConsent.granted;
+    return ListTile(
+      leading: const Icon(Icons.insights_outlined),
+      title: Text(l10n.translate('usage_stats')),
+      subtitle: Text(l10n.translate('settings_usage_stats_subtitle')),
+      trailing: Switch(
+        value: granted,
+        activeThumbColor: Colors.white,
+        activeTrackColor: numPrimary,
+        onChanged: (v) => ref.read(analyticsConsentProvider.notifier).set(v),
       ),
     );
   }

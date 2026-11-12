@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/analytics/app_analytics.dart';
 import '../../core/api_client.dart';
 import '../../core/env.dart';
 import '../../core/network_utils.dart';
@@ -735,6 +736,7 @@ class RecognitionController extends StateNotifier<AsyncValue<RecognitionResponse
     try {
       final result = await _service.recognize(imageFile, skipPreFlight: skipPreFlight, attrs: attrs);
       state = AsyncValue.data(result);
+      _logResult(result, sides: 1);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }
@@ -746,6 +748,7 @@ class RecognitionController extends StateNotifier<AsyncValue<RecognitionResponse
     try {
       final result = await _service.recognizeDual(obverseFile, reverseFile, skipPreFlight: skipPreFlight, attrs: attrs);
       state = AsyncValue.data(result);
+      _logResult(result, sides: 2);
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
     }
@@ -753,5 +756,17 @@ class RecognitionController extends StateNotifier<AsyncValue<RecognitionResponse
 
   void reset() {
     state = const AsyncValue.loading();
+  }
+
+  /// Analitik: yalnız özet (aday sayısı, kaba benzerlik kovası); fotoğraf yok.
+  void _logResult(RecognitionResponse r, {required int sides}) {
+    AppAnalytics.instance.recognitionComplete(
+      candidateCount: r.matches.length,
+      noMatch: r.noMatch,
+      uncertain: r.noMatch || r.verified == false,
+      sides: sides,
+      modernCoin: r.modernCoin != null,
+      topConfidence: r.matches.isEmpty ? null : r.matches.first.confidence,
+    );
   }
 }

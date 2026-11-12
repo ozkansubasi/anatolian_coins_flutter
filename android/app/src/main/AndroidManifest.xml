@@ -9,6 +9,10 @@
 
 	<!-- Camera permissions -->
 	<uses-permission android:name="android.permission.CAMERA"/>
+
+	<!-- Reklam kimliği YOK (kullanıcı kararı 12 Kas 2026): firebase_analytics (play-services-measurement)
+	     AD_ID iznini birleştirmeyle ekliyor; Play beyanı "AD_ID kullanılmıyor" aynı kalsın diye silinir. -->
+	<uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
 	<uses-feature android:name="android.hardware.camera" android:required="false"/>
 	<uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
 	<!-- camera_android_camerax, camera.any'yi zorunlu bildiriyor: kamerasız 117 cihaz (tablet/Chromebook)
@@ -102,5 +106,15 @@
         <!-- Flutter'ın splash sırasındaki arka planı -->
         <meta-data android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Firebase Analytics: onaya dek HİÇ veri gitmez (Consent Mode temel). Uygulama
+             kullanıcı "İzin ver" deyince setAnalyticsCollectionEnabled(true) + setConsent çağırır
+             (lib/src/core/analytics/app_analytics.dart). Kişiselleştirme sinyali hep kapalı. -->
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_adid_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_analytics_storage" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_storage" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_user_data" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
     </application>
 </manifest>

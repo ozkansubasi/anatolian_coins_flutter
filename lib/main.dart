@@ -12,6 +12,7 @@ import 'src/core/app_theme.dart';
 import 'src/core/app_typography.dart';
 import 'src/core/env.dart';
 import 'src/features/settings/settings_provider.dart';
+import 'src/core/analytics/app_analytics.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,6 +77,10 @@ void main() async {
 
   // Initialize SharedPreferences
   final sharedPreferences = await SharedPreferences.getInstance();
+
+  // Firebase Analytics: yalnız env/firebase.json verilen derlemede başlar; onaya
+  // dek native tarafta toplama kapalıdır (AndroidManifest / Info.plist).
+  await AppAnalytics.init(sharedPreferences);
 
   runApp(
     ProviderScope(

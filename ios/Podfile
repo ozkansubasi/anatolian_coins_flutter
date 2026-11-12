@@ -1,6 +1,11 @@
 # Platform, ios/Runner.xcodeproj IPHONEOS_DEPLOYMENT_TARGET ile hizali tutulur (15.0).
 platform :ios, '15.0'
 
+# Firebase Analytics IDFA'sız (FirebaseAnalytics/Core): AdSupport bağlanmaz, ATT gerekmez
+# (kullanıcı kararı 12 Kas 2026: reklam kimliği yok). SwiftPM'e geçilirse karşılığı
+# FIREBASE_ANALYTICS_WITHOUT_ADID ortam değişkeni.
+$FirebaseAnalyticsWithoutAdIdSupport = true
+
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 

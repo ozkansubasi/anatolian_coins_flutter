@@ -52,3 +52,6 @@ android/key.properties
 # Apple anahtarları (.p8: Sign in with Apple, App Store Connect API) — asla commit etme
 **/*.p8
 Apple_developer_Key/
+
+# Firebase istemci yapılandırması (depo herkese açık): kaynak Drive OTURUM/numistr_firebase/firebase.json
+env/firebase.json

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/app_log.dart';
+import 'core/analytics/app_analytics.dart';
+import 'core/analytics/consent_prompt.dart';
 import 'features/home/prokit_home_screen.dart';
 import 'features/variants/prokit_variant_list_page.dart';
 import 'features/variants/prokit_variant_detail_page.dart';
@@ -62,7 +64,7 @@ GoRouter appRouter() {
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
-            NumShellScaffold(navigationShell: navigationShell),
+            ConsentGate(child: NumShellScaffold(navigationShell: navigationShell)),
         branches: [
           // --- Ana Sayfa ---
           StatefulShellBranch(routes: [
@@ -219,7 +221,18 @@ GoRouter appRouter() {
   String? last;
   router.routerDelegate.addListener(() {
     final loc = router.routerDelegate.currentConfiguration.uri.toString();
-    if (loc != last) appLog('NAV', last = loc);
+    if (loc == last) return;
+    appLog('NAV', last = loc);
+    // Analitik: ekran adı kalıptır (`/variant/:id`), somut kimlik değil; sikke ve
+    // yazı kimliği ayrı olayla gider (katalog kimliği kişisel veri değildir).
+    final config = router.routerDelegate.currentConfiguration;
+    AppAnalytics.instance.screenView(config.fullPath);
+    final id = int.tryParse(config.pathParameters['id'] ?? '');
+    if (id != null && config.fullPath == '/variant/:id') {
+      AppAnalytics.instance.viewItem(id);
+    } else if (id != null && config.fullPath == '/article/:id') {
+      AppAnalytics.instance.selectArticle(id);
+    }
   });
   return router;
 }

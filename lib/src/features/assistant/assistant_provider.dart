@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/analytics/app_analytics.dart';
 import 'assistant_api.dart';
 
 enum AssistantRole { user, assistant }
@@ -73,6 +74,8 @@ class AssistantNotifier extends StateNotifier<AssistantState> {
       sending: true,
       clearError: true,
     );
+    // Analitik: yalnız sayaç + dil; sorunun metni GİTMEZ.
+    AppAnalytics.instance.assistantQuestion(lang);
 
     try {
       final reply = await _api.chat(
