@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nb_utils/nb_utils.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 import '../../auth/auth_controller.dart';
 import '../../core/navigation.dart';
 import '../../l10n/app_localizations.dart';
@@ -30,12 +31,27 @@ class ProkitCameraScreen extends ConsumerStatefulWidget {
   ConsumerState<ProkitCameraScreen> createState() => _ProkitCameraScreenState();
 }
 
+/// Kamera izni hata kodu → 'denied' | 'restricted' | null (izin dışı hata).
+/// iOS (camera_avfoundation): CameraAccessDenied, CameraAccessDeniedWithoutPrompt
+/// (daha önce reddedilmiş, sistem yeniden sormaz), CameraAccessRestricted (Ekran Süresi /
+/// ebeveyn denetimi). Android (camerax): CameraAccessDenied.
+@visibleForTesting
+String? cameraPermissionState(String code) {
+  if (code == 'CameraAccessRestricted') return 'restricted';
+  if (code.startsWith('CameraAccessDenied')) return 'denied';
+  return null;
+}
+
 class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   CameraController? _controller;
   List<CameraDescription>? _cameras;
   bool _isInitializing = true;
   String? _error;
+
+  /// M39: kamera izni kapalı ('denied') ya da kısıtlı ('restricted'). Ekran yine çalışır:
+  /// önizleme yerine açıklama + Ayarlar + galeri; yuvalar ve galeri akışı açık kalır.
+  String? _permission;
   late AnimationController _pulseController;
 
   // Two-sided capture state
@@ -78,8 +94,22 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+    WidgetsBinding.instance.addObserver(this);
     _syncCamera();
     Future.microtask(() => ref.refresh(scanQuotaProvider));
+  }
+
+  /// Ayarlar'dan dönünce izni yeniden dene (Android izin verilince uygulamayı kapatmaz;
+  /// iOS izin değişince uygulamayı yeniden başlatır, ekran zaten baştan açılır).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _permission != null && mounted) {
+      setState(() {
+        _permission = null;
+        _isInitializing = true;
+      });
+      _syncCamera();
+    }
   }
 
   @override
@@ -102,7 +132,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     if (_cameraBusy) return;
     _cameraBusy = true;
     try {
-      while (mounted && _error == null) {
+      while (mounted && _error == null && _permission == null) {
         final current = _controller;
         if (current != null &&
             (!_visible || current.description != _selectedCamera)) {
@@ -145,8 +175,13 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     } catch (e) {
       debugPrint('[Camera] open failed: $e');
       if (mounted) {
+        final permission = e is CameraException ? cameraPermissionState(e.code) : null;
         setState(() {
-          _error = 'camera_error';
+          if (permission != null) {
+            _permission = permission;
+          } else {
+            _error = 'camera_error';
+          }
           _isInitializing = false;
         });
       }
@@ -629,6 +664,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _focusTimer?.cancel();
     _controller?.dispose();
     _pulseController.dispose();
@@ -700,7 +736,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
       );
     }
 
-    if (_controller == null || !_controller!.value.isInitialized) {
+    if (_permission == null &&
+        (_controller == null || !_controller!.value.isInitialized)) {
       return Center(
         child: Text(
           l10n.translate('camera_not_available'),
@@ -724,9 +761,11 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
           ),
         ),
 
-        // Camera Preview
+        // Camera Preview (izin kapalıysa açıklama + Ayarlar + galeri)
         Expanded(
-          child: _buildCameraPreview(l10n),
+          child: _permission != null
+              ? _buildPermissionPanel(l10n)
+              : _buildCameraPreview(l10n),
         ),
 
         // Image Slots & Controls
@@ -995,6 +1034,78 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     );
   }
 
+  /// M39: izin kapalı/kısıtlı. iOS sistem penceresini bir kez gösterir; sonrası yalnız Ayarlar.
+  /// Kısıtlıda (Ekran Süresi) Ayarlar düğmesi yok. Galeri her iki durumda açık (iOS 14+
+  /// PHPicker izin istemez); seçilen fotoğraf aşağıdaki yuvalara gider.
+  Widget _buildPermissionPanel(AppLocalizations l10n) {
+    final restricted = _permission == 'restricted';
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: boxDecorationWithRoundedCorners(
+          backgroundColor: numCardDark,
+          borderRadius: radius(20),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.no_photography_outlined,
+                  size: 56, color: numPrimaryLight),
+              16.height,
+              Text(
+                l10n.translate('camera_permission_title'),
+                textAlign: TextAlign.center,
+                style: boldTextStyle(size: 18, color: white),
+              ),
+              10.height,
+              Text(
+                l10n.translate(restricted
+                    ? 'camera_permission_restricted'
+                    : 'camera_permission_body'),
+                textAlign: TextAlign.center,
+                style: secondaryTextStyle(size: 14, color: Colors.grey[300]),
+              ),
+              20.height,
+              if (!restricted) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: numPrimary,
+                      foregroundColor: white,
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    onPressed: () => ph.openAppSettings(),
+                    icon: const Icon(Icons.settings_outlined),
+                    label: Text(
+                        l10n.translate('camera_permission_open_settings')),
+                  ),
+                ),
+                12.height,
+              ],
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: numPrimaryLight,
+                    side: const BorderSide(color: numPrimaryLight),
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  onPressed: _pickFromGallery,
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: Text(l10n.translate('camera_permission_gallery')),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomControls(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1043,9 +1154,9 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                 size: 52,
               ),
 
-              // Capture button
+              // Capture button (M39: izin yokken etkisiz ve soluk)
               GestureDetector(
-                onTap: _takePicture,
+                onTap: _permission != null ? null : _takePicture,
                 child: Container(
                   width: 72,
                   height: 72,
@@ -1066,7 +1177,9 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                       shape: BoxShape.circle,
                       border: Border.all(color: white, width: 3),
                     ),
-                    child: const Icon(Icons.camera_alt, color: white, size: 28),
+                    child: Icon(Icons.camera_alt,
+                        color: _permission != null ? Colors.white38 : white,
+                        size: 28),
                   ),
                 ),
               ),
