@@ -19,10 +19,12 @@ import 'helpers/fake_camera.dart';
 /// İzin reddi taklidi: [denyCode] doluyken kamera açılışı CameraException atar.
 class _DenyingCamera extends FakeCameraPlatform {
   String? denyCode;
+  int attempts = 0;
 
   @override
   Future<int> createCameraWithSettings(
       CameraDescription cameraDescription, MediaSettings mediaSettings) async {
+    attempts++;
     if (denyCode != null) throw CameraException(denyCode!, 'izin yok');
     return super.createCameraWithSettings(cameraDescription, mediaSettings);
   }
@@ -34,9 +36,10 @@ Future<void> _settle(WidgetTester tester) async {
   }
 }
 
-Future<AppLocalizations> _pump(WidgetTester tester, {Locale locale = const Locale('tr')}) async {
-  tester.view.physicalSize = const Size(1080, 2340);
-  tester.view.devicePixelRatio = 2.625;
+Future<AppLocalizations> _pump(WidgetTester tester,
+    {Locale locale = const Locale('tr'), Size size = const Size(1080, 2340), double dpr = 2.625}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = dpr;
   addTearDown(tester.view.reset);
 
   final router = GoRouter(initialLocation: '/recognition', routes: [
@@ -70,6 +73,7 @@ void main() {
   setUp(() {
     camera = _DenyingCamera();
     CameraPlatform.instance = camera;
+    cameraPermissionGranted = () async => camera.denyCode == null;
   });
 
   test('hata kodu → izin durumu', () {
@@ -105,6 +109,17 @@ void main() {
     });
   }
 
+  for (final locale in const [Locale('tr'), Locale('en')]) {
+    testWidgets('küçük ekranda (375×667) düğmeler görünür ve dokunulabilir (${locale.languageCode})',
+        (tester) async {
+      camera.denyCode = 'CameraAccessDenied';
+      final l10n = await _pump(tester, locale: locale, size: const Size(750, 1334), dpr: 2);
+      expect(find.text(l10n.translate('camera_permission_open_settings')).hitTestable(), findsOneWidget);
+      expect(find.text(l10n.translate('camera_permission_gallery')).hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull); // taşma yok
+    });
+  }
+
   testWidgets('kısıtlı (Ekran Süresi): Ayarlar düğmesi yok, galeri var', (tester) async {
     camera.denyCode = 'CameraAccessRestricted';
     final l10n = await _pump(tester);
@@ -124,6 +139,21 @@ void main() {
 
     expect(camera.open.values, [FakeCameraPlatform.back]);
     expect(find.text(l10n.translate('camera_permission_title')), findsNothing);
+  });
+
+  testWidgets('izin hâlâ kapalıyken dönüş (resumed) yeniden denemez — döngü yok', (tester) async {
+    camera.denyCode = 'CameraAccessDenied';
+    final l10n = await _pump(tester);
+    final once = camera.attempts;
+
+    // Android'de izin isteğinin sistem penceresi kapanınca da "resumed" gelir.
+    for (var i = 0; i < 3; i++) {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await _settle(tester);
+    }
+    expect(camera.attempts, once);
+    expect(find.text(l10n.translate('camera_permission_title')), findsOneWidget);
   });
 
   testWidgets('izin dışı hata eskisi gibi genel hata ekranı', (tester) async {

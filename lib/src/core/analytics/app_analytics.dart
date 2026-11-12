@@ -56,7 +56,14 @@ class AppAnalytics {
     final options = FirebaseEnv.currentPlatformOptions();
     if (options != null) {
       try {
-        await Firebase.initializeApp(options: options);
+        try {
+          await Firebase.initializeApp(options: options);
+        } on FirebaseException catch (e) {
+          // Android'de google_app_id kaynağı varken varsayılan uygulama yerelde zaten
+          // başlamış olabilir; aynı ayarlar, mevcut olanı kullan.
+          if (e.code != 'duplicate-app') rethrow;
+          Firebase.app();
+        }
         service._fa = FirebaseAnalytics.instance;
         await service._apply(resetOnDeny: false);
       } catch (e) {

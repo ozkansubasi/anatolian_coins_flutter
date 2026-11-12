@@ -49,6 +49,19 @@ class GoRouterRefreshStream extends ChangeNotifier {
 /// sahibi olan sekmeye atlar ve geri dönüş kalmaz (ölçüldü: go_router 14.8.1).
 enum ShellBranch { home, browse, scan, favorites, menu }
 
+/// Ekranda en üstte duran eşleşmeler. `context.push` ile açılan sayfa yapılandırmada
+/// ImperativeRouteMatch olarak durur (kabuk dalının içinde de olabilir) ve RouteMatchList'in
+/// `uri` / `fullPath`'inden DIŞLANIR; eskiden günlük ve analitik itilen sayfayı görmüyordu.
+@visibleForTesting
+RouteMatchList topRouteMatches(RouteMatchList list) {
+  RouteMatchBase? m = list.isEmpty ? null : list.matches.last;
+  while (m is ShellRouteMatch) {
+    m = m.matches.isEmpty ? null : m.matches.last;
+  }
+  if (m is ImperativeRouteMatch) return topRouteMatches(m.matches);
+  return list;
+}
+
 /// Tek yönlendirici örneği. Eskiden kök widget her yeniden çizildiğinde
 /// `appRouter(ref)` yeni bir GoRouter kuruyordu: dil ya da tema değişince
 /// (ve her hot reload'da) gezinme geçmişi sıfırlanıp Ana Sayfa'ya dönülüyordu
@@ -218,14 +231,21 @@ GoRouter appRouter() {
     ],
   );
   // Ekran geçişleri hata günlüğüne: bir hatanın hangi ekranda çıktığı görünsün.
+  // routerDelegate yalnız go/pop'ta haber veriyor; context.push ile açılan sayfalar
+  // (sikke ayrıntısı, yazı) hiç görünmüyordu (cihaz, 13 Kas 2026). Push'ta da haber veren
+  // routeInformationProvider eklendi; yapılandırma kare sonunda okunur (o an güncel).
   String? last;
-  router.routerDelegate.addListener(() {
-    final loc = router.routerDelegate.currentConfiguration.uri.toString();
+  late void Function() logNavigation;
+  void onNavigation() => WidgetsBinding.instance.addPostFrameCallback((_) => logNavigation());
+  router.routerDelegate.addListener(onNavigation);
+  router.routeInformationProvider.addListener(onNavigation);
+  logNavigation = () {
+    final config = topRouteMatches(router.routerDelegate.currentConfiguration);
+    final loc = config.uri.toString();
     if (loc == last) return;
     appLog('NAV', last = loc);
     // Analitik: ekran adı kalıptır (`/variant/:id`), somut kimlik değil; sikke ve
     // yazı kimliği ayrı olayla gider (katalog kimliği kişisel veri değildir).
-    final config = router.routerDelegate.currentConfiguration;
     AppAnalytics.instance.screenView(config.fullPath);
     final id = int.tryParse(config.pathParameters['id'] ?? '');
     if (id != null && config.fullPath == '/variant/:id') {
@@ -233,6 +253,6 @@ GoRouter appRouter() {
     } else if (id != null && config.fullPath == '/article/:id') {
       AppAnalytics.instance.selectArticle(id);
     }
-  });
+  };
   return router;
 }

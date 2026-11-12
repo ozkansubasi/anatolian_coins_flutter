@@ -15,6 +15,20 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// Firebase Analytics: Android ölçüm kütüphanesi google_app_id'yi uygulama KAYNAKLARINDAN okur
+// (Dart FirebaseOptions yetmiyor: "Missing google_app_id", cihaz 13 Kas 2026). Değerler git dışı
+// env/firebase.json'dan (depo herkese açık; kaynak Drive OTURUM/numistr_firebase/firebase.json).
+// Dosya yoksa kaynak üretilmez → ölçüm kapalı kalır. Toplama yine onaya dek manifestte kapalı.
+val firebaseEnvFile = rootProject.file("../env/firebase.json")
+@Suppress("UNCHECKED_CAST")
+val firebaseEnv: Map<String, String> =
+    if (firebaseEnvFile.exists()) {
+        (groovy.json.JsonSlurper().parse(firebaseEnvFile) as Map<String, Any?>)
+            .mapValues { it.value?.toString() ?: "" }
+    } else {
+        emptyMap()
+    }
+
 // Kotlin 2.3: kotlinOptions.jvmTarget kaldırıldı → compilerOptions (JVM 17, Java ile aynı).
 kotlin {
     compilerOptions {
@@ -53,6 +67,15 @@ android {
             // `mapsApiKey`; Cloud'da paket adı + imza SHA-1'ine kısıtlı (proje numistr-auth).
             "mapsApiKey" to (keystoreProperties.getProperty("mapsApiKey") ?: "")
         )
+
+        // google-services eklentisinin ürettiği kaynakların eşi (yukarıdaki not).
+        firebaseEnv["FIREBASE_ANDROID_APP_ID"]?.takeIf { it.isNotEmpty() }?.let { appId ->
+            resValue("string", "google_app_id", appId)
+            resValue("string", "google_api_key", firebaseEnv["FIREBASE_ANDROID_API_KEY"] ?: "")
+            resValue("string", "gcm_defaultSenderId", firebaseEnv["FIREBASE_SENDER_ID"] ?: "")
+            resValue("string", "project_id", firebaseEnv["FIREBASE_PROJECT_ID"] ?: "")
+            resValue("string", "google_storage_bucket", firebaseEnv["FIREBASE_STORAGE_BUCKET"] ?: "")
+        }
     }
 
     signingConfigs {

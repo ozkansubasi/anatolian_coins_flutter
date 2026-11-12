@@ -1056,7 +1056,7 @@
   "pp_legal_basis_5": "Explicit consent (KVKK art. 5/1; GDPR art. 6(1)(a)): in-app usage statistics and advertising measurement (Google Analytics for Firebase). If you do not consent, no statistics are sent. You can withdraw your consent at any time in Settings → Privacy; the analytics identifier on your device is then deleted as well.",
   "pp_retention_6": "Usage statistics (only with consent): for the retention period configured for the Google Analytics property, at most 14 months.",
   "camera_permission_title": "Camera access is off",
-  "camera_permission_body": "Anatolian Coins needs camera access to recognise a coin from a photo. Turn on Camera in Settings, then come back to the app. You can also choose the photo from your gallery.",
+  "camera_permission_body": "Camera access is needed to recognise a coin from a photo. Turn it on in Settings and come back, or choose the photo from your gallery.",
   "camera_permission_restricted": "Camera use is restricted on this device (e.g. Screen Time). You can choose the coin's photo from your gallery.",
   "camera_permission_open_settings": "Open Settings",
   "camera_permission_gallery": "Choose from gallery"

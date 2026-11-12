@@ -1056,7 +1056,7 @@
   "pp_legal_basis_5": "Açık rıza (m.5/1; GDPR m.6/1-a): uygulama içi kullanım istatistikleri ve reklam ölçümü (Google Analytics for Firebase). Onay vermezseniz hiçbir istatistik gönderilmez. Rızanızı istediğiniz zaman Ayarlar → Gizlilik'ten geri alabilirsiniz; geri alındığında cihazdaki analitik kimliği de silinir.",
   "pp_retention_6": "Kullanım istatistikleri (yalnız onayla): Google Analytics'te mülk için tanımlı saklama süresi boyunca, en çok 14 ay.",
   "camera_permission_title": "Kamera izni kapalı",
-  "camera_permission_body": "Sikkeyi fotoğrafla tanımak için Anatolian Coins'in kameraya erişmesi gerekiyor. Ayarlar'da Kamera iznini açıp uygulamaya dönün. İsterseniz fotoğrafı galeriden de seçebilirsiniz.",
+  "camera_permission_body": "Sikkeyi fotoğrafla tanımak için kamera izni gerekiyor. Ayarlar'dan izni açıp uygulamaya dönün ya da fotoğrafı galeriden seçin.",
   "camera_permission_restricted": "Bu cihazda kamera kullanımı kısıtlanmış (ör. Ekran Süresi). Sikkenin fotoğrafını galeriden seçebilirsiniz.",
   "camera_permission_open_settings": "Ayarları aç",
   "camera_permission_gallery": "Galeriden seç"

@@ -42,6 +42,13 @@ String? cameraPermissionState(String code) {
   return null;
 }
 
+/// Kamera izni şu an verili mi (Android'de durum sorgusu pencere açmaz). Sınamada değiştirilir.
+/// iOS'ta permission_handler makrosu yok → hep false; iOS izin değişince uygulamayı zaten
+/// yeniden başlatır, dönüşte yeniden denemeye gerek kalmaz.
+@visibleForTesting
+Future<bool> Function() cameraPermissionGranted =
+    () => ph.Permission.camera.isGranted;
+
 class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   CameraController? _controller;
@@ -99,17 +106,30 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
     Future.microtask(() => ref.refresh(scanQuotaProvider));
   }
 
-  /// Ayarlar'dan dönünce izni yeniden dene (Android izin verilince uygulamayı kapatmaz;
-  /// iOS izin değişince uygulamayı yeniden başlatır, ekran zaten baştan açılır).
+  /// Ayarlar'dan dönünce kamerayı yeniden aç — YALNIZ izin gerçekten verildiyse.
+  /// Koşulsuz yeniden deneme döngüye giriyordu: Android'de izin isteği sistem penceresini
+  /// açar, uygulama duraklar; "bir daha sorma"da pencere anında kapanıp uygulama yeniden
+  /// "resumed" olur → yine istek → yine pencere (cihaz, 13 Kas 2026).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _permission != null && mounted) {
-      setState(() {
-        _permission = null;
-        _isInitializing = true;
-      });
-      _syncCamera();
+      _retryIfGranted();
     }
+  }
+
+  Future<void> _retryIfGranted() async {
+    bool granted = false;
+    try {
+      granted = await cameraPermissionGranted();
+    } catch (e) {
+      debugPrint('[Camera] permission status unavailable: $e');
+    }
+    if (!granted || !mounted || _permission == null) return;
+    setState(() {
+      _permission = null;
+      _isInitializing = true;
+    });
+    _syncCamera();
   }
 
   @override
@@ -752,6 +772,8 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
         _buildHeader(l10n),
 
         // İpucu önizlemenin dışında: içeride çemberin altına biniyordu (cihaz, 2026-09-28)
+        // M39: izin kapalıyken ipucu gizli (panelin yerini daraltıyordu).
+        if (_permission == null)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
@@ -1039,68 +1061,83 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
   /// PHPicker izin istemez); seçilen fotoğraf aşağıdaki yuvalara gider.
   Widget _buildPermissionPanel(AppLocalizations l10n) {
     final restricted = _permission == 'restricted';
+    // Düğmeler panelin altına sabit, metin kayar: önizleme alanı küçük telefonlarda
+    // ~230 dp; düğmeler metnin altında kalınca görünmüyordu (cihaz, 13 Kas 2026).
+    final gallery = OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: numPrimaryLight,
+        side: const BorderSide(color: numPrimaryLight),
+        minimumSize: const Size.fromHeight(46),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+      ),
+      onPressed: _pickFromGallery,
+      icon: const Icon(Icons.photo_library_outlined, size: 20),
+      label: Text(l10n.translate('camera_permission_gallery'),
+          maxLines: 1, overflow: TextOverflow.ellipsis),
+    );
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
         decoration: boxDecorationWithRoundedCorners(
           backgroundColor: numCardDark,
           borderRadius: radius(20),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.no_photography_outlined,
-                  size: 56, color: numPrimaryLight),
-              16.height,
-              Text(
-                l10n.translate('camera_permission_title'),
-                textAlign: TextAlign.center,
-                style: boldTextStyle(size: 18, color: white),
-              ),
-              10.height,
-              Text(
-                l10n.translate(restricted
-                    ? 'camera_permission_restricted'
-                    : 'camera_permission_body'),
-                textAlign: TextAlign.center,
-                style: secondaryTextStyle(size: 14, color: Colors.grey[300]),
-              ),
-              20.height,
-              if (!restricted) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: numPrimary,
-                      foregroundColor: white,
-                      minimumSize: const Size.fromHeight(48),
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const Icon(Icons.no_photography_outlined,
+                        size: 40, color: numPrimaryLight),
+                    10.height,
+                    Text(
+                      l10n.translate('camera_permission_title'),
+                      textAlign: TextAlign.center,
+                      style: boldTextStyle(size: 17, color: white),
                     ),
-                    onPressed: () => ph.openAppSettings(),
-                    icon: const Icon(Icons.settings_outlined),
-                    label: Text(
-                        l10n.translate('camera_permission_open_settings')),
-                  ),
-                ),
-                12.height,
-              ],
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: numPrimaryLight,
-                    side: const BorderSide(color: numPrimaryLight),
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                  onPressed: _pickFromGallery,
-                  icon: const Icon(Icons.photo_library_outlined),
-                  label: Text(l10n.translate('camera_permission_gallery')),
+                    8.height,
+                    Text(
+                      l10n.translate(restricted
+                          ? 'camera_permission_restricted'
+                          : 'camera_permission_body'),
+                      textAlign: TextAlign.center,
+                      style:
+                          secondaryTextStyle(size: 14, color: Colors.grey[300]),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            12.height,
+            if (restricted)
+              SizedBox(width: double.infinity, child: gallery)
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: numPrimary,
+                        foregroundColor: white,
+                        minimumSize: const Size.fromHeight(46),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      onPressed: () => ph.openAppSettings(),
+                      icon: const Icon(Icons.settings_outlined, size: 20),
+                      label: Text(
+                          l10n.translate('camera_permission_open_settings'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ),
+                  10.width,
+                  Expanded(child: gallery),
+                ],
+              ),
+          ],
         ),
       ),
     );
