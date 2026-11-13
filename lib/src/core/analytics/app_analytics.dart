@@ -18,7 +18,8 @@ typedef FirebaseStarter = Future<FirebaseAnalytics?> Function(FirebaseOptions op
 /// - Onay HERKESE ilk açılışta sorulur (KVKK + AEA/UK/CH).
 /// - Onaydan önce HİÇ veri gitmez (Consent Mode "temel"): native tarafta toplama
 ///   kapalı başlar (AndroidManifest / Info.plist), yalnız onayla açılır.
-/// - Onay = analytics_storage + ad_storage + ad_user_data; ad_personalization HEP kapalı
+/// - Onay = analytics_storage + ad_storage + ad_user_data (iOS'ta yalnız analytics_storage,
+///   14 Kas kararı, bkz. [consentSignals]); ad_personalization HEP kapalı
 ///   (yeniden hedefleme yok; "reklam yok, veri satılmaz" sözü).
 /// - Reklam kimliği yok: Android AD_ID izni manifestten silinir, iOS'ta IDFA/ATT yok.
 /// - Olaylarda kişisel veri, fotoğraf, serbest metin YOK.
@@ -123,16 +124,29 @@ class AppAnalytics {
     await _apply(resetOnDeny: wasGranted && !granted);
   }
 
+  /// Onay → Firebase onay sinyalleri. `ad_personalization` her yerde hep kapalı.
+  ///
+  /// iOS'ta reklam sinyalleri de HEP kapalı (kullanıcı kararı 14 Kas 2026): uygulamada ATT yok;
+  /// Apple Geliştirici Sözleşmesi (LYL262 §3.3.3(E)) ve Apple Ads Koşulları (6(r)) izlemeyi ATT
+  /// iznine bağlıyor, ATT'siz kullanıcı düzeyinde reklam ölçümü (`ad_user_data`) "izleme"
+  /// sayılabilir. iOS'ta yalnız kullanım istatistiği (analytics_storage) gider; App Store
+  /// beyanı "izleme için kullanılmaz". Android'de onayla reklam ölçümü açık kalır.
+  @visibleForTesting
+  static ({bool analytics, bool ads, bool personalization}) consentSignals(
+          {required bool granted, required bool ios}) =>
+      (analytics: granted, ads: granted && !ios, personalization: false);
+
   Future<void> _apply({required bool resetOnDeny}) async {
     final fa = _fa;
     if (fa == null) return;
     final granted = consent == AnalyticsConsent.granted;
+    final signals = consentSignals(granted: granted, ios: !kIsWeb && Platform.isIOS);
     try {
       await fa.setConsent(
-        analyticsStorageConsentGranted: granted,
-        adStorageConsentGranted: granted,
-        adUserDataConsentGranted: granted,
-        adPersonalizationSignalsConsentGranted: false,
+        analyticsStorageConsentGranted: signals.analytics,
+        adStorageConsentGranted: signals.ads,
+        adUserDataConsentGranted: signals.ads,
+        adPersonalizationSignalsConsentGranted: signals.personalization,
       );
       await fa.setAnalyticsCollectionEnabled(granted);
       if (resetOnDeny) await fa.resetAnalyticsData();

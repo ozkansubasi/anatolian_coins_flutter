@@ -114,6 +114,24 @@ void main() {
     });
   });
 
+  // 14 Kas 2026 kullanıcı kararı: iOS'ta ATT yok → reklam sinyalleri hep kapalı (ADPLA §3.3.3(E)).
+  test('onay sinyalleri: iOS\'ta reklam hep kapalı, Android\'de onayla açık, kişiselleştirme hep kapalı', () {
+    final iosOn = AppAnalytics.consentSignals(granted: true, ios: true);
+    expect(iosOn.analytics, isTrue);
+    expect(iosOn.ads, isFalse);
+    expect(iosOn.personalization, isFalse);
+
+    final androidOn = AppAnalytics.consentSignals(granted: true, ios: false);
+    expect(androidOn.analytics, isTrue);
+    expect(androidOn.ads, isTrue);
+    expect(androidOn.personalization, isFalse);
+
+    for (final ios in [true, false]) {
+      final off = AppAnalytics.consentSignals(granted: false, ios: ios);
+      expect([off.analytics, off.ads, off.personalization], everyElement(isFalse));
+    }
+  });
+
   test('benzerlik kovası (sunucu ölçeği 0–1)', () {
     expect(AppAnalytics.scoreBucket(null), 'none');
     expect(AppAnalytics.scoreBucket(0.35), '0-40');
