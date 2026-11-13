@@ -9,6 +9,8 @@ import '../../core/num_colors.dart';
 import '../../core/subscription_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
+import '../settings/settings_provider.dart';
+import 'assistant_ai_consent.dart';
 import 'assistant_provider.dart';
 
 /// ADR-006 Faz 3 — AI Numizmatik Asistanı (mobil istemci).
@@ -43,9 +45,12 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     super.dispose();
   }
 
-  void _send() {
+  Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
+    // Üçüncü taraf yapay zekâ izni (Apple 5.1.2(i)): yoksa sorulur; verilmezse gönderilmez.
+    final ok = await ensureAssistantAiConsent(context, ref.read(sharedPreferencesProvider));
+    if (!ok || !mounted) return;
     final lang = ref.read(localeProvider).languageCode;
     ref.read(assistantProvider.notifier).send(text, lang: lang);
     _controller.clear();

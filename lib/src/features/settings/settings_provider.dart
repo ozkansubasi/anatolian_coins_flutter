@@ -10,6 +10,9 @@ class SettingsKeys {
   static const String recognitionFilterRegion = 'recognition_filter_region';
   static const String recognitionFilterMaterial = 'recognition_filter_material';
   static const String themeMode = 'theme_mode'; // 'light', 'dark', 'system'
+  /// AI Asistan: mesajların üçüncü taraf yapay zekâya (Google Gemini, Anthropic Claude)
+  /// gönderilmesine verilen açık izin (Apple 5.1.2(i); 14 Kas 2026).
+  static const String assistantAiConsent = 'assistant_ai_consent_v1';
 
   /// Hesap silinince sıfırlanan tercihler (kullanıcının kullanımına bağlı).
   /// Tema cihazın görünüm tercihidir, kalır.
@@ -19,6 +22,7 @@ class SettingsKeys {
     recognitionTopK,
     recognitionFilterRegion,
     recognitionFilterMaterial,
+    assistantAiConsent,
   ];
 }
 
