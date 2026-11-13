@@ -1,6 +1,7 @@
 // Firebase Analytics onayı (Prime NT-261112-01321879 / -015431th, 12 Kas 2026).
 // Sınanan: onay kaydı, Firebase'siz derlemede sessizlik, benzerlik kovası,
 // onay penceresinin iki düğmesinin aynı biçimde olması ve kararı döndürmesi.
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,6 +49,68 @@ void main() {
       await a.screenView('/variant/:id');
       await a.viewItem(30671);
       await a.purchase(productId: 'pro_annual', value: 39.99, currency: 'USD');
+    });
+  });
+
+  // 13 Kas 2026 iOS bulgusu: Firebase başlar başlamaz (toplama kapalıyken bile) Installations
+  // kaydı gidiyordu → Firebase yalnız onayla başlar.
+  group('Firebase yalnız onayla başlar', () {
+    const opts = FirebaseOptions(
+        apiKey: 'k', appId: '1:1:ios:1', messagingSenderId: '1', projectId: 'p');
+    late int starts;
+    Future<AppAnalytics> make(SharedPreferences prefs) => AppAnalytics.init(prefs,
+        options: opts, starter: (_) async {
+      starts++;
+      return null;
+    });
+
+    setUp(() {
+      starts = 0;
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    test('karar yokken başlamaz; onay penceresi yine sorulur', () async {
+      final a = await make(await SharedPreferences.getInstance());
+      expect(a.isAvailable, isTrue);
+      expect(a.consent, AnalyticsConsent.unknown);
+      expect(a.started, isFalse);
+      expect(starts, 0);
+    });
+
+    test('"İzin verme" → hiç başlamaz; sonraki açılışta da başlamaz', () async {
+      final prefs = await SharedPreferences.getInstance();
+      final a = await make(prefs);
+      await a.setConsent(false);
+      expect(starts, 0);
+      final again = await make(prefs);
+      expect(again.started, isFalse);
+      expect(starts, 0);
+    });
+
+    test('"İzin ver" → bir kez başlar; tekrar onay yeniden başlatmaz', () async {
+      final a = await make(await SharedPreferences.getInstance());
+      await a.setConsent(true);
+      expect(a.started, isTrue);
+      expect(starts, 1);
+      await a.setConsent(false);
+      await a.setConsent(true);
+      expect(starts, 1);
+    });
+
+    test('daha önce onay verilmişse açılışta başlar', () async {
+      SharedPreferences.setMockInitialValues({'flutter.${AppAnalytics.consentPrefKey}': 'granted'});
+      final a = await make(await SharedPreferences.getInstance());
+      expect(a.started, isTrue);
+      expect(starts, 1);
+    });
+
+    test('başlatma hatası uygulamayı düşürmez; olaylar sessizce düşer', () async {
+      final a = await AppAnalytics.init(await SharedPreferences.getInstance(),
+          options: opts, starter: (_) async => throw Exception('yok'));
+      await a.setConsent(true);
+      expect(a.started, isTrue);
+      await a.screenView('/');
+      await a.viewItem(1);
     });
   });
 

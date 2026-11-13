@@ -114,6 +114,14 @@
         <!-- Firebase Analytics: onaya dek HİÇ veri gitmez (Consent Mode temel). Uygulama
              kullanıcı "İzin ver" deyince setAnalyticsCollectionEnabled(true) + setConsent çağırır
              (lib/src/core/analytics/app_analytics.dart). Kişiselleştirme sinyali hep kapalı. -->
+        <!-- Firebase YALNIZ ONAYLA başlar (13 Kas 2026): google_app_id kaynağı varken
+             FirebaseInitProvider varsayılan uygulamayı süreç açılırken kendiliğinden başlatıyordu.
+             Silinince Firebase'i yalnız Dart (AppAnalytics, onaydan sonra) başlatır;
+             ölçüm google_app_id'yi yine kaynaktan okur (build.gradle.kts resValue). -->
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="${applicationId}.firebaseinitprovider"
+            tools:node="remove" />
         <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
         <meta-data android:name="google_analytics_adid_collection_enabled" android:value="false" />
         <meta-data android:name="google_analytics_default_allow_analytics_storage" android:value="false" />

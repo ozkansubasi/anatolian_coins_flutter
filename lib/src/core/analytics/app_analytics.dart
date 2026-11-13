@@ -9,6 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Kullanıcının analitik onayı.
 enum AnalyticsConsent { unknown, granted, denied }
 
+/// Firebase'i başlatıp Analytics örneğini döndürür (sınamada sahtesi verilir).
+typedef FirebaseStarter = Future<FirebaseAnalytics?> Function(FirebaseOptions options);
+
 /// Firebase Analytics (GA4 uygulama akışları) — Prime NT-261112-01321879 / -015431th.
 ///
 /// Kurallar (kullanıcı kararları, 12 Kas 2026):
@@ -23,20 +26,34 @@ enum AnalyticsConsent { unknown, granted, denied }
 /// Firebase yapılandırması depoda değil (depo herkese açık): `env/firebase.json`
 /// (`--dart-define-from-file`, kaynak Drive OTURUM/numistr_firebase/firebase.json).
 /// Dosya verilmeyen derlemede (dev) Firebase hiç başlamaz, onay da sorulmaz.
+///
+/// Firebase YALNIZ ONAYLA BAŞLAR (13 Kas 2026, iOS simülatör bulgusu): toplama kapalıyken
+/// bile Firebase başlar başlamaz Analytics paketi Firebase Installations sunucusuna kurulum
+/// kimliği kaydı gönderiyordu (genel `FirebaseDataCollectionDefaultEnabled` anahtarı da
+/// durdurmadı). Onay yoksa ya da reddedildiyse `Firebase.initializeApp` hiç çağrılmaz;
+/// Android'de kendiliğinden başlatan `FirebaseInitProvider` manifestten silindi.
 class AppAnalytics {
-  AppAnalytics._(this._prefs);
+  AppAnalytics._(this._prefs, this._options, this._starter);
 
   /// Uygulama genelinde tek örnek; `init` öncesi ve Firebase yokken her çağrı boşa düşer.
-  static AppAnalytics instance = AppAnalytics._(null);
+  static AppAnalytics instance = AppAnalytics._(null, null, _startFirebase);
 
   static const consentPrefKey = 'analytics_consent_v1';
 
   final SharedPreferences? _prefs;
+  final FirebaseOptions? _options;
+  final FirebaseStarter _starter;
   FirebaseAnalytics? _fa;
+  bool _started = false;
   String? _lastScreen;
 
-  /// Firebase bu derlemede yapılandırılmış ve başlatılmış mı?
-  bool get isAvailable => _fa != null;
+  /// Firebase bu derlemede yapılandırılmış mı? (Onay penceresi ve ayar anahtarı buna bakar;
+  /// Firebase'in başlamış olması onaya bağlıdır.)
+  bool get isAvailable => _options != null;
+
+  /// Firebase bu oturumda başlatıldı mı (yalnız onaydan sonra).
+  @visibleForTesting
+  bool get started => _started;
 
   AnalyticsConsent get consent {
     switch (_prefs?.getString(consentPrefKey)) {
@@ -51,36 +68,58 @@ class AppAnalytics {
 
   bool get _canLog => _fa != null && consent == AnalyticsConsent.granted;
 
-  static Future<AppAnalytics> init(SharedPreferences prefs) async {
-    final service = AppAnalytics._(prefs);
-    final options = FirebaseEnv.currentPlatformOptions();
-    if (options != null) {
-      try {
-        try {
-          await Firebase.initializeApp(options: options);
-        } on FirebaseException catch (e) {
-          // Android'de google_app_id kaynağı varken varsayılan uygulama yerelde zaten
-          // başlamış olabilir; aynı ayarlar, mevcut olanı kullan.
-          if (e.code != 'duplicate-app') rethrow;
-          Firebase.app();
-        }
-        service._fa = FirebaseAnalytics.instance;
-        await service._apply(resetOnDeny: false);
-      } catch (e) {
-        debugPrint('⚠️ [Analytics] Firebase başlatılamadı: $e');
-        service._fa = null;
-      }
-    } else {
+  /// [options] ve [starter] yalnız sınama içindir; uygulamada `env/firebase.json`
+  /// değerleri ve gerçek Firebase başlatıcısı kullanılır.
+  static Future<AppAnalytics> init(
+    SharedPreferences prefs, {
+    FirebaseOptions? options,
+    FirebaseStarter? starter,
+  }) async {
+    final service = AppAnalytics._(
+      prefs,
+      options ?? FirebaseEnv.currentPlatformOptions(),
+      starter ?? _startFirebase,
+    );
+    if (!service.isAvailable) {
       debugPrint('ℹ️ [Analytics] env/firebase.json verilmedi — analitik kapalı');
+    } else if (service.consent == AnalyticsConsent.granted) {
+      await service._ensureStarted();
+      await service._apply(resetOnDeny: false);
     }
     instance = service;
     return service;
   }
 
+  static Future<FirebaseAnalytics?> _startFirebase(FirebaseOptions options) async {
+    try {
+      await Firebase.initializeApp(options: options);
+    } on FirebaseException catch (e) {
+      // Varsayılan uygulama yerelde zaten başlamışsa (eski kurulum) aynı ayarlarla onu kullan.
+      if (e.code != 'duplicate-app') rethrow;
+      Firebase.app();
+    }
+    return FirebaseAnalytics.instance;
+  }
+
+  /// Firebase'i bir kez başlatır (oturumda tek deneme); yalnız onay varken çağrılır.
+  Future<void> _ensureStarted() async {
+    final options = _options;
+    if (_started || options == null) return;
+    _started = true;
+    try {
+      _fa = await _starter(options);
+    } catch (e) {
+      debugPrint('⚠️ [Analytics] Firebase başlatılamadı: $e');
+      _fa = null;
+    }
+  }
+
   Future<void> setConsent(bool granted) async {
     final wasGranted = consent == AnalyticsConsent.granted;
     await _prefs?.setString(consentPrefKey, granted ? 'granted' : 'denied');
-    // Geri çekilirse cihazdaki uygulama örneği kimliği de silinir.
+    if (granted) await _ensureStarted();
+    // Geri çekilirse cihazdaki uygulama örneği kimliği de silinir. Hiç başlamamışsa
+    // (_fa yok) yapılacak bir şey yok: Firebase'e hiçbir şey gitmedi.
     await _apply(resetOnDeny: wasGranted && !granted);
   }
 
