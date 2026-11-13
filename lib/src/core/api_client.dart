@@ -4,6 +4,7 @@ import 'app_log.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import '../core/env.dart';
+import 'rate_limit_retry.dart';
 import 'token_interceptor.dart';
 
 class ApiClient {
@@ -65,6 +66,8 @@ class ApiClient {
 
     // Bearer ekleyen interceptor
     dio.interceptors.add(TokenInterceptor(ref));
+    // 429'da kısa bekleyip GET'i bir kez yeniden dene (M36)
+    dio.interceptors.add(RateLimitRetryInterceptor(dio));
     return ApiClient._(dio);
   }
 }

@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:nb_utils/nb_utils.dart';
 import '../../core/coin_format.dart';
 import '../../core/navigation.dart';
+import '../../core/rate_limit_retry.dart';
 import '../../models/variant.dart';
 import '../../core/region_data.dart';
 import '../../prokit_ui/numistr_colors.dart';
@@ -38,6 +39,8 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
   bool _isGridView = true;
   bool _initialLoad = false;
   String? _errorMessage;
+  /// M36: kaydırmada (sonraki sayfa) hata listeyi silmez; altta ileti + "Tekrar dene".
+  String? _pageErrorMessage;
 
   final Map<int, Map<String, String?>> _thumbnailCache = {};
 
@@ -59,7 +62,8 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
   void _onScroll() {
     if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 200 &&
         !_loading &&
-        _hasMore) {
+        _hasMore &&
+        _pageErrorMessage == null) {
       _page++;
       _load();
     }
@@ -121,6 +125,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
       _page = 1;
       _hasMore = false;
       _errorMessage = null;
+      _pageErrorMessage = null;
       _initialLoad = false;
     });
   }
@@ -143,6 +148,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
       _hasMore = true;
       _thumbnailCache.clear();
       _errorMessage = null;
+      _pageErrorMessage = null;
     }
 
     final api = ref.read(variantsApiProvider);
@@ -179,16 +185,16 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
         return;
       }
       if (mounted) {
-        final l10n = AppLocalizations.of(context);
-        final String errorMsg;
-        if (e.toString().contains('timeout') || e.toString().contains('SocketException')) {
-          errorMsg = l10n.translate('error_network');
-        } else if (e.toString().contains('404')) {
-          errorMsg = l10n.translate('no_results');
+        final errorMsg = _errorText(e, AppLocalizations.of(context));
+        if (!reset && _items.isNotEmpty) {
+          // M36: sonraki sayfa gelmedi — yüklenen liste kalır, altta tekrar dene.
+          setState(() {
+            _page--;
+            _pageErrorMessage = errorMsg;
+          });
         } else {
-          errorMsg = l10n.translate('error_generic');
+          setState(() => _errorMessage = errorMsg);
         }
-        setState(() => _errorMessage = errorMsg);
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -200,9 +206,21 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
   /// hostta uzak görsel akışlarıyla çakışıp yavaşladı, 2026-09-27 cihaz ölçümü).
   /// Kartta `url_raw` = 480 px önizleme (~50 KB) — 1600 px filigranlı büyük
   /// görsel (~350 KB) yalnız detay sayfasında. Kart en çok ~300 px çizilir.
+  ///
+  /// M36 (API 1.25.0): küçük görsel liste yanıtında geliyor → istek yok. Sikke başına
+  /// istek yalnız alanı olmayan (eski API) yanıtta yedek yol olarak kalır.
   Future<void> _loadThumbnails(List<Variant> variants) async {
+    final fromList = <int, Map<String, String?>>{
+      for (final v in variants)
+        if (v.hasListThumb) v.articleId: {'url': v.thumbUrl, 'remoteUrl': v.thumbRemoteUrl},
+    };
+    if (fromList.isNotEmpty && mounted) setState(() => _thumbnailCache.addAll(fromList));
+
     final api = ref.read(variantsApiProvider);
-    final pending = variants.where((v) => !_thumbnailCache.containsKey(v.articleId)).toList();
+    final pending = variants
+        .where((v) => !v.hasListThumb && !_thumbnailCache.containsKey(v.articleId))
+        .toList();
+    if (pending.isEmpty) return;
     var next = 0;
 
     Future<void> worker() async {
@@ -227,6 +245,55 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     }
 
     await Future.wait(List.generate(4, (_) => worker()));
+  }
+
+  String _errorText(Object e, AppLocalizations l10n) {
+    // 429: bağlantı sorunu değil; kısa bekleme (RateLimitRetryInterceptor bir kez denedi).
+    if (isRateLimited(e)) return l10n.translate('error_rate_limited');
+    if (e.toString().contains('timeout') || e.toString().contains('SocketException')) {
+      return l10n.translate('error_network');
+    }
+    if (e.toString().contains('404')) return l10n.translate('no_results');
+    return l10n.translate('error_generic');
+  }
+
+  /// Listenin sonu: sonraki sayfa yükleniyor ya da yüklenemedi (tekrar dene).
+  Widget _buildFooter() {
+    final msg = _pageErrorMessage;
+    if (msg == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(color: numPrimary),
+        ),
+      );
+    }
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(msg, textAlign: TextAlign.center, style: secondaryTextStyle(size: 13)),
+            8.height,
+            TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _pageErrorMessage = null;
+                  _page++;
+                });
+                _load();
+              },
+              icon: const Icon(Icons.refresh, color: numPrimary),
+              label: Text(
+                AppLocalizations.of(context).translate('retry'),
+                style: const TextStyle(color: numPrimary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showFilterBottomSheet() {
@@ -624,29 +691,33 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     );
   }
 
+  /// Izgara + tam genişlikte alt bilgi (yükleniyor / tekrar dene). Alt bilgi eskiden
+  /// ızgaranın yarım hücresiydi; hata iletisi ve düğme sığmıyordu (M36).
   Widget _buildGridView() {
-    return GridView.builder(
+    return CustomScrollView(
       controller: _scroll,
-      padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.1, // %25 daha küçük görsel (0.9 -> 1.1)
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: _items.length + (_hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index >= _items.length) {
-          return const Center(
-            child: CircularProgressIndicator(color: numPrimary),
-          );
-        }
-        return _CoinGridCard(
-          variant: _items[index],
-          thumbnailData: _thumbnailCache[_items[index].articleId],
-          onTap: () => context.push('/variant/${_items[index].articleId}'),
-        );
-      },
+      slivers: [
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(12, 12, 12, _hasMore ? 0 : 12),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: 1.1, // %25 daha küçük görsel (0.9 -> 1.1)
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => _CoinGridCard(
+                variant: _items[index],
+                thumbnailData: _thumbnailCache[_items[index].articleId],
+                onTap: () => context.push('/variant/${_items[index].articleId}'),
+              ),
+              childCount: _items.length,
+            ),
+          ),
+        ),
+        if (_hasMore) SliverToBoxAdapter(child: _buildFooter()),
+      ],
     );
   }
 
@@ -657,14 +728,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
       itemCount: _items.length + (_hasMore ? 1 : 0),
       separatorBuilder: (_, __) => 12.height,
       itemBuilder: (context, index) {
-        if (index >= _items.length) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(color: numPrimary),
-            ),
-          );
-        }
+        if (index >= _items.length) return _buildFooter();
         return _CoinListCard(
           variant: _items[index],
           thumbnailData: _thumbnailCache[_items[index].articleId],

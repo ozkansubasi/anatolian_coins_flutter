@@ -21,6 +21,7 @@ import '../../core/num_colors.dart';
 import '../../core/num_text.dart';
 import '../../core/coin_format.dart';
 import '../../core/navigation.dart';
+import '../../core/rate_limit_retry.dart';
 import '../favorites/favorites_service.dart';
 import '../offline/offline_service.dart';
 import '../../widgets/fallback_image.dart';
@@ -115,7 +116,10 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
         final l10n = AppLocalizations.of(context);
         _error = e.toString().contains('404')
             ? l10n.translate('coin_not_found')
-            : l10n.translate('coin_load_failed');
+            // M36: 429 bağlantı sorunu değil (RateLimitRetryInterceptor bir kez bekleyip denedi)
+            : isRateLimited(e)
+                ? l10n.translate('error_rate_limited')
+                : l10n.translate('coin_load_failed');
       });
     } finally {
       setState(() => _loading = false);

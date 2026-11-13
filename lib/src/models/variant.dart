@@ -26,6 +26,13 @@ class Variant {
   final String? coordinates;
   final String? sourceCitation;
 
+  /// M36 (API 1.25.0): liste yanıtındaki küçük görsel (ilk görünür görselin 480 px önizlemesi)
+  /// ve kaynak adresi. [hasListThumb] = alan yanıtta var (null bile olsa: görselsiz sikke);
+  /// yoksa (eski API) kart görseli ayrı istekle bulunur.
+  final String? thumbUrl;
+  final String? thumbRemoteUrl;
+  final bool hasListThumb;
+
   Variant({
     required this.articleId,
     required this.uid,
@@ -51,6 +58,9 @@ class Variant {
     this.findspotUri,
     this.coordinates,
     this.sourceCitation,
+    this.thumbUrl,
+    this.thumbRemoteUrl,
+    this.hasListThumb = false,
   });
 
   String get title => titleTr ?? titleEn ?? slug;
@@ -100,6 +110,14 @@ class Variant {
           ? '${j['latitude']},${j['longitude']}' 
           : null), // latitude/longitude varsa birleştir
       sourceCitation: j['source_citation'],
+      thumbUrl: _nonEmpty(j['thumb_url']),
+      thumbRemoteUrl: _nonEmpty(j['thumb_remote_url']),
+      hasListThumb: j.containsKey('thumb_url'),
     );
+  }
+
+  static String? _nonEmpty(dynamic v) {
+    final s = v?.toString().trim() ?? '';
+    return s.isEmpty ? null : s;
   }
 }

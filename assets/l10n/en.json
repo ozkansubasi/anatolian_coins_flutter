@@ -267,6 +267,7 @@
   "error_quota_exceeded": "Monthly scan limit reached. Upgrade to Pro or wait until next month.",
   "error_recognition_failed": "Coin recognition failed. Please try again.",
   "error_generic": "Something went wrong. Please try again.",
+  "error_rate_limited": "Too many requests in a short time. Wait a few seconds and try again.",
   "no_camera": "No camera found on this device",
   "camera_error": "Failed to initialize camera",
   "initializing_camera": "Initializing camera...",

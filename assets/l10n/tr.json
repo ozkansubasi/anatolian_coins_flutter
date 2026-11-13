@@ -267,6 +267,7 @@
   "error_quota_exceeded": "Aylık tarama limitiniz doldu. Pro'ya geçin veya gelecek ay için bekleyin.",
   "error_recognition_failed": "Sikke tanıma başarısız oldu. Lütfen tekrar deneyin.",
   "error_generic": "Bir sorun oluştu. Tekrar deneyin.",
+  "error_rate_limited": "Kısa sürede çok fazla istek gönderildi. Birkaç saniye bekleyip tekrar deneyin.",
   "no_camera": "Bu cihazda kamera bulunamadı",
   "camera_error": "Kamera başlatılamadı",
   "initializing_camera": "Kamera başlatılıyor...",
