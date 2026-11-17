@@ -679,7 +679,9 @@ class _Similarity extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.numColors;
     final t = context.numText;
-    final pct = '%${(value * 100).round()}';
+    // Yüzde dile göre: TR "%100", EN "100%" (percent_value; 17 Kas 2026 — EN mağaza ekranında "%100" görüldü)
+    final pct = AppLocalizations.of(context)
+        .translate('percent_value', params: {'value': '${(value * 100).round()}'});
     final bar = ClipRRect(
       borderRadius: BorderRadius.circular(3),
       child: LinearProgressIndicator(
@@ -731,9 +733,9 @@ class _TopMatchCard extends StatelessWidget {
     final meta = _metaLine(match, l10n);
     final faces = [
       if (match.obverseScore != null)
-        '${l10n.translate('obverse')} %${(match.obverseScore! * 100).round()}',
+        '${l10n.translate('obverse')} ${l10n.translate('percent_value', params: {'value': '${(match.obverseScore! * 100).round()}'})}',
       if (match.reverseScore != null)
-        '${l10n.translate('reverse')} %${(match.reverseScore! * 100).round()}',
+        '${l10n.translate('reverse')} ${l10n.translate('percent_value', params: {'value': '${(match.reverseScore! * 100).round()}'})}',
     ].join('  ·  ');
 
     return Material(
