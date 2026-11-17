@@ -129,8 +129,12 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
   ///
   /// Onceki surum jenerik ikon + gradyan tasiyordu (Icons.explore, camera,
   /// collections); uygulamanin icerigi -- gercek sikke fotograflari -- ana
-  /// sayfada hic gorunmuyordu. Gorseller: BnF kamu mali (ADR-008 lisans
-  /// haritasinda "serbest" kumesi), Sagalassos icin mevcut bolge banner'i.
+  /// sayfada hic gorunmuyordu. Gorseller (17 Kas 2026'dan beri): Berlin
+  /// Muenzkabinett, PDM 1.0 -- coin_tanima = Lidya trite (ikmk 18210868),
+  /// coin_bilgi = Augustus kistophoros, Efes (ikmk 18202459). Onceki BnF
+  /// gorselleri magaza ekran goruntusu uzerinden reklama tasiniyordu; reklam
+  /// kurali BnF'yi disarida birakir (NT-261117-0305563i). Sagalassos icin
+  /// mevcut bolge banner'i.
   Widget _buildBannerCarousel(BuildContext context, AppLocalizations l10n) {
     final banners = <Widget>[
       HomeBanner(
@@ -147,12 +151,13 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
         // Keşfet'e gidip Keşfet ikonuyla aynı yere düşüyordu.
         onTap: () => context.openRoute('/blog'),
         // Isaretler: sikkenin okunan kisimlarina dikkat ceker. Konumlar bu
-        // fotografa gore ayarlandi; gorsel degisirse yeniden hizalanmali.
+        // fotografa gore (kare gorselin -1..1 alani) ayarlandi: portre = Augustus'un
+        // yuzu, lejant = sol kenardaki IMP CAESAR yazisi. Gorsel degisirse yeniden hizalanmali.
         markers: [
           BannerMarker(
-              const Alignment(-0.10, -0.55), l10n.translate('marker_portrait')),
+              const Alignment(0.10, -0.30), l10n.translate('marker_portrait')),
           BannerMarker(
-              const Alignment(0.22, 0.10), l10n.translate('marker_legend')),
+              const Alignment(-0.72, 0.20), l10n.translate('marker_legend')),
         ],
       ),
       HomeBanner(

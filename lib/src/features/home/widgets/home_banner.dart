@@ -24,7 +24,7 @@ class HomeBanner extends StatelessWidget {
   final BoxFit fit;
 
   /// Gorsel uzerinde dikkat cekilecek noktalar (bos ise isaret cizilmez).
-  /// Konum, gorsel alanina gore -1..1 araliginda (Alignment).
+  /// Halka merkezinin konumu, kare gorselin kendisine gore -1..1 (Alignment degerleri).
   final List<BannerMarker> markers;
 
   const HomeBanner({
@@ -84,11 +84,31 @@ class HomeBanner extends StatelessWidget {
                     ),
                   ),
 
-                  // Isaretler yalniz gorsel alanina konur
-                  for (final m in markers)
-                    Align(
-                      alignment: m.at,
-                      child: _MarkerRing(label: m.label),
+                  // Isaretler gorselin KENDI kare alanina konur (17 Kas 2026): `at`
+                  // halkanin merkezi, gorsele gore -1..1. Onceden Align tum bant
+                  // kutusuna gore konumluyordu; kutu ekran genisligiyle degistigi
+                  // icin halka cihaza gore kayiyordu. Sikke gorselleri karedir.
+                  if (markers.isNotEmpty)
+                    Center(
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: LayoutBuilder(
+                          builder: (context, c) => Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              for (final m in markers)
+                                Positioned(
+                                  left: (m.at.x + 1) / 2 * c.maxWidth,
+                                  top: (m.at.y + 1) / 2 * c.maxHeight - 13,
+                                  child: FractionalTranslation(
+                                    translation: const Offset(-0.5, 0),
+                                    child: _MarkerRing(label: m.label),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                 ],
               ),
