@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/num_colors.dart';
 import '../../core/free_trial.dart';
 import '../../core/subscription_provider.dart';
+import '../../core/web_handoff.dart';
 import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import 'subscription_legal_notice.dart';
@@ -136,7 +137,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: () => _showManageSubscriptionInfo(
-                        context, l10n, subscription.managedByStore),
+                        context, ref, l10n, subscription.managedByStore),
                     icon: const Icon(Icons.settings),
                     label: Text(l10n.translate('manage_subscription')),
                     style: OutlinedButton.styleFrom(
@@ -987,6 +988,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
   /// yasaklıyor.
   void _showManageSubscriptionInfo(
     BuildContext context,
+    WidgetRef ref,
     AppLocalizations l10n,
     bool managedByStore,
   ) {
@@ -1026,9 +1028,14 @@ class ProkitSubscriptionPage extends ConsumerWidget {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
-                if (await canLaunchUrl(accountUrl)) {
-                  await launchUrl(accountUrl,
-                      mode: LaunchMode.externalApplication);
+                // Girişli açmak için tek kullanımlık geçiş adresi; alınamazsa düz Hesabım adresi.
+                final url = await ref.read(webHandoffApiProvider).accountUrl(
+                      returnPath: isTr ? '/tr/hesabim' : '/en/my-account',
+                      lang: isTr ? 'tr' : 'en',
+                      fallback: accountUrl,
+                    );
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
                 }
               },
               child: Text(l10n.translate('open_web_account'),
