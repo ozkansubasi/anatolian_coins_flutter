@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import '../settings/settings_provider.dart';
 import 'assistant_ai_consent.dart';
+import 'assistant_api.dart';
 import 'assistant_provider.dart';
 
 /// ADR-006 Faz 3 — AI Numizmatik Asistanı (mobil istemci).
@@ -275,52 +276,104 @@ class _MessageBubble extends StatelessWidget {
                   style: theme.textTheme.labelSmall
                       ?.copyWith(color: fg.withValues(alpha: 0.7)),
                 ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: message.sources.take(5).map((s) {
-                    final linkStyle = theme.textTheme.labelLarge?.copyWith(
-                      color: context.numColors.accent,
-                      decoration: TextDecoration.underline,
-                      decorationColor: context.numColors.accent,
-                    );
-                    return ActionChip(
-                      // Metindeki [n] atfıyla eşleşen numara başta, altı çizisiz.
-                      label: Text.rich(
-                        TextSpan(children: [
-                          if (s.refLabel != null)
-                            TextSpan(
-                              text: '${s.refLabel} ',
-                              style: linkStyle?.copyWith(
-                                decoration: TextDecoration.none,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          TextSpan(text: s.title.isEmpty ? s.url : s.title),
-                        ]),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        // Baglanti gibi okunsun: accent (acikta #8B6914, fildisi
-                        // zeminde 5,04:1; koyuda #E8C766) -> WCAG AA gecer; alti cizili.
-                        style: linkStyle,
-                      ),
-                      avatar: Icon(Icons.open_in_new,
-                          size: 14, color: context.numColors.accent),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () async {
-                        final uri = Uri.tryParse(s.url);
-                        if (uri != null)
-                          await launchUrl(uri,
-                              mode: LaunchMode.externalApplication);
-                      },
-                    );
-                  }).toList(),
-                ),
+                const SizedBox(height: 2),
+                // Her kaynak ayrı satır (22.11.2026, kullanıcı). Sunucu en çok
+                // 10 kaynak gönderir; hepsi gösterilir.
+                for (final s in message.sources)
+                  AssistantSourceRow(source: s, color: fg),
               ],
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Cevabın altındaki tek kaynak satırı (22.11.2026).
+///
+/// Metindeki [n] atfıyla eşleşen numara başta. Bağlantılı satır dokunulunca
+/// tarayıcıda açılır (accent, altı çizili: açıkta #8B6914 fildişi zeminde 5,04:1,
+/// koyuda #E8C766 → WCAG AA). Bağlantısız terim satırı (sözlük sayfasında yer
+/// almayan terim, plugin 1.27.0) düz metindir ve "NumisTR terim veritabanı"
+/// etiketini taşır.
+class AssistantSourceRow extends StatelessWidget {
+  final AssistantSource source;
+  final Color color;
+  const AssistantSourceRow(
+      {super.key, required this.source, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final s = source;
+    final linked = s.isLinked;
+    final accent = context.numColors.accent;
+    final base = theme.textTheme.labelLarge?.copyWith(
+      color: linked ? accent : color,
+      height: 1.3,
+    );
+    final muted = theme.textTheme.labelSmall
+        ?.copyWith(color: color.withValues(alpha: 0.7));
+
+    final text = Text.rich(
+      TextSpan(children: [
+        if (s.refLabel != null)
+          TextSpan(
+            text: '${s.refLabel} ',
+            style: base?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        TextSpan(
+          text: s.title.isEmpty ? s.url : s.title,
+          style: linked
+              ? base?.copyWith(
+                  decoration: TextDecoration.underline,
+                  decorationColor: accent,
+                )
+              : base,
+        ),
+        if (!linked && s.isTerm)
+          TextSpan(
+            text: ' · ${l10n.translate('assistant_source_kb')}',
+            style: muted,
+          ),
+      ]),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+
+    final row = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2, right: 6),
+            child: Icon(
+              linked ? Icons.open_in_new : Icons.menu_book_outlined,
+              size: 14,
+              color: linked ? accent : color.withValues(alpha: 0.7),
+            ),
+          ),
+          Expanded(child: text),
+        ],
+      ),
+    );
+
+    if (!linked) return row;
+
+    return Semantics(
+      link: true,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () async {
+          final uri = Uri.tryParse(s.url);
+          if (uri != null) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        },
+        child: row,
       ),
     );
   }

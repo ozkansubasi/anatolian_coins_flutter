@@ -19,14 +19,30 @@ class AssistantSource {
   /// için ilk makale metinde [3] iken listede ikinci olabilir.
   final List<int> refs;
 
+  /// 'term' = NumisTR terim veritabanından bir terim (plugin 1.27.0+). Her terim
+  /// ayrı satırdır; yalnız sözlük sayfasında geçiyorsa `url` doludur, yoksa
+  /// bağlantısız gösterilir. Boş = site makalesi / sayfa.
+  final String kind;
+
   const AssistantSource({
     required this.title,
     required this.url,
     this.refs = const [],
+    this.kind = '',
   });
 
   /// Metindeki biçimle aynı etiket: "[1]", "[1, 2]"; numarasız kaynakta null.
   String? get refLabel => refs.isEmpty ? null : '[${refs.join(', ')}]';
+
+  bool get isTerm => kind == 'term';
+
+  /// Yalnız http(s) bağlantısı açılır; boş ya da başka şemalı adres düz metin.
+  bool get isLinked {
+    final uri = Uri.tryParse(url);
+    return uri != null &&
+        (uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.host.isNotEmpty;
+  }
 
   factory AssistantSource.fromJson(Map<String, dynamic> j) => AssistantSource(
         title: (j['title'] ?? '').toString(),
@@ -36,6 +52,7 @@ class AssistantSource {
             for (final r in j['refs'] as List)
               if (r is num) r.toInt(),
         ],
+        kind: (j['kind'] ?? '').toString(),
       );
 }
 
@@ -65,7 +82,9 @@ class AssistantReply {
       for (final s in rawSources) {
         if (s is Map<String, dynamic>) {
           final src = AssistantSource.fromJson(s);
-          if (src.url.isNotEmpty) sources.add(src);
+          // Bağlantısız terim satırı da gösterilir (1.27.0); başlığı da adresi
+          // de boş olan satır atlanır.
+          if (src.url.isNotEmpty || src.title.isNotEmpty) sources.add(src);
         }
       }
     }
