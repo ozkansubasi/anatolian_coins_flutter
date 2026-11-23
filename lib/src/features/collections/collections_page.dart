@@ -147,9 +147,15 @@ class CollectionsPage extends ConsumerWidget {
     final nameController = TextEditingController();
     final descController = TextEditingController();
 
+    // M43: sayfaya geçiş, kapanmış pencerenin bağlamıyla değil sayfanın kendi bağlamıyla
+    // yapılır (eskiden builder'daki 'context' dış bağlamı gölgeliyordu; açılan koleksiyon
+    // sayfasında geri düğmesi çalışmıyordu).
+    final router = GoRouter.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(l10n.translate('new_collection')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -177,14 +183,14 @@ class CollectionsPage extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(l10n.translate('cancel')),
           ),
           FilledButton(
             onPressed: () async {
               final name = nameController.text.trim();
               if (name.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(content: Text(l10n.translate('enter_name'))),
                 );
                 return;
@@ -198,17 +204,15 @@ class CollectionsPage extends ConsumerWidget {
                     description: description.isEmpty ? null : description,
                   );
 
-              if (context.mounted) {
-                Navigator.pop(context);
-                if (collectionId != null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text(l10n.translate('collection_created',
-                            params: {'name': name}))),
-                  );
-                  // Navigate to the new collection
-                  context.push('/collection/$collectionId');
-                }
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              if (collectionId != null) {
+                messenger.showSnackBar(
+                  SnackBar(
+                      content: Text(l10n.translate('collection_created',
+                          params: {'name': name}))),
+                );
+                // Yeni koleksiyona git (sayfanın yönlendiricisiyle).
+                router.push('/collection/$collectionId');
               }
             },
             child: Text(l10n.translate('create')),
