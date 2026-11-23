@@ -577,8 +577,10 @@ class _QuickAction extends StatelessWidget {
                     feature.title,
                     // 12sp: 14sp'de hucre genisligi (~91dp) yetmiyor ve
                     // "Favorilerim" / "Koleksiyonlar" kelime ortasindan boluniyordu.
+                    // w600: cihazlarda hep yarı kalın göründü (eski google_fonts ailesi 500'ü
+                    // çizemiyordu); gömülü Inter'le aynı görünüm korunur (2026-11-24).
                     style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: isDark ? Colors.white70 : numTextPrimary,
                     ),
                     maxLines: 2,
