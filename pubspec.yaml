@@ -105,6 +105,24 @@ flutter:
     # klasöre bakar; ilk açılış çevrimdışı olsa da doğru yazı tipi çıkar.
     # Dosyalar google_fonts'un kendi adresinden, SHA-256 paketteki değerle eş.
     - assets/google_fonts/
+    - assets/fonts/inter/OFL.txt
+
+  # Inter: arayüzün gövde yazı tipi, tek aile, 4 ağırlık (SIL OFL 1.1, assets/fonts/inter/OFL.txt).
+  # NEDEN (2026-11-24, font incelemesi): google_fonts her ağırlığı ayrı aile adıyla kaydediyordu
+  # (Inter_regular, Inter_700…); kalınlığı kendisi isteyen stiller (boldTextStyle, NumText, yazı
+  # başlıkları) temadaki normal aileyi miras alıp kalın çizilmiyordu. Inter ayrıca ilk açılışta
+  # Google'dan iniyordu. Dosyalar google_fonts 6.3.2'nin adresinden, SHA-256 paketteki değerle eş.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/inter/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/inter/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/inter/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/inter/Inter-Bold.ttf
+          weight: 700
 
 flutter_launcher_icons:
   android: true

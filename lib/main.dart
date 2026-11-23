@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'src/core/app_log.dart';
@@ -30,11 +31,19 @@ void main() async {
     return true;
   };
 
-  // Uygulamaya gömülü Cinzel yazı tipinin lisansı (OFL) Lisanslar sayfasında.
+  // Uygulamaya gömülü yazı tiplerinin lisansları (OFL) Lisanslar sayfasında:
+  // Cinzel + Marcellus (google_fonts klasörü) ve Inter (pubspec `fonts:`).
   LicenseRegistry.addLicense(() async* {
     final license = await rootBundle.loadString('assets/google_fonts/OFL.txt');
     yield LicenseEntryWithLineBreaks(['google_fonts'], license);
+    final inter = await rootBundle.loadString('assets/fonts/inter/OFL.txt');
+    yield LicenseEntryWithLineBreaks(['Inter'], inter);
   });
+
+  // Yazı tipleri yalnız uygulamanın içinden yüklenir; google_fonts Google sunucularına gitmez
+  // (2026-11-24). Kullanılan her yüz gömülü: Inter (pubspec), Cinzel 700 ve Marcellus 400
+  // (assets/google_fonts). Gömülü olmayan bir yüz istenirse google_fonts hata günlüğe yazar.
+  GoogleFonts.config.allowRuntimeFetching = false;
 
   // Tipografi seti: nb_utils (ProKit) stil varsayılanlarını tek kaynağa bağlar
   initNumistrTypography();

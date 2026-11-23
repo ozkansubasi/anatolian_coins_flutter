@@ -254,18 +254,24 @@ class _ArticleContent extends StatelessWidget {
                           'h1': Style(
                             fontSize: FontSize(24),
                             fontWeight: FontWeight.bold,
+                            // Gövdenin 1,7'sini miras alınca iki satırlık başlık dağılıyordu (2026-11-24).
+                            lineHeight: const LineHeight(1.3),
                             color: c.text,
                             margin: Margins.only(top: 24, bottom: 12),
                           ),
                           'h2': Style(
                             fontSize: FontSize(20),
                             fontWeight: FontWeight.bold,
+                            // Gövdenin 1,7'sini miras alınca iki satırlık başlık dağılıyordu (2026-11-24).
+                            lineHeight: const LineHeight(1.3),
                             color: c.text,
                             margin: Margins.only(top: 20, bottom: 10),
                           ),
                           'h3': Style(
                             fontSize: FontSize(16),
                             fontWeight: FontWeight.bold,
+                            // Gövdenin 1,7'sini miras alınca iki satırlık başlık dağılıyordu (2026-11-24).
+                            lineHeight: const LineHeight(1.3),
                             color: c.text,
                             margin: Margins.only(top: 16, bottom: 8),
                           ),

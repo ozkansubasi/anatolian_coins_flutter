@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:nb_utils/nb_utils.dart';
 
+import 'app_theme.dart';
+
 /// NumisTR tipografi seti — TEK KAYNAK.
 ///
 /// Uygulamadaki tüm yazı boyutları bu ölçekten seçilir; ara değer
@@ -56,10 +58,15 @@ TextStyle numShowcaseStyle({required double size, Color? color, double? letterSp
 /// main() içinde runApp'ten ÖNCE bir kez çağrılır.
 ///
 /// Bundan sonra size verilmeden yapılan her boldTextStyle()/primaryTextStyle()/
-/// secondaryTextStyle() çağrısı bu sete uyar. Font ailesi bilinçli olarak
-/// ayarlanmaz: TextStyle'da fontFamily boş kalınca DefaultTextStyle üzerinden
-/// AppTheme'in Inter'i miras alınır (ayrı bir aile tanımlamak Inter'i ezerdi).
+/// secondaryTextStyle() çağrısı bu sete uyar. Aile açıkça gömülü `Inter`'dir
+/// (2026-11-24). Eskiden boş bırakılıp temadan miras alınıyordu; google_fonts her ağırlığı
+/// ayrı aile adıyla kaydettiği için miras alınan aile yalnız normal kesimi içeriyordu ve
+/// `boldTextStyle()` gövdede kalın çizilmiyordu (üst çubukta çiziliyordu).
 void initNumistrTypography() {
+  fontFamilyBoldGlobal = AppTheme.fontFamily;
+  fontFamilyPrimaryGlobal = AppTheme.fontFamily;
+  fontFamilySecondaryGlobal = AppTheme.fontFamily;
+
   textBoldSizeGlobal = NumTypo.subtitle.toDouble(); // 16
   textPrimarySizeGlobal = NumTypo.subtitle.toDouble(); // 16
   textSecondarySizeGlobal = NumTypo.body.toDouble(); // 14

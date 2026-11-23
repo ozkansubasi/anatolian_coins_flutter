@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../prokit_ui/numistr_colors.dart';
 import 'num_colors.dart';
 
@@ -8,6 +7,11 @@ import 'num_colors.dart';
 /// Supports light and dark modes
 /// Integrated with ProKit UI System
 class AppTheme {
+  /// Gövde yazı tipi: pubspec `fonts:` altındaki gömülü tek aile (400/500/600/700).
+  /// `GoogleFonts.inter` KULLANILMAZ: her ağırlığı ayrı aile adıyla kaydediyor, temadan miras
+  /// alan kalın stiller kalın çizilmiyordu (2026-11-24, claudedocs/mobil/font-inceleme-2026-11-24.md).
+  static const String fontFamily = 'Inter';
+
   // Brand Colors - Ancient Gold/Numismatic themed (from numistr_colors.dart)
   static const Color _primarySeed = numPrimary; // Ancient Gold (0xFF8B6914)
   static const Color _secondaryColor = numSecondary; // Ancient Bronze Dark
@@ -37,6 +41,7 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: fontFamily,
       colorScheme: colorScheme,
       brightness: Brightness.light,
       extensions: const [NumColors.light],
@@ -45,7 +50,7 @@ class AppTheme {
       textTheme: _buildTextTheme(colorScheme),
 
       // AppBar Theme
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 2,
         centerTitle: true,
@@ -54,7 +59,7 @@ class AppTheme {
         // uygulama iki ayrı kimlik gösteriyordu.
         backgroundColor: numPrimary,
         foregroundColor: Colors.white,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -90,7 +95,7 @@ class AppTheme {
           ),
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
-          textStyle: GoogleFonts.inter(
+          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
             fontSize: 15,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -107,7 +112,7 @@ class AppTheme {
           ),
           side: BorderSide(color: colorScheme.outline, width: 1.5),
           foregroundColor: colorScheme.primary,
-          textStyle: GoogleFonts.inter(
+          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
             fontSize: 15,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -123,7 +128,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(8),
           ),
           foregroundColor: colorScheme.primary,
-          textStyle: GoogleFonts.inter(
+          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -137,7 +142,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: GoogleFonts.inter(
+          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
             fontSize: 15,
             fontWeight: FontWeight.w600,
           ),
@@ -163,7 +168,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        extendedTextStyle: GoogleFonts.inter(
+        extendedTextStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -191,12 +196,12 @@ class AppTheme {
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        labelStyle: GoogleFonts.inter(
+        labelStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: colorScheme.onSurfaceVariant,
         ),
-        hintStyle: GoogleFonts.inter(
+        hintStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: colorScheme.onSurfaceVariant.withOpacity(0.7),
@@ -215,7 +220,7 @@ class AppTheme {
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
-        textStyle: GoogleFonts.inter(
+        textStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: colorScheme.onSurface,
@@ -226,7 +231,7 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: colorScheme.surfaceContainerHighest,
         selectedColor: colorScheme.primaryContainer,
-        labelStyle: GoogleFonts.inter(
+        labelStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 13,
           fontWeight: FontWeight.w500,
           // RENK ACIKCA VERILIR. Renksiz birakildiginda cip etiketi cozumlenmemis
@@ -248,17 +253,17 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 15,
           fontWeight: FontWeight.w500,
           color: colorScheme.onSurface,
         ),
-        subtitleTextStyle: GoogleFonts.inter(
+        subtitleTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 13,
           fontWeight: FontWeight.w400,
           color: colorScheme.onSurfaceVariant,
         ),
-        leadingAndTrailingTextStyle: GoogleFonts.inter(
+        leadingAndTrailingTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: colorScheme.onSurfaceVariant,
@@ -271,11 +276,11 @@ class AppTheme {
         backgroundColor: colorScheme.surface,
         selectedItemColor: colorScheme.primary,
         unselectedItemColor: colorScheme.onSurfaceVariant,
-        selectedLabelStyle: GoogleFonts.inter(
+        selectedLabelStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.inter(
+        unselectedLabelStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
@@ -288,13 +293,13 @@ class AppTheme {
         indicatorColor: colorScheme.primaryContainer,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return GoogleFonts.inter(
+            return TextStyle(fontFamily: AppTheme.fontFamily, 
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
             );
           }
-          return GoogleFonts.inter(
+          return TextStyle(fontFamily: AppTheme.fontFamily, 
             fontSize: 12,
             fontWeight: FontWeight.w500,
             color: colorScheme.onSurfaceVariant,
@@ -323,12 +328,12 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: colorScheme.onSurface,
         ),
-        contentTextStyle: GoogleFonts.inter(
+        contentTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: colorScheme.onSurfaceVariant,
@@ -349,7 +354,7 @@ class AppTheme {
       // Snackbar Theme
       snackBarTheme: SnackBarThemeData(
         backgroundColor: colorScheme.inverseSurface,
-        contentTextStyle: GoogleFonts.inter(
+        contentTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: colorScheme.onInverseSurface,
@@ -372,11 +377,11 @@ class AppTheme {
       tabBarTheme: TabBarThemeData(
         labelColor: colorScheme.primary,
         unselectedLabelColor: colorScheme.onSurfaceVariant,
-        labelStyle: GoogleFonts.inter(
+        labelStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.inter(
+        unselectedLabelStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
@@ -394,7 +399,7 @@ class AppTheme {
       badgeTheme: BadgeThemeData(
         backgroundColor: colorScheme.error,
         textColor: colorScheme.onError,
-        textStyle: GoogleFonts.inter(
+        textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
@@ -461,7 +466,7 @@ class AppTheme {
         thumbColor: colorScheme.primary,
         overlayColor: colorScheme.primary.withOpacity(0.12),
         valueIndicatorColor: colorScheme.primary,
-        valueIndicatorTextStyle: GoogleFonts.inter(
+        valueIndicatorTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 12,
           fontWeight: FontWeight.w600,
           color: colorScheme.onPrimary,
@@ -474,7 +479,7 @@ class AppTheme {
           color: colorScheme.inverseSurface,
           borderRadius: BorderRadius.circular(8),
         ),
-        textStyle: GoogleFonts.inter(
+        textStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 12,
           fontWeight: FontWeight.w500,
           color: colorScheme.onInverseSurface,
@@ -489,7 +494,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        textStyle: GoogleFonts.inter(
+        textStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: colorScheme.onSurface,
@@ -519,6 +524,7 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: fontFamily,
       colorScheme: colorScheme,
       brightness: Brightness.dark,
       extensions: const [NumColors.dark],
@@ -527,7 +533,7 @@ class AppTheme {
       textTheme: _buildTextTheme(colorScheme),
 
       // AppBar Theme
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 2,
         centerTitle: true,
@@ -536,7 +542,7 @@ class AppTheme {
         // uygulama iki ayrı kimlik gösteriyordu.
         backgroundColor: numPrimary,
         foregroundColor: Colors.white,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -572,7 +578,7 @@ class AppTheme {
           ),
           backgroundColor: colorScheme.primary,
           foregroundColor: colorScheme.onPrimary,
-          textStyle: GoogleFonts.inter(
+          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
             fontSize: 15,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -589,7 +595,7 @@ class AppTheme {
           ),
           side: BorderSide(color: colorScheme.outline, width: 1.5),
           foregroundColor: colorScheme.primary,
-          textStyle: GoogleFonts.inter(
+          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
             fontSize: 15,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
@@ -605,7 +611,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(8),
           ),
           foregroundColor: colorScheme.primary,
-          textStyle: GoogleFonts.inter(
+          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -630,12 +636,12 @@ class AppTheme {
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        labelStyle: GoogleFonts.inter(
+        labelStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: colorScheme.onSurfaceVariant,
         ),
-        hintStyle: GoogleFonts.inter(
+        hintStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: colorScheme.onSurfaceVariant.withOpacity(0.7),
@@ -648,11 +654,11 @@ class AppTheme {
         backgroundColor: colorScheme.surface,
         selectedItemColor: colorScheme.primary,
         unselectedItemColor: colorScheme.onSurfaceVariant,
-        selectedLabelStyle: GoogleFonts.inter(
+        selectedLabelStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.inter(
+        unselectedLabelStyle: const TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
@@ -666,12 +672,12 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: colorScheme.onSurface,
         ),
-        contentTextStyle: GoogleFonts.inter(
+        contentTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: colorScheme.onSurfaceVariant,
@@ -692,7 +698,7 @@ class AppTheme {
       // Snackbar Theme
       snackBarTheme: SnackBarThemeData(
         backgroundColor: colorScheme.inverseSurface,
-        contentTextStyle: GoogleFonts.inter(
+        contentTextStyle: TextStyle(fontFamily: AppTheme.fontFamily, 
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: colorScheme.onInverseSurface,
@@ -725,53 +731,53 @@ class AppTheme {
   static TextTheme _buildTextTheme(ColorScheme colorScheme) {
     return TextTheme(
       // Display styles - Playfair Display for elegance
-      displayLarge: GoogleFonts.inter(
+      displayLarge: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 57,
         fontWeight: FontWeight.w400,
         letterSpacing: -0.25,
         color: colorScheme.onSurface,
       ),
-      displayMedium: GoogleFonts.inter(
+      displayMedium: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 45,
         fontWeight: FontWeight.w400,
         color: colorScheme.onSurface,
       ),
-      displaySmall: GoogleFonts.inter(
+      displaySmall: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 36,
         fontWeight: FontWeight.w400,
         color: colorScheme.onSurface,
       ),
 
       // Headline styles - Playfair Display
-      headlineLarge: GoogleFonts.inter(
+      headlineLarge: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 32,
         fontWeight: FontWeight.w500,
         color: colorScheme.onSurface,
       ),
-      headlineMedium: GoogleFonts.inter(
+      headlineMedium: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 28,
         fontWeight: FontWeight.w500,
         color: colorScheme.onSurface,
       ),
-      headlineSmall: GoogleFonts.inter(
+      headlineSmall: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 24,
         fontWeight: FontWeight.w500,
         color: colorScheme.onSurface,
       ),
 
       // Title styles - Inter for readability
-      titleLarge: GoogleFonts.inter(
+      titleLarge: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 22,
         fontWeight: FontWeight.w600,
         color: colorScheme.onSurface,
       ),
-      titleMedium: GoogleFonts.inter(
+      titleMedium: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 16,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.15,
         color: colorScheme.onSurface,
       ),
-      titleSmall: GoogleFonts.inter(
+      titleSmall: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 14,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.1,
@@ -779,19 +785,19 @@ class AppTheme {
       ),
 
       // Body styles - Inter for readability
-      bodyLarge: GoogleFonts.inter(
+      bodyLarge: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 16,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.5,
         color: colorScheme.onSurface,
       ),
-      bodyMedium: GoogleFonts.inter(
+      bodyMedium: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 14,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.25,
         color: colorScheme.onSurface,
       ),
-      bodySmall: GoogleFonts.inter(
+      bodySmall: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 12,
         fontWeight: FontWeight.w400,
         letterSpacing: 0.4,
@@ -799,19 +805,19 @@ class AppTheme {
       ),
 
       // Label styles - Inter
-      labelLarge: GoogleFonts.inter(
+      labelLarge: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 14,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.1,
         color: colorScheme.onSurface,
       ),
-      labelMedium: GoogleFonts.inter(
+      labelMedium: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 12,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
         color: colorScheme.onSurface,
       ),
-      labelSmall: GoogleFonts.inter(
+      labelSmall: TextStyle(fontFamily: AppTheme.fontFamily, 
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
