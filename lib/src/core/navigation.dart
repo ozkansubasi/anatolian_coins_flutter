@@ -12,8 +12,16 @@ extension NumNavigation on BuildContext {
 
   /// `openRoute` bir ekranı başka sekmede `go` ile açtığında geldiği adres
   /// (`from` sorgu parametresi). Yalnız uygulama içi yol kabul edilir.
+  ///
+  /// `GoRouterState.of` KULLANILMAZ (2026-11-24, TestFlight 0.6.4+32'de donma): go_router 14.8.1'de
+  /// kaldırılmakta olan bir sayfadan çağrılınca (sayfa kayıttan düşmüş) iç içe gezginde `while(true)`
+  /// döngüsünden çıkamıyor → uygulama %100 işlemcide kilitleniyordu. Yol: Blog → yazı açıkken Ana
+  /// Sayfa'dan AI Asistan (aynı Menü dalında `go`) → Blog listesinin başlığı her karede yeniden
+  /// kuruluyordu. go_router sayfanın `arguments`'ına yol + sorgu parametrelerini koyar
+  /// (builder.dart `_buildPlatformAdapterPage`); `from` oradan okunur.
   String? get returnLocation {
-    final from = GoRouterState.of(this).uri.queryParameters['from'];
+    final args = ModalRoute.of(this)?.settings.arguments;
+    final from = args is Map ? args['from']?.toString() : null;
     return (from != null && from.startsWith('/') && !from.startsWith('//')) ? from : null;
   }
 

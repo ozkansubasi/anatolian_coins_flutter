@@ -213,6 +213,59 @@ void main() {
     expect(find.byType(BackButton), findsNothing);
   });
 
+  // TestFlight 0.6.4+32: Blog → yazı açıkken Ana Sayfa'dan AI Asistan açılınca uygulama donuyordu
+  // (%100 işlemci). Menü dalının yığını `go` ile değişirken kaldırılan Blog sayfası geri okunu
+  // yeniden kuruyor, eski `returnLocation` GoRouterState.of'u çağırıyordu; go_router 14.8.1 o
+  // sayfayı kayıtta bulamayınca `while (true)` döngüsünden çıkamıyordu.
+  testWidgets('Blog → yazı açıkken Ana Sayfa\'dan Menü ekranı açmak donmaz', (tester) async {
+    final router = GoRouter(routes: [
+      StatefulShellRoute.indexedStack(
+        builder: (_, __, shell) => NumShellScaffold(navigationShell: shell),
+        branches: [
+          StatefulShellBranch(routes: [_page('/', 'home')]),
+          StatefulShellBranch(routes: [
+            _page('/browse', 'browse'),
+            _page('/variant/:id', 'variant'),
+          ]),
+          StatefulShellBranch(routes: [_page('/recognition', 'scan')]),
+          StatefulShellBranch(routes: [_page('/favorites', 'favorites')]),
+          StatefulShellBranch(routes: [
+            _page('/account', 'account'),
+            _page('/blog', 'blog'),
+            _page('/article/:id', 'article'),
+            _page('/assistant', 'assistant'),
+          ]),
+        ],
+      ),
+    ]);
+    await tester.pumpWidget(MaterialApp.router(
+      routerConfig: router,
+      locale: const Locale('en'),
+      localizationsDelegates: const [AppLocalizations.delegate],
+      supportedLocales: const [Locale('en'), Locale('tr')],
+    ));
+    await tester.pumpAndSettle();
+
+    tester.element(find.text('home:0')).openRoute('/blog');
+    await tester.pumpAndSettle();
+    expect(find.text('blog:0'), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget); // from=/ → geri oku
+
+    tester.element(find.text('blog:0')).openRoute('/article/34108');
+    await tester.pumpAndSettle();
+    expect(find.text('article:0'), findsOneWidget);
+
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    expect(find.text('home:0'), findsOneWidget);
+
+    tester.element(find.text('home:0')).openRoute('/assistant');
+    await tester.pumpAndSettle();
+    expect(find.text('assistant:0'), findsOneWidget);
+    expect(router.state.uri.path, '/assistant');
+    expect(find.byType(BackButton), findsOneWidget);
+  });
+
   testWidgets('bulunulan sekmeye tekrar basmak köke döner', (tester) async {
     final router = await _pumpApp(tester);
     router.push('/variant/9');

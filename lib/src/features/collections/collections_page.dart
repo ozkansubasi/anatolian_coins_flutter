@@ -296,6 +296,8 @@ class _CollectionListItem extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
+      // Sekme dalının gezinicisinde açılınca alt çubuk paneli örtüyordu (TestFlight 0.6.4+32).
+      useRootNavigator: true,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,

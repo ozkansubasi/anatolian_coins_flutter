@@ -21,6 +21,8 @@ Future<bool> ensureAssistantAiConsent(BuildContext context, SharedPreferences pr
   if (hasAssistantAiConsent(prefs)) return true;
   final accepted = await showModalBottomSheet<bool>(
     context: context,
+    // Alt çubuk "Kabul et" düğmesini örtmesin (TestFlight 0.6.4+32'de koleksiyon panelinde görüldü).
+    useRootNavigator: true,
     isScrollControlled: true,
     useSafeArea: true,
     builder: (_) => const AssistantAiConsentSheet(),

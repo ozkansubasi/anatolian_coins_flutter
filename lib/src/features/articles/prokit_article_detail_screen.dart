@@ -15,6 +15,7 @@ import '../../core/num_text.dart';
 import '../../prokit_ui/numistr_colors.dart';
 import 'articles_api.dart';
 import 'article_related.dart';
+import 'article_image_extension.dart';
 
 /// ProKit styled Article Detail Screen
 /// Features: Hero header, elegant typography, share functionality
@@ -236,7 +237,12 @@ class _ArticleContent extends StatelessWidget {
                       Html(
                         data: article.content!,
                         onLinkTap: (url, _, __) => _onLinkTap(context, url),
+                        // Figür görselleri görünmüyordu (yüzde genişlik); içerik kenar boşluğu 20+20.
+                        extensions: const [ArticleImageExtension(horizontalInset: 40)],
                         style: {
+                          '.${ArticleImageExtension.rowClass}': Style(
+                            textAlign: TextAlign.center,
+                          ),
                           'body': Style(
                             margin: Margins.zero,
                             padding: HtmlPaddings.zero,

@@ -18,6 +18,8 @@ import 'collections_service.dart';
 Future<void> showAddToCollectionSheet(BuildContext context, int articleId) {
   return showModalBottomSheet<void>(
     context: context,
+    // Sekme dalının gezinicisinde açılınca alt çubuk paneli örtüyordu (TestFlight 0.6.4+32).
+    useRootNavigator: true,
     isScrollControlled: true,
     showDragHandle: true,
     builder: (_) => _AddToCollectionSheet(articleId: articleId),
