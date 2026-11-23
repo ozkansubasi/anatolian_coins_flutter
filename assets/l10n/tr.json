@@ -574,6 +574,8 @@
   "enter_name": "Lütfen bir ad girin",
   "create": "Oluştur",
   "collection_created": "{name} oluşturuldu",
+  "add_to_collection": "Koleksiyona ekle",
+  "added_to_collection": "{name} koleksiyonuna eklendi",
   "edit_collection": "Koleksiyonu Düzenle",
   "collection_updated": "Koleksiyon güncellendi",
   "delete_collection_title": "Koleksiyonu Sil?",

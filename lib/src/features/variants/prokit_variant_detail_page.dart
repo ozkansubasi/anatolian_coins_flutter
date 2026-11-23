@@ -23,6 +23,7 @@ import '../../core/coin_format.dart';
 import '../../core/navigation.dart';
 import '../../core/rate_limit_retry.dart';
 import '../favorites/favorites_service.dart';
+import '../collections/add_to_collection_sheet.dart';
 import '../offline/offline_service.dart';
 import '../../widgets/fallback_image.dart';
 import '../../widgets/image_credit.dart';
@@ -263,6 +264,14 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
                       color: isFavorite ? Colors.red.shade300 : Colors.white,
                     ),
                     onPressed: _handleFavoriteToggle,
+                  ),
+                  4.width,
+                  // M43b: koleksiyona ekle / çıkar (boş koleksiyon metni buraya yönlendiriyor).
+                  IconButton(
+                    style: _overlayIconStyle,
+                    icon: const Icon(Icons.library_add_outlined, color: Colors.white),
+                    tooltip: l10n.translate('add_to_collection'),
+                    onPressed: () => showAddToCollectionSheet(context, widget.articleId),
                   ),
                   4.width,
                   // ADR-006 Faz 3: asistana bu sikke hakkında sor (soru önceden doldurulur, gönderilmez)
