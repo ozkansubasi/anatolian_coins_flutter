@@ -308,7 +308,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(msg, textAlign: TextAlign.center, style: secondaryTextStyle(size: 13)),
+            Text(msg, textAlign: TextAlign.center, style: secondaryTextStyle(size: 14)),
             8.height,
             TextButton.icon(
               onPressed: () {
@@ -699,7 +699,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
           6.height,
           Text(
             l10n.translate(_selectedMaterial != null ? 'material_needs_region' : 'choose_region_or_search'),
-            style: secondaryTextStyle(size: 13, color: c.textMuted),
+            style: secondaryTextStyle(size: 14, color: c.textMuted),
           ),
           16.height,
           Wrap(
@@ -709,7 +709,7 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
               for (final r in regions)
                 ActionChip(
                   avatar: Icon(Icons.location_on_outlined, size: 16, color: c.accent),
-                  label: Text(r.value, style: TextStyle(fontSize: 13, color: c.text)),
+                  label: Text(r.value, style: TextStyle(fontSize: 14, color: c.text)),
                   backgroundColor: c.card,
                   side: BorderSide(color: c.border),
                   shape: const StadiumBorder(),
@@ -849,7 +849,7 @@ class _CoinGridCard extends StatelessWidget {
                           ),
                           child: Text(
                             CoinFormat.material(variant.material, AppLocalizations.of(context)) ?? variant.material!,
-                            style: boldTextStyle(size: 8, color: Colors.white),
+                            style: boldTextStyle(size: 11, color: Colors.white),
                           ),
                         ),
                       ),
@@ -867,7 +867,7 @@ class _CoinGridCard extends StatelessWidget {
                   children: [
                     Text(
                       variant.title,
-                      style: boldTextStyle(size: 10, color: c.text),
+                      style: boldTextStyle(size: 12, color: c.text),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -879,7 +879,7 @@ class _CoinGridCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             RegionData.getRegionName(variant.regionCode, AppLocalizations.of(context)),
-                            style: secondaryTextStyle(size: 8, color: c.textMuted),
+                            style: secondaryTextStyle(size: 11, color: c.textMuted),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -993,7 +993,7 @@ class _CoinListCard extends StatelessWidget {
                           ),
                           child: Text(
                             CoinFormat.material(variant.material, AppLocalizations.of(context)) ?? variant.material!,
-                            style: boldTextStyle(size: 10, color: c.accent),
+                            style: boldTextStyle(size: 11, color: c.accent),
                           ),
                         ),
                         8.width,

@@ -737,7 +737,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
                   Expanded(
                     child: Text(
                       l10n.translate('optional_details'),
-                      style: boldTextStyle(size: 13, color: Colors.grey[300]),
+                      style: boldTextStyle(size: 14, color: Colors.grey[300]),
                     ),
                   ),
                   Icon(
@@ -777,7 +777,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
                           controller: _weightCtrl,
                           enabled: !_isProcessing,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: primaryTextStyle(size: 13, color: white),
+                          style: primaryTextStyle(size: 14, color: white),
                           decoration: InputDecoration(
                             labelText: l10n.translate('attr_weight'),
                             hintText: '3.85',
@@ -798,7 +798,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
                           controller: _diameterCtrl,
                           enabled: !_isProcessing,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          style: primaryTextStyle(size: 13, color: white),
+                          style: primaryTextStyle(size: 14, color: white),
                           decoration: InputDecoration(
                             labelText: l10n.translate('attr_diameter'),
                             hintText: '18',
@@ -842,7 +842,7 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
             4.width,
             Text(
               label,
-              style: primaryTextStyle(size: 13, color: selected ? white : Colors.grey[400]),
+              style: primaryTextStyle(size: 14, color: selected ? white : Colors.grey[400]),
             ),
           ],
         ),

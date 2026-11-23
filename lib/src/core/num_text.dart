@@ -8,7 +8,9 @@ import 'num_colors.dart';
 /// kart başlığı ile gövde aynı boyda duruyordu. Ekran kodu artık boyut SEÇMEZ,
 /// rol seçer: `Text('…', style: context.numText.section)`.
 ///
-/// Ölçek (Inter): 24 · 20 · 16 · 14 · 12 · 11. Ara değer yok.
+/// Ölçek (Inter, gömülü): 24 · 20 · 18 · 16 · 14 · 12 · 11. Ara değer yok (2026-11-24 B adımı:
+/// ölçek dışı 46 kullanım taşındı). İstisnalar: marka yazısı (Cinzel), harita etiketleri (10),
+/// temadaki Material büyük başlık ölçeği (22–57).
 /// Renk gerekiyorsa `.copyWith(color: …)`; varsayılanlar iki temada da okunur.
 @immutable
 class NumText {
@@ -22,6 +24,11 @@ class NumText {
   /// 20/700 — sayfanın ana başlığı (sikke adı, makale başlığı).
   TextStyle get pageTitle => TextStyle(
       fontSize: 20, fontWeight: FontWeight.w700, height: 1.3, letterSpacing: -0.2, color: _c.text);
+
+  /// 18/600 — ekran içi büyük bölüm başlığı, kart başlığı (Son Yazılar, öne çıkan yazı),
+  /// AppBar başlığıyla aynı punto. 2026-11-24'te ölçeğe eklendi: kodda 18 yerde kullanılıyordu.
+  TextStyle get title =>
+      TextStyle(fontSize: 18, fontWeight: FontWeight.w600, height: 1.3, color: _c.text);
 
   /// 16/600 — kart ve bölüm başlığı.
   TextStyle get section =>

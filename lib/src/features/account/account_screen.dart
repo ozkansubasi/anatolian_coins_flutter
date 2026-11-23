@@ -400,7 +400,7 @@ class _AvatarWithBadge extends StatelessWidget {
                   badge,
                   style: TextStyle(
                     color: isPro ? Colors.white : numPrimary,
-                    fontSize: 10.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.6,
                   ),
@@ -426,7 +426,7 @@ class _SectionLabel extends StatelessWidget {
         text,
         style: TextStyle(
           color: context.numColors.textMuted,
-          fontSize: 13,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.3,
         ),
@@ -499,7 +499,7 @@ class _MenuItem extends StatelessWidget {
                     title,
                     style: TextStyle(
                       color: emphasize ? c.accent : c.text,
-                      fontSize: 15.5,
+                      fontSize: 16,
                       fontWeight: emphasize ? FontWeight.w700 : FontWeight.w600,
                     ),
                   ),
@@ -507,7 +507,7 @@ class _MenuItem extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle!,
-                      style: TextStyle(color: c.textMuted, fontSize: 12.5),
+                      style: TextStyle(color: c.textMuted, fontSize: 12),
                     ),
                   ],
                 ],

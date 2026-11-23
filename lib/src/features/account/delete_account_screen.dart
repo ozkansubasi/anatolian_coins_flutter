@@ -94,7 +94,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                   l10n.translate('delete_account_intro'),
                   style: TextStyle(
                     color: c.text,
-                    fontSize: 15.5,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                     height: 1.4,
                   ),
@@ -144,7 +144,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                       params: {'word': word}),
                   style: TextStyle(
                     color: c.text,
-                    fontSize: 14.5,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -226,7 +226,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                     textStyle: const TextStyle(
-                        fontSize: 15.5, fontWeight: FontWeight.w700),
+                        fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -279,7 +279,7 @@ class _ListCard extends StatelessWidget {
                     title,
                     style: TextStyle(
                       color: c.text,
-                      fontSize: 15.5,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -354,7 +354,7 @@ class _StoreSubscriptionWarning extends StatelessWidget {
                       l10n.translate('delete_account_store_sub_title'),
                       style: TextStyle(
                         color: c.text,
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -417,7 +417,7 @@ class _Note extends StatelessWidget {
               text,
               style: TextStyle(
                 color: emphasize ? c.text : c.textMuted,
-                fontSize: 13.5,
+                fontSize: 14,
                 height: 1.4,
                 fontWeight: emphasize ? FontWeight.w600 : FontWeight.w400,
               ),

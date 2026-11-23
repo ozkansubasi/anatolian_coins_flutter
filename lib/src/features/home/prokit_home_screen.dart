@@ -563,7 +563,7 @@ class _QuickAction extends StatelessWidget {
                             feature.badge!,
                             style: TextStyle(
                               color: theme.colorScheme.onError,
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

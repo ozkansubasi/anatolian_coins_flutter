@@ -82,7 +82,7 @@ class ProBadge extends StatelessWidget {
         AppLocalizations.of(context).translate('plan_badge_pro'),
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.5,
         ),

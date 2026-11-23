@@ -387,7 +387,7 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
           child: Center(
             child: ImageCredit(
               image: _images[_currentImageIndex.clamp(0, _images.length - 1)],
-              fontSize: 10,
+              fontSize: 11,
               // Açık renkli görselde beyaz yazı okunmuyordu: koyu zemin
               background: Colors.black.withValues(alpha: 0.45),
             ),

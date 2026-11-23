@@ -209,7 +209,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         20.height,
         Text(
           l10n.translate(_verifyEmail == null ? 'register_title' : 'verify_email_title'),
-          style: boldTextStyle(size: 22, color: c.text),
+          style: boldTextStyle(size: 24, color: c.text),
         ),
         6.height,
         Text(
@@ -244,7 +244,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               Expanded(
                 child: Text(
                   l10n.translate('verify_email_spam_hint'),
-                  style: secondaryTextStyle(size: 13, color: c.textMuted),
+                  style: secondaryTextStyle(size: 12, color: c.textMuted),
                 ),
               ),
             ],

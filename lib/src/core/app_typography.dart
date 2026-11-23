@@ -18,8 +18,8 @@ import 'app_theme.dart';
 class NumTypo {
   NumTypo._();
 
-  /// 10 — çok küçük rozet/etiket
-  static const int tiny = 10;
+  /// 11 — çok küçük rozet/etiket. (10'du; 2026-11-24 B adımında okunabilirlik alt sınırı 11.)
+  static const int tiny = 11;
 
   /// 12 — caption, yardımcı metin (theme: bodySmall/labelMedium)
   static const int caption = 12;

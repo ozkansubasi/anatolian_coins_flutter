@@ -1096,7 +1096,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
                     Text(
                       l10n.translate('camera_permission_title'),
                       textAlign: TextAlign.center,
-                      style: boldTextStyle(size: 17, color: white),
+                      style: boldTextStyle(size: 18, color: white),
                     ),
                     8.height,
                     Text(
@@ -1341,7 +1341,7 @@ class _ProkitCameraScreenState extends ConsumerState<ProkitCameraScreen>
               ),
               child: Text(
                 label,
-                style: boldTextStyle(size: 10, color: white),
+                style: boldTextStyle(size: 11, color: white),
               ),
             ),
           ),

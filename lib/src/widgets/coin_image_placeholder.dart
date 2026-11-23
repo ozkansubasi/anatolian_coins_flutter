@@ -26,7 +26,7 @@ class CoinImagePlaceholder extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               AppLocalizations.of(context).translate('image_not_found'),
-              style: TextStyle(color: c.textMuted, fontSize: 13),
+              style: TextStyle(color: c.textMuted, fontSize: 12),
             ),
           ],
         ],

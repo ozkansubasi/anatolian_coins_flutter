@@ -195,7 +195,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         20.height,
         Text(
           l10n.translate('welcome'),
-          style: boldTextStyle(size: 22, color: c.text),
+          style: boldTextStyle(size: 24, color: c.text),
         ),
         6.height,
         Text(

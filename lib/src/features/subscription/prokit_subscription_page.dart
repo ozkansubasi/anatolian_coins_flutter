@@ -64,7 +64,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                     8.height,
                     Text(
                       l10n.translate('pro_active'),
-                      style: boldTextStyle(size: 15, color: white),
+                      style: boldTextStyle(size: 16, color: white),
                     ),
                   ],
                 ),
@@ -425,7 +425,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                     Row(
                       children: [
                         Text(title,
-                            style: boldTextStyle(size: 15, color: c.text)),
+                            style: boldTextStyle(size: 16, color: c.text)),
                         if (badge != null) ...[
                           8.width,
                           Container(
@@ -450,7 +450,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                       children: [
                         Text(
                           product.priceString,
-                          style: boldTextStyle(size: 17, color: c.accent),
+                          style: boldTextStyle(size: 18, color: c.accent),
                         ),
                         4.width,
                         Text(
@@ -663,7 +663,7 @@ class ProkitSubscriptionPage extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       l10n.translate(item.$1),
-                      style: secondaryTextStyle(size: 13, color: c.textMuted),
+                      style: secondaryTextStyle(size: 14, color: c.textMuted),
                     ),
                   ),
                 ],
@@ -1131,7 +1131,7 @@ class _ProTitle extends StatelessWidget {
               l10n.translate('plan_badge_pro'),
               style: const TextStyle(
                 color: numPrimaryDark,
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1,
               ),
@@ -1179,7 +1179,7 @@ class _SectionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: boldTextStyle(size: 15, color: c.text)),
+                Text(title, style: boldTextStyle(size: 16, color: c.text)),
                 if (subtitle != null) ...[
                   2.height,
                   Text(subtitle!,

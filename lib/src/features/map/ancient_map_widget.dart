@@ -799,7 +799,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(sel.title, style: boldTextStyle(size: 15, color: c.text)),
+                Text(sel.title, style: boldTextStyle(size: 16, color: c.text)),
                 if (summary != null && summary.isNotEmpty) ...[
                   4.height,
                   Text(
