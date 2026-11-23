@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/image_cache.dart';
 import '../../models/variant.dart';
 import '../../core/region_data.dart';
+import '../../core/coin_format.dart';
 import '../../core/num_colors.dart';
 import '../../l10n/app_localizations.dart';
 import '../../core/navigation.dart';
@@ -30,8 +32,10 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
     _loadFavorites();
   }
 
-  Future<void> _loadFavorites() async {
-    setState(() => _loading = true);
+  /// [silent]: favori kümesi başka bir ekranda değişince (sekme IndexedStack'te canlı kalıyor)
+  /// listeyi tam ekran yükleme göstermeden yeniler (M41).
+  Future<void> _loadFavorites({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
 
     try {
       final service = ref.read(favoritesServiceProvider);
@@ -89,6 +93,12 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
     final favoritesController = ref.watch(favoritesControllerProvider);
     final c = context.numColors;
 
+    // M41: sekme boşken açıldıysa sonradan eklenen favoriler görünmüyordu (liste yalnız
+    // initState'te yükleniyordu). Favori kümesi değişince listeyi yeniden çek.
+    ref.listen<Set<int>>(favoritesControllerProvider, (prev, next) {
+      if (prev == null || !setEquals(prev, next)) _loadFavorites(silent: true);
+    });
+
     return Scaffold(
       appBar: AppBar(
         leading: context.returnLeading,
@@ -105,7 +115,19 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _favorites.isEmpty
-              ? _buildEmptyState(l10n, theme)
+              // Boş durumda da aşağı çekip yenilenebilsin (M41).
+              ? RefreshIndicator(
+                  onRefresh: _loadFavorites,
+                  child: LayoutBuilder(
+                    builder: (context, box) => SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: box.maxHeight),
+                        child: _buildEmptyState(l10n, theme),
+                      ),
+                    ),
+                  ),
+                )
               : RefreshIndicator(
                   onRefresh: _loadFavorites,
                   child: ListView.separated(
@@ -179,7 +201,8 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
-                            '${RegionData.getRegionName(variant.regionCode, l10n)} • ${variant.material ?? '-'}',
+                            // M42: ham İngilizce malzeme değil, detay sayfasıyla aynı çeviri.
+                            '${RegionData.getRegionName(variant.regionCode, l10n)} • ${CoinFormat.material(variant.material, l10n) ?? '-'}',
                             style: TextStyle(
                               color: c.textMuted,
                               fontSize: 12,
@@ -194,15 +217,14 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
                             size: 24,
                           ),
                           onPressed: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            // Liste, favori kümesi değişince ref.listen ile yenilenir (M41).
                             await ref
                                 .read(favoritesControllerProvider.notifier)
                                 .remove(variant.articleId);
 
-                            // Listeyi güncelle
-                            await _loadFavorites();
-
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 SnackBar(
                                   content: Text(
                                       l10n.translate('removed_from_favorites')),
