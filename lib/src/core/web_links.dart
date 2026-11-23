@@ -39,3 +39,19 @@ Uri termsOfUseWebUrl(String languageCode) => languageCode == 'en'
 Uri privacyPolicyWebUrl(String languageCode) => languageCode == 'en'
     ? Uri.https('www.numistr.org', '/en/privacy-policy-gdpr')
     : Uri.https('www.numistr.org', '/tr/kvkk-ve-gizlilik-politikasi');
+
+
+/// Sitedeki sikke sayfası adresinden sikke kimliği (M31): blog yazılarının içindeki
+/// sikke bağlantıları uygulamada sikke sayfasını açsın. Biçim
+/// `https://(www.)numistr.org/<tr|en>/anatolian-coins/<bölge>/<kimlik>-<slug>`; göreli
+/// adres de kabul edilir. Sikke sayfası değilse null (yerleşim, yazı, dış site).
+int? coinIdFromWebUrl(String url) {
+  final uri = Uri.tryParse(url.trim());
+  if (uri == null) return null;
+  final host = uri.host.toLowerCase();
+  if (host.isNotEmpty && host != 'numistr.org' && host != 'www.numistr.org') return null;
+  final m = RegExp(r'^/(?:tr|en)/anatolian-coins/[^/]+/(\d+)(?:-[^/]*)?/?$').firstMatch(uri.path);
+  if (m == null) return null;
+  final id = int.parse(m.group(1)!);
+  return id > 0 ? id : null;
+}

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:nb_utils/nb_utils.dart' hide ContextExtensions;
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../l10n/app_localizations.dart';
 import '../../core/navigation.dart';
+import '../../core/web_links.dart';
 import '../../models/article.dart';
 import '../../core/num_colors.dart';
 import '../../core/num_text.dart';
@@ -95,6 +98,23 @@ class _ArticleContent extends StatelessWidget {
     required this.article,
     required this.l10n,
   });
+
+  /// M31: yazıdaki bağlantılar eskiden hiç açılmıyordu (`Html` bileşeninde işleyici yoktu).
+  /// Sitedeki sikke sayfası uygulama içinde sikke sayfasını açar; geri kalan her şey
+  /// (yerleşim, başka yazı, dış kaynak) tarayıcıda açılır. Göreli adres siteye göre çözülür.
+  void _onLinkTap(BuildContext context, String? url) {
+    if (url == null || url.trim().isEmpty) return;
+    final coinId = coinIdFromWebUrl(url);
+    if (coinId != null) {
+      context.push('/variant/$coinId');
+      return;
+    }
+    final uri = Uri.tryParse(url.trim());
+    if (uri == null) return;
+    final target = uri.hasScheme ? uri : Uri.https('www.numistr.org', '/').resolveUri(uri);
+    if (!const {'http', 'https', 'mailto'}.contains(target.scheme)) return;
+    launchUrl(target, mode: LaunchMode.externalApplication);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -191,6 +211,7 @@ class _ArticleContent extends StatelessWidget {
                         ),
                         child: Html(
                           data: article.intro!,
+                          onLinkTap: (url, _, __) => _onLinkTap(context, url),
                           style: {
                             'body': Style(
                               margin: Margins.zero,
@@ -214,6 +235,7 @@ class _ArticleContent extends StatelessWidget {
                     if (article.content != null && article.content!.isNotEmpty)
                       Html(
                         data: article.content!,
+                        onLinkTap: (url, _, __) => _onLinkTap(context, url),
                         style: {
                           'body': Style(
                             margin: Margins.zero,
