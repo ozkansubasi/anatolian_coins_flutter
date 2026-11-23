@@ -152,10 +152,16 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     }
 
     final api = ref.read(variantsApiProvider);
+    final query = _searchCtrl.text.trim();
+    final lang = AppLocalizations.of(context).locale.languageCode;
     try {
-      final mintParam = _searchCtrl.text.trim().isNotEmpty
-          ? _searchCtrl.text.trim()
-          : _selectedMint;
+      // M35: arama kutusu eskiden yalnız filter[mint]'e gidiyordu → yalnız Türkçe darphane
+      // adı eşleşiyordu ("Sardis", "Croeseid" 0 sonuç). Artık sunucunun site araması.
+      if (query.isNotEmpty) {
+        await _loadSearch(api, query, lang);
+        return;
+      }
+      final mintParam = _selectedMint;
 
       final (list, meta) = await api.list(
         region: _selectedRegion,
@@ -199,6 +205,34 @@ class _ProkitVariantListPageState extends ConsumerState<ProkitVariantListPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Arama sonuçları sayfası (M35). Bölge / malzeme / "yalnız görselli" seçiliyse sonuçlar
+  /// istemcide süzülür (site araması bu süzgeçleri almıyor); süzgeç bir sayfayı tümden
+  /// boşaltırsa liste takılmasın diye en çok 4 sayfa daha ileri bakılır.
+  Future<void> _loadSearch(VariantsApi api, String query, String lang) async {
+    var offset = (_page - 1) * VariantsApi.searchPageSize;
+    final kept = <Variant>[];
+    int? next;
+    for (var tries = 0; tries < 5; tries++) {
+      final (list, nextOffset) = await api.searchCoins(query, lang: lang, offset: offset);
+      next = nextOffset;
+      kept.addAll(list.where((v) =>
+          (_selectedRegion == null || v.regionCode == _selectedRegion) &&
+          (_selectedMaterial == null || v.material == _selectedMaterial) &&
+          (!_onlyImages || v.thumbUrl != null)));
+      if (kept.isNotEmpty || next == null) break;
+      offset = next;
+      _page = next ~/ VariantsApi.searchPageSize + 1;
+    }
+    if (!mounted) return;
+    final seen = _items.map((v) => v.articleId).toSet();
+    final fresh = kept.where((v) => seen.add(v.articleId)).toList();
+    setState(() {
+      _items.addAll(fresh);
+      _hasMore = next != null;
+    });
+    _loadThumbnails(fresh);
   }
 
   /// Liste yanıtında görsel yok: her sikkenin ilk görseli ayrı istekle bulunur.

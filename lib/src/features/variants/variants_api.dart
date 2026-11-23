@@ -47,6 +47,31 @@ class VariantsApi {
     return (data, Map<String, dynamic>.from(res.data['meta'] ?? {}));
   }
 
+  /// Serbest metin sikke araması (M35): `GET /v1/search?type=coins` (API 1.26.0).
+  /// Darphane (TR + EN / Latince yazım: Sardes ↔ Sardis), hükümdar, başlık ve
+  /// ön/arka yüz betiminde arar; sıra eşleşme türüne göredir. Sayfa 12 sonuç,
+  /// toplam sayı dönmez — yalnız sonraki ofset (konumlandırma kuralı).
+  static const searchPageSize = 12;
+
+  Future<(List<Variant>, int? nextOffset)> searchCoins(
+    String q, {
+    required String lang,
+    int offset = 0,
+  }) async {
+    final res = await _client.dio.get('/search', queryParameters: {
+      'q': q,
+      'type': 'coins',
+      'lang': lang == 'en' ? 'en' : 'tr',
+      if (offset > 0) 'offset': offset,
+    });
+    final coins = Map<String, dynamic>.from((res.data['data'] ?? const {})['coins'] ?? const {});
+    final items = (coins['items'] as List? ?? const [])
+        .map((e) => Variant.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+    final next = coins['next_offset'];
+    return (items, next is int ? next : int.tryParse('${next ?? ''}'));
+  }
+
   Future<Variant> getVariant(int articleId, {bool includeImages = true}) async {
     debugPrint('🔵 GET variant: $articleId');
     
