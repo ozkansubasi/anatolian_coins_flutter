@@ -55,9 +55,10 @@ void main() {
     expect(freeTrialLabel(_product(option: _option()), tr), isNull);
   });
 
-  test('iOS: fiyatı 0 olan tanıtım dönemi → 1 hafta', () {
+  test('iOS: fiyatı 0 olan 1 haftalık tanıtım dönemi → Android ile aynı "7 gün" (M27)', () {
     const intro = IntroductoryPrice(0, 'Free', 'P1W', 1, PeriodUnit.week, 1);
-    expect(freeTrialLabel(_product(intro: intro), tr), '1 hafta ücretsiz');
+    expect(freeTrialLabel(_product(intro: intro), tr), '7 gün ücretsiz');
+    expect(freeTrialLabel(_product(intro: intro), en), '7-day free trial');
   });
 
   test('iOS: ücretli tanıtım fiyatı deneme sayılmaz', () {

@@ -20,14 +20,17 @@ import '../l10n/app_localizations.dart';
 }
 
 /// "7 gün ücretsiz" / "7-day free trial"; desteklenmeyen birimde null.
+///
+/// Hafta güne çevrilir (M27): App Store'da 7 gün seçeneği yok, teklif "1 hafta"
+/// olarak gelir; Android'de aynı teklif 7 gün. İki platform aynı metni göstersin.
 String? freeTrialLabel(StoreProduct product, AppLocalizations l10n) {
   final trial = freeTrialOf(product);
   if (trial == null) return null;
-  final key = switch (trial.unit) {
-    PeriodUnit.day => 'trial_days',
-    PeriodUnit.week => 'trial_weeks',
-    PeriodUnit.month => 'trial_months',
-    _ => null,
+  final (key, count) = switch (trial.unit) {
+    PeriodUnit.day => ('trial_days', trial.value),
+    PeriodUnit.week => ('trial_days', trial.value * 7),
+    PeriodUnit.month => ('trial_months', trial.value),
+    _ => (null, 0),
   };
-  return key == null ? null : l10n.translate(key, params: {'count': '${trial.value}'});
+  return key == null ? null : l10n.translate(key, params: {'count': '$count'});
 }
