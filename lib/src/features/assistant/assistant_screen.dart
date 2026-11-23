@@ -166,7 +166,7 @@ class _LoginCta extends StatelessWidget {
             FilledButton(
               onPressed: () => context.push('/login'),
               style: FilledButton.styleFrom(backgroundColor: numPrimary),
-              child: Text(l10n.translate('login')),
+              child: Text(l10n.translate('sign_in')),
             ),
           ],
         ),
