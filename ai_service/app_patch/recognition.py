@@ -783,7 +783,12 @@ class RecognitionService:
             return ident
         vec = side['embs'][1] if side.get('detected') and len(side['embs']) > 1 else side['embs'][0]
         t0 = time.time()
-        r = lo.karar(lo.oku(side.get('vimg')), vec)
+        # reads kept on the side: AI14's second pass copies the side dict (shallow) and would read the same crop again
+        # (live 25 Nov: 2 x 1.3 s per unverified request); the decision is cheap and is redone
+        okuma = side.get('lejant_okuma')
+        if okuma is None:
+            okuma = side['lejant_okuma'] = lo.oku(side.get('vimg'))
+        r = lo.karar(okuma, vec)
         logger.info("lejant: %d ms decision=%s" % ((time.time() - t0) * 1000, r))
         if not r:
             return ident
