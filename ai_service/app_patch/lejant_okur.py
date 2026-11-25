@@ -78,6 +78,18 @@ DN_IMPARATOR = {"Valens", "Valentinian I", "Valentinian II", "Gratian", "Theodos
                 "Honorius", "Jovianus", "Magnentius"}
 
 
+def _yakin_sozcukler():
+    """-> {sözcük: ikizleri}: birbirine en çok 2 harf uzak adlar (CONSTANTINVS / CONSTANTIVS, MAXIMIANVS / MAXIMINVS)."""
+    ks = [k for k in SOZCUK if len(k) > 5]
+    out = {}
+    for i, a in enumerate(ks):
+        for b in ks[i + 1:]:
+            if _mesafe(a, b) <= 2:
+                out.setdefault(a, set()).add(b)
+                out.setdefault(b, set()).add(a)
+    return out
+
+
 def _norm(s):
     s = s.upper().replace("U", "V").replace("J", "I")
     return re.sub(r"[^A-Z]", "", s).replace("G", "C")          # Roma büyük harfinde G ile C karışıyor
@@ -110,6 +122,9 @@ def _gecer(metin, ad):
     return _uzaklik(metin, ad) is not None
 
 
+YAKIN = _yakin_sozcukler()
+
+
 class LejantOkur:
     def __init__(self, model_dir, bas_path, threads=2):
         self.model_dir, self.bas_path, self.threads = model_dir, bas_path, threads
@@ -130,6 +145,10 @@ class LejantOkur:
             return self._rec
         with self._kilit:
             if self._rec is None and not self._hata:
+                # paddlex yüklenirken kök günlükçünün düzeyini WARNING'e çekiyor: servisin INFO satırları
+                # (recognize(...), lejant: ... ms) bayrak açılınca kayboldu (25 Kas canlı). Düzey geri konur.
+                kok = logging.getLogger()
+                kok_duzey = kok.level
                 try:
                     os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
                     from paddleocr import TextRecognition
@@ -141,6 +160,8 @@ class LejantOkur:
                 except Exception as e:                # isteğe bağlı katman: tanımayı asla bozmaz
                     logger.error("lejant: OCR modeli yüklenemedi: %s" % e)
                     self._hata = True
+                finally:
+                    kok.setLevel(kok_duzey)
         return self._rec
 
     @staticmethod
@@ -151,17 +172,21 @@ class LejantOkur:
         tek Hough FB 13/13 · VCoins 8/9; ikisi birlikte FB 17/17 · VCoins 8/9, yeni FB kümesinde yeni yanlış yok."""
         import cv2
         h, w = crop.shape[:2]
-        k = 800.0 / max(h, w)
-        g = cv2.medianBlur(cv2.cvtColor(cv2.resize(crop, None, fx=k, fy=k), cv2.COLOR_BGR2GRAY), 5)
-        m = min(g.shape[:2])
-        c = cv2.HoughCircles(g, cv2.HOUGH_GRADIENT, dp=1.2, minDist=m, param1=120, param2=40,
+        # Hough 400 px karede: 800 px'te VPS'te servis kırpımı başına ortalama 3,9 sn (en çok 8,3), 400 px'te
+        # yaklaşık 25 kat hızlı (25 Kas canlı ölçüm: bayrak açıkken istek süresi 12 -> 23 sn idi)
+        kh = 400.0 / max(h, w)
+        gh = cv2.medianBlur(cv2.cvtColor(cv2.resize(crop, None, fx=kh, fy=kh), cv2.COLOR_BGR2GRAY), 5)
+        m = min(gh.shape[:2])
+        c = cv2.HoughCircles(gh, cv2.HOUGH_GRADIENT, dp=1.2, minDist=m, param1=120, param2=40,
                              minRadius=int(m * 0.18), maxRadius=int(m * 0.55))
-        out = [tuple(v / k for v in c[0][0])] if c is not None else [(w / 2.0, h / 2.0, min(h, w) / 2.0 / 1.06)]
+        out = [tuple(v / kh for v in c[0][0])] if c is not None else [(w / 2.0, h / 2.0, min(h, w) / 2.0 / 1.06)]
+        k = 800.0 / max(h, w)
+        g = (int(round(h * k)), int(round(w * k)))
         # SAM kırpımı: maske dışı 235 gri; maske yuvarlaksa (alan / çevreleyen çember > 0,6) maske çemberi de.
-        # Maske Hough ile aynı küçültülmüş karede (en yakın komşu: 235 değeri korunur), çevreleyen çember dış
+        # Maske 800 px karede (en yakın komşu: 235 değeri korunur), çevreleyen çember dış
         # konturdan: tam çözünürlükte milyonlarca piksel üzerinde minEnclosingCircle 3351 px katalog görselinde
         # 10 dakikayı aştı (canlıda büyük telefon fotoğrafı isteği kilitlerdi).
-        kucuk = cv2.resize(crop, (g.shape[1], g.shape[0]), interpolation=cv2.INTER_NEAREST)
+        kucuk = cv2.resize(crop, (max(1, g[1]), max(1, g[0])), interpolation=cv2.INTER_NEAREST)
         gri = np.all(np.abs(kucuk.astype(np.int16) - 235) <= 2, axis=2)
         dolu = 1.0 - float(gri.mean())
         if 0.25 < dolu < 0.97:
@@ -242,11 +267,19 @@ class LejantOkur:
         disla = {k for (s, e), kisiler in DISLA.items() if _norm(s) in bulunan and e in es for k in kisiler}
         if "IMPC" in es:
             disla |= DN_IMPARATOR
-        # lejantın ad sözcükleri aynı kişiyi anlatır: adayların kesişimi (P SEPT GETA -> Geta; L SEPT SEV -> Severus);
-        # kesişim boşsa (gürültü sözcüğü) birleşim
-        kume = [set(self.sozcuk[s]) for s in bulunan]
-        aday = set.intersection(*kume) or set.union(*kume)
         zorla = [set(kisiler) & set(self.idx) for (s, e), kisiler in ZORLA.items() if _norm(s) in bulunan and e in es]
+        # lejantın ad sözcükleri aynı kişiyi anlatır: adayların kesişimi (P SEPT GETA -> Geta; L SEPT SEV -> Severus);
+        # kesişim boşsa (gürültü sözcüğü) birleşim. Yakın çift: tek harfle ayrılan ad hiç birebir okunmadıysa ikizinin
+        # kişileri de aday, seçimi portre yapar (VCoins vc022 "CONSTANTINVS IVN NOB C": IVN okunmayınca "CONSTANTIVS"
+        # sanıldı; portre Constantine II 0,79 derken aday listesi yalnız Constantius'larken Constantius II seçiliyordu)
+        kume = []
+        for s in bulunan:
+            k = set(self.sozcuk[s])
+            if not zorla and tam.get(s, 0) == 0:
+                for o in YAKIN.get(s, ()):
+                    k |= set(self.sozcuk.get(o, ()))
+            kume.append(k)
+        aday = set.intersection(*kume) or set.union(*kume)
         if zorla:
             aday = set.union(*zorla)
         aday = sorted(aday - disla)
