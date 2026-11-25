@@ -253,8 +253,9 @@ SCOPE_FLAG = "/app/index/kapsam.on"
 # The portrait side's coin crop is unwrapped along the rim and read with PP-OCRv5 (no text detection); a ruler word
 # (ANTONINVS, GETA, CONSTANTINVS ...) gives candidate persons and a linear portrait head (trained on the catalog's
 # obverse vectors, labels = person in the portrait) picks among them. Only when nothing is verified and the portrait
-# vote named no ruler. Measured offline (real photos): Facebook set 15 of 17 right persons (portrait vote: 0),
-# VCoins 11 of 12. Checked per request while LEJANT_FLAG exists (delete = off).
+# vote named no ruler (or a strong legend names another person). Measured offline on real photos (right / named):
+# Facebook 17/17, VCoins 8/9, Facebook group set 23/24 (images not used for tuning: 5/5 after the NERO +
+# DRVSVS rule; 5/6 before). Checked per request while LEJANT_FLAG exists (delete = off).
 LEJANT_FLAG = "/app/index/lejant.on"
 LEJANT_BAS = "/app/index/hukumdar_bas.npz"
 LEJANT_MODEL = "/app/models/ocr/en_PP-OCRv5_mobile_rec"
@@ -766,9 +767,13 @@ class RecognitionService:
         return self.lejant
 
     def _lejant_ust(self, ident, obv, rev, verified):
-        """Unverified result and no ruler claimed yet -> ruler from the portrait side's legend + portrait head."""
-        if verified or (ident and ident.get('level') in ('type', 'ruler')):
+        """Unverified result -> ruler from the portrait side's legend + portrait head. When the portrait vote already
+        named a ruler, a strong legend (a name word read exactly twice or within tolerance three times) naming another
+        person replaces it (the portrait vote is wrong on near-identical late portraits; real photos: Claudius II on a
+        Gallienus antoninianus)."""
+        if verified or (ident and ident.get('level') == 'type'):
             return ident
+        claimed = ((ident.get('ruler') or {}).get('name') if ident and ident.get('level') == 'ruler' else None)
         lo = self._lejant_al()
         if lo is None:
             return ident
@@ -782,6 +787,11 @@ class RecognitionService:
         logger.info("lejant: %d ms decision=%s" % ((time.time() - t0) * 1000, r))
         if not r:
             return ident
+        if claimed and (r['ruler'] == claimed or not r.get('strong')):
+            if r['ruler'] == claimed:
+                ident = dict(ident)
+                ident['legend'] = {'tokens': r['tokens'], 'portrait_p': r['p'], 'agrees': True}
+            return ident
         name, alts = r['ruler'], r['alternatives']
         new = dict(ident) if ident else {'level': None, 'basis': basis, 'ruler': None, 'ruler_alternatives': [],
                                          'ruler_alternatives_tr': [], 'ruler_alternatives_en': [], 'dynasty': None,
@@ -794,7 +804,7 @@ class RecognitionService:
         g = self.hier.get(self.by_ruler.get(name, [None])[0] or -1, {}).get('g')
         if g in self.dynasties:
             new['dynasty'] = self._dynasty_info(g)
-        new['legend'] = {'tokens': r['tokens'], 'portrait_p': r['p']}
+        new['legend'] = {'tokens': r['tokens'], 'portrait_p': r['p'], 'replaced': claimed}
         return new
 
     def _ruler_info(self, name, share=None):
