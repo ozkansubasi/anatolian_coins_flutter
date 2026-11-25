@@ -322,6 +322,8 @@
   "tip_lighting": "İyi aydınlatma sağlayın",
   "tip_centered": "Sikkeyi ortalı ve düz tutun",
   "tip_shadows": "Gölge ve yansımalardan kaçının",
+  "tip_fill_frame": "Sikke kadrajın en az yarısını doldursun, uzaktan çekmeyin",
+  "tip_no_screen": "Ekranın fotoğrafını çekmek yerine asıl görseli yükleyin",
   "processing": "İşleniyor...",
   "identify_coin": "Sikkeyi Tanımla",
   "retake_photo": "Tekrar Çek",

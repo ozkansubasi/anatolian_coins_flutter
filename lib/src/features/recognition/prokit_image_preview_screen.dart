@@ -877,6 +877,11 @@ class _ProkitImagePreviewScreenState extends ConsumerState<ProkitImagePreviewScr
             _buildTipItem(Icons.center_focus_strong, l10n.translate('tip_centered')),
             12.height,
             _buildTipItem(Icons.blur_off, l10n.translate('tip_shadows')),
+            // 2026-11-25 (FB gerçek seti): uzak çekim ve ekran fotoğrafı tanımayı en çok düşüren iki durum
+            12.height,
+            _buildTipItem(Icons.crop_free, l10n.translate('tip_fill_frame')),
+            12.height,
+            _buildTipItem(Icons.tv_off, l10n.translate('tip_no_screen')),
           ],
         ),
         actions: [

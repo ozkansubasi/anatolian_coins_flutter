@@ -322,6 +322,8 @@
   "tip_lighting": "Ensure good lighting",
   "tip_centered": "Keep coin centered and flat",
   "tip_shadows": "Avoid shadows and reflections",
+  "tip_fill_frame": "Let the coin fill at least half of the frame; don't shoot from afar",
+  "tip_no_screen": "Upload the original image instead of photographing a screen",
   "processing": "Processing...",
   "identify_coin": "Identify Coin",
   "retake_photo": "Retake Photo",
