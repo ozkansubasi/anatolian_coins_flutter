@@ -280,11 +280,14 @@ class _ProkitRecognitionResultsScreenState
       'no_coin_detected' => 'reason_no_coin_detected',
       'low_detail_surface' => 'reason_low_detail_surface',
       'below_confidence' => 'reason_below_confidence',
+      // Kapsam (2026-11-25): sunucu zayıf doğrulanmamış adayları göstermiyor; sikke büyük olasılıkla katalog dışı
+      'out_of_catalog' => 'reason_out_of_catalog',
       _ => null,
     };
     final icon = switch (reason) {
       'no_coin_detected' => Icons.image_search,
       'low_detail_surface' => Icons.texture,
+      'out_of_catalog' => Icons.public_off,
       _ => Icons.search_off,
     };
     return _StateMessage(
@@ -414,6 +417,11 @@ class _ProkitRecognitionResultsScreenState
                   ),
                 ),
                 const SizedBox(height: 16),
+                // Kapsam: aday gösterilmedi; neden katalog dışı olabileceğini söyle (kimlik kartı yine gösterilir)
+                if (results.noMatchReason == 'out_of_catalog') ...[
+                  Text(l10n.translate('reason_out_of_catalog_desc'), style: t.caption.copyWith(color: c.text)),
+                  const SizedBox(height: 16),
+                ],
                 if (showIdent) ...[
                   _IdentificationCard(ident: ident, l10n: l10n),
                   const SizedBox(height: 16),

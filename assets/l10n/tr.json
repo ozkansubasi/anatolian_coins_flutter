@@ -351,6 +351,8 @@
   "reason_low_detail_surface_desc": "Yoğun patina, aşınma veya bulanıklık nedeniyle güvenilir bir eşleşme üretilemedi. Gün ışığında, dik açıyla ve mümkünse her iki yüzü de çekerek tekrar deneyin.",
   "reason_below_confidence": "Güvenilir eşleşme bulunamadı",
   "reason_below_confidence_desc": "Sonuçların hiçbiri güven eşiğini geçemedi. Daha net bir fotoğraf, farklı açı veya arka yüz fotoğrafı eklemek sonucu iyileştirebilir.",
+  "reason_out_of_catalog": "Katalogda eşleşme bulunamadı",
+  "reason_out_of_catalog_desc": "Katalog yalnız bugünkü Türkiye sınırları içindeki antik darphanelerde basılmış sikkeleri kapsar. Sikkeniz bu darphanelerden birinde basıldıysa daha net bir fotoğraf ya da arka yüz eklemek sonucu iyileştirebilir.",
   "reason_ambiguous_match": "Sonuçlar birbirine çok yakın; en iyi eşleşme kesin olmayabilir. Arka yüz fotoğrafı eklemek ayrımı netleştirir.",
   "same_face_notice": "İki fotoğraf da sikkenin aynı yüzünü gösteriyor; arka yüz tanıması atlandı ve sonuç tek fotoğrafa göre. Daha güvenilir sonuç için sikkenin öbür yüzünü de çekin.",
   "try_clearer_photo": "Daha net bir fotoğraf deneyin, daha iyi aydınlatma kullanın",

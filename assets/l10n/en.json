@@ -351,6 +351,8 @@
   "reason_low_detail_surface_desc": "Heavy patina, wear or blur prevented a reliable match. Try daylight, a straight-on angle, and photograph both sides if possible.",
   "reason_below_confidence": "No reliable match found",
   "reason_below_confidence_desc": "None of the results passed the confidence threshold. A clearer photo, a different angle or adding the reverse side may help.",
+  "reason_out_of_catalog": "No match in the catalogue",
+  "reason_out_of_catalog_desc": "The catalogue covers only coins struck at ancient mints within today's Türkiye. If your coin was struck at one of them, a sharper photo or adding the reverse may help.",
   "reason_ambiguous_match": "The results are very close; the top match may not be definitive. Adding a reverse-side photo helps disambiguate.",
   "same_face_notice": "Both photos show the same side of the coin, so reverse recognition was skipped and the result is based on one photo. For a more reliable result, photograph the other side too.",
   "try_clearer_photo": "Try a clearer photo with better lighting",
