@@ -87,7 +87,7 @@ class RecognitionResponse(BaseModel):
         None, description="no_match_reason=modern_coin: the photo is a modern Turkish coin (legend OCR) - {country, unit "
                           "lira|kurus|null, denomination|null, year|null}; information only, no authenticity or value claim")
     no_match: bool = Field(False, description="True when no confident match was found")
-    no_match_reason: Optional[str] = Field(None, description="no_coin_detected | low_detail_surface | below_confidence | ambiguous_match | modern_coin | service_unavailable")
+    no_match_reason: Optional[str] = Field(None, description="no_coin_detected | low_detail_surface | below_confidence | ambiguous_match | modern_coin | out_of_catalog | service_unavailable")
     quality: Optional[Dict[str, Any]] = Field(None, description="Per-side input quality metrics")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Response timestamp")
 

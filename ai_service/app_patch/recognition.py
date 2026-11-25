@@ -234,6 +234,14 @@ NOTES_PATH = "/app/index/hukumdar_notlari.json"   # optional {name: {name_tr, na
 # request after the file changes (replace it with an atomic mv; no restart). The layer answers only while AYIRT_FLAG
 # exists (checked per request: delete = off, no restart). It never fails a recognition.
 AYIRT_PATH = "/app/index/ayirt_veri.json"
+# ---- Kapsam (2026-11-25, PRO/AI değerlendirmesi A): weak unverified candidates -> "outside the catalog" ----
+# Real phone photos (123 coins from a Facebook group, 65% struck outside today's Türkiye) showed that an UNVERIFIED top
+# candidate below SCOPE_MAX is mostly a wrong coin: 15 of 19 wrong candidate lists hidden, 2 of 7 right ones (both weak
+# Alexander drachm type matches). The response then says no_match_reason='out_of_catalog' with no candidates; the
+# identification card (ruler / dynasty / date) is kept. Checked per request while SCOPE_FLAG exists (delete = off).
+# Report: NumisTR claudedocs/ai-gercek-fb-seti-degerlendirme-2026-11-25.md
+SCOPE_FLAG = "/app/index/kapsam.on"
+SCOPE_MAX = 0.42
 AYIRT_FLAG = "/app/index/ayirt.on"
 HIER_T = 0.05
 BASIS_K = 20                    # rows looked at to tell which photo is the portrait (obverse) side
@@ -1130,9 +1138,15 @@ class RecognitionService:
                     matches, no_match, top = [], True, 0.0
                     is_tied, tied_ids = False, []
 
+            # Kapsam: an unverified weak candidate list is withheld; the coin is most likely outside the catalog
+            if (not modern_coin and verify_ran and matches and not verified and not is_tied and top < SCOPE_MAX
+                    and os.path.exists(SCOPE_FLAG)):
+                reason = 'out_of_catalog'
+                matches, no_match, top = [], True, 0.0
+
             # AI4: nothing reached MIN_CONF -> still offer the closest candidates, separately
             near = []
-            if no_match and reason not in ('no_coin_detected', 'modern_coin'):
+            if no_match and reason not in ('no_coin_detected', 'modern_coin', 'out_of_catalog'):
                 for a, d in ranked[:NEAR_N]:
                     conf = min(_conf(d), UNVERIFIED_CAP)
                     if conf < NEAR_MIN_CONF:
