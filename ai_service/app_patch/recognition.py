@@ -83,6 +83,11 @@ try:                            # ADR-012 (2026-11): what tells the shortlist ca
 except Exception as e:          # optional layer: a missing module must never break recognition
     Distinguisher = None
     logger.warning("ADR-012: distinguish not loaded, layer off: %s" % e)
+try:                            # Lejant + portre (2026-11-25): ruler from the portrait side's legend (off unless flag)
+    from app.services.lejant_okur import LejantOkur
+except Exception as e:          # optional layer: a missing module (or paddleocr) must never break recognition
+    LejantOkur = None
+    logger.warning("lejant: module not loaded, layer off: %s" % e)
 
 IMN = np.array([0.485, 0.456, 0.406], np.float32)
 IST = np.array([0.229, 0.224, 0.225], np.float32)
@@ -244,6 +249,16 @@ AYIRT_PATH = "/app/index/ayirt_veri.json"
 # Checked per request while SCOPE_FLAG exists (delete = off).
 # Report: NumisTR claudedocs/ai-gercek-fb-seti-degerlendirme-2026-11-25.md
 SCOPE_FLAG = "/app/index/kapsam.on"
+# ---- Lejant + portre (2026-11-25): ruler card for unverified coins from the legend + a portrait head ----
+# The portrait side's coin crop is unwrapped along the rim and read with PP-OCRv5 (no text detection); a ruler word
+# (ANTONINVS, GETA, CONSTANTINVS ...) gives candidate persons and a linear portrait head (trained on the catalog's
+# obverse vectors, labels = person in the portrait) picks among them. Only when nothing is verified and the portrait
+# vote named no ruler. Measured offline (real photos): Facebook set 15 of 17 right persons (portrait vote: 0),
+# VCoins 11 of 12. Checked per request while LEJANT_FLAG exists (delete = off).
+LEJANT_FLAG = "/app/index/lejant.on"
+LEJANT_BAS = "/app/index/hukumdar_bas.npz"
+LEJANT_MODEL = "/app/models/ocr/en_PP-OCRv5_mobile_rec"
+LEJANT_THREADS = 2
 SCOPE_MAX = 0.42
 AYIRT_FLAG = "/app/index/ayirt.on"
 HIER_T = 0.05
@@ -381,6 +396,7 @@ class RecognitionService:
             logger.error("Hedef 2: hierarchy load failed: %s" % e, exc_info=True)
             self.hier, self.dynasties, self.notes, self.by_ruler = {}, {}, {}, {}
         self.ayirt, self.ayirt_mtime = None, None   # ADR-012
+        self.lejant, self.lejant_hata = None, False  # Lejant + portre: loaded on first use while the flag exists
         self._ayirt_load()
 
     def _ayirt_load(self):
@@ -734,6 +750,52 @@ class RecognitionService:
             if v:
                 oy[v] = oy.get(v, 0.0) + w
         return sorted(((v, w / tot) for v, w in oy.items()), key=lambda x: -x[1])
+
+    def _lejant_al(self):
+        """-> LejantOkur or None (flag off, module / head missing, or a previous load failed)."""
+        if LejantOkur is None or self.lejant_hata or not os.path.exists(LEJANT_FLAG):
+            return None
+        if self.lejant is None:
+            try:
+                self.lejant = LejantOkur(LEJANT_MODEL, LEJANT_BAS, threads=LEJANT_THREADS)
+                logger.info("lejant: head loaded (%d classes)" % len(self.lejant.siniflar))
+            except Exception as e:
+                logger.error("lejant: head load failed, layer off: %s" % e)
+                self.lejant_hata = True
+                return None
+        return self.lejant
+
+    def _lejant_ust(self, ident, obv, rev, verified):
+        """Unverified result and no ruler claimed yet -> ruler from the portrait side's legend + portrait head."""
+        if verified or (ident and ident.get('level') in ('type', 'ruler')):
+            return ident
+        lo = self._lejant_al()
+        if lo is None:
+            return ident
+        basis = (ident or {}).get('basis') or 'obverse'
+        side = (obv if basis == 'obverse' else rev) or obv or rev
+        if side is None or not side.get('embs'):
+            return ident
+        vec = side['embs'][1] if side.get('detected') and len(side['embs']) > 1 else side['embs'][0]
+        t0 = time.time()
+        r = lo.karar(lo.oku(side.get('vimg')), vec)
+        logger.info("lejant: %d ms decision=%s" % ((time.time() - t0) * 1000, r))
+        if not r:
+            return ident
+        name, alts = r['ruler'], r['alternatives']
+        new = dict(ident) if ident else {'level': None, 'basis': basis, 'ruler': None, 'ruler_alternatives': [],
+                                         'ruler_alternatives_tr': [], 'ruler_alternatives_en': [], 'dynasty': None,
+                                         'mint': None, 'date': None, 'reverse': None}
+        new['level'] = 'ruler'
+        new['ruler'] = self._ruler_info(name)
+        new['ruler_alternatives'] = alts
+        new['ruler_alternatives_tr'] = self._alt_names(alts, 'tr')
+        new['ruler_alternatives_en'] = self._alt_names(alts, 'en')
+        g = self.hier.get(self.by_ruler.get(name, [None])[0] or -1, {}).get('g')
+        if g in self.dynasties:
+            new['dynasty'] = self._dynasty_info(g)
+        new['legend'] = {'tokens': r['tokens'], 'portrait_p': r['p']}
+        return new
 
     def _ruler_info(self, name, share=None):
         # name = catalog canonical (English, may carry ", governor of Asia"); the app shows name_tr / name_en.
@@ -1174,6 +1236,10 @@ class RecognitionService:
                     ident = self._identify(obv, rev, matches, exclude)
                 except Exception as e:                  # optional layer: never fails the recognition
                     logger.error("Hedef 2: identification failed: %s" % e, exc_info=True)
+                try:                                    # Lejant + portre (2026-11-25)
+                    ident = self._lejant_ust(ident, obv, rev, verified)
+                except Exception as e:
+                    logger.error("lejant: failed: %s" % e, exc_info=True)
 
             quality = {}
             if obv:

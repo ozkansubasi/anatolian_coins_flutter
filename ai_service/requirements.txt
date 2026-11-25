@@ -18,8 +18,9 @@ Pillow>=11.0.0
 albumentations>=1.4.0
 
 # OCR
-paddlepaddle>=2.6.0
-paddleocr>=2.8.0
+paddlepaddle==3.2.0
+paddleocr==3.3.3
+paddlex==3.3.13            # 2026-11-25 lejant okuma (PP-OCRv5 en_mobile_rec); numpy 1.26.2 sabit kalmalı
 
 # Google AutoML (optional)
 google-cloud-automl==2.11.1
