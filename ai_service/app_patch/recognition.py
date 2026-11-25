@@ -236,9 +236,12 @@ NOTES_PATH = "/app/index/hukumdar_notlari.json"   # optional {name: {name_tr, na
 AYIRT_PATH = "/app/index/ayirt_veri.json"
 # ---- Kapsam (2026-11-25, PRO/AI değerlendirmesi A): weak unverified candidates -> "outside the catalog" ----
 # Real phone photos (123 coins from a Facebook group, 65% struck outside today's Türkiye) showed that an UNVERIFIED top
-# candidate below SCOPE_MAX is mostly a wrong coin: 15 of 19 wrong candidate lists hidden, 2 of 7 right ones (both weak
-# Alexander drachm type matches). The response then says no_match_reason='out_of_catalog' with no candidates; the
-# identification card (ruler / dynasty / date) is kept. Checked per request while SCOPE_FLAG exists (delete = off).
+# candidate below SCOPE_MAX is mostly a wrong coin. Exact ties count too. Alexander / Philip III types (titles "Price
+# ...") are exempt: a huge family of near-identical types whose confidence stays low even when the type is right.
+# Measured (2026-11-25): Facebook set 15 of 19 wrong candidate lists hidden, 0 of 7 right ones; VCoins seller photos
+# (124 catalog coins, top-1 right 52) 3 right top-1 answers hidden. The response then says
+# no_match_reason='out_of_catalog' with no candidates; the identification card (ruler / dynasty / date) is kept.
+# Checked per request while SCOPE_FLAG exists (delete = off).
 # Report: NumisTR claudedocs/ai-gercek-fb-seti-degerlendirme-2026-11-25.md
 SCOPE_FLAG = "/app/index/kapsam.on"
 SCOPE_MAX = 0.42
@@ -1139,10 +1142,12 @@ class RecognitionService:
                     is_tied, tied_ids = False, []
 
             # Kapsam: an unverified weak candidate list is withheld; the coin is most likely outside the catalog
-            if (not modern_coin and verify_ran and matches and not verified and not is_tied and top < SCOPE_MAX
+            if (not modern_coin and verify_ran and matches and not verified and top < SCOPE_MAX
+                    and not str(matches[0].get('title_en') or matches[0].get('title') or '').startswith('Price ')
                     and os.path.exists(SCOPE_FLAG)):
                 reason = 'out_of_catalog'
                 matches, no_match, top = [], True, 0.0
+                is_tied, tied_ids = False, []
 
             # AI4: nothing reached MIN_CONF -> still offer the closest candidates, separately
             near = []
