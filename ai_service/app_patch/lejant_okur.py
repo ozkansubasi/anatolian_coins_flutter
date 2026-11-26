@@ -53,6 +53,12 @@ SOZCUK = {
     "NERVA": ["Nerva"], "TIBERIVS": ["Tiberius"], "CLAVDIVS": ["Claudius", "Claudius II"], "LVCILLA": ["Lucilla"],
     "CRISPINA": ["Crispina"], "CARINVS": ["Carinus"], "FLORIANVS": ["Florian"], "SEVERINA": ["Severina"],
     "GRATIANVS": ["Gratian"], "HONORIVS": ["Honorius"], "IOVIANVS": ["Jovianus"], "MAGNENTIVS": ["Magnentius"],
+    # AVGVSTVS unvan olduğu için tek başına ad sayılmaz; "DIVVS AVGVSTVS PATER" (Tiberius dönemi, portre Augustus)
+    # yalnız Augustus. FB Roman Imperial Coins 0338/0340: okuma kusursuz, portre oyu "Claudius" diyordu.
+    "AVGVSTVSPATER": ["Augustus"],
+    # Caligula'nın adı lejantta "C CAESAR"; "DIVI AVG PRON(epos) AVG" yalnız onda (FB Ancient Roman & Greek 0264:
+    # okuma "CCAESARDIVVNCPRONAVC", portre oyu "Claudius" diyordu). Nero'nun "AVG PRON"u Tiberius'a, sıra farklı.
+    "PRONAVG": ["Caligula"],
 }
 
 
@@ -63,15 +69,38 @@ SOZCUK = {
 # - "IVN NOB C" (iunior): CONSTANTINVS IVN = II. Constantinus, LICINIVS IVN = II. Licinius.
 # - NERO + DRVSVS imparator Nero değil: "NERO ET DRVSVS CAESARES" (Caligula'nın kardeşleri, FB 0359),
 #   "NERO CLAVDIVS DRVSVS GERMANICVS" (Claudius'un babası).
+# - "PIVS AVG" sırası Severuslar döneminin (Caracalla, Elagabalus "ANTONINVS PIVS AVG"); Antoninus Pius'ta sıra
+#   "ANTONINVS AVG PIVS". GERM(anicus) ANTONINVS adlılardan Caracalla ve Marcus Aurelius'ta var, Pius ve
+#   Elagabalus'ta yok. (FB Roman Imperial Coins: "ANTONINVS PIVS AVG GERM/BRIT" 0229, 0278, 0406 yanlış kişiydi.)
+# - Arka yüz "CONCORDIA AVGGG" OCR'da "...CORDIA AVGGG" çıkıyor, GORDIANVS sanılıyordu (FB RIC 0007, CONOB solidus).
+#   GORDIANVS'tan sonra N gelir; "CORDIA" + "AVG" Concordia lejantıdır.
+# - "IMP C M CL TACITVS" okuması "...GETACI..." çıkıyor (FB RIC 0280); Geta'da GETA'dan sonra "CAES"/"PIVS" gelir.
+# - FL CL unvanı (Flavius Claudius) yalnız Constantinus II (Caesar), Constantius Gallus ve Iulianus'ta.
+#   FB RIC 0184 "D N FL CL CONSTANTIVS NOB CAES" (Gallus) Constantinus I sanılıyordu.
+# - Lucius Verus PIVS unvanını kullanmadı ("L VERVS AVG ARM PARTH MAX", "L AVREL VERVS AVG"). "SEVERVS PIVS AVG
+#   (BRIT)" okumasında SEVERVS çoğu kez "SVERVS"/"WERVS" çıkıyor, birebir eşleşen VERVS kalıyordu: FB Roman Imperial
+#   Coins 0711, 0712, 0812 Septimius Severus'a "Lucius Verus" denmişti (canlıdaki kurallarla da).
 DISLA = {("ANTONINVS", "PIVS"): ["Marcus Aurelius"],
          ("ANTONINVS", "BRIT"): ["Antoninus Pius", "Elagabalus", "Marcus Aurelius"],
-         ("NERO", "DRVSVS"): ["Nero"]}
+         ("ANTONINVS", "PIVSAVG"): ["Antoninus Pius", "Marcus Aurelius"],
+         ("ANTONINVS", "GERM"): ["Antoninus Pius", "Elagabalus"],
+         ("GORDIANVS", "CONCORDIA"): ["Gordian III"],
+         ("GETA", "TACIT"): ["Geta"],
+         # CONSTANTIVS + FL CL = Gallus; portre başında sınıfı yok -> ad verilmez (Constantinus II'de ad CONSTANTINVS)
+         ("CONSTANTIVS", "FLCL"): ["Constantius I", "Constantius II", "Constantine I", "Constantine II"],
+         ("CONSTANTINVS", "FLCL"): ["Constantius I", "Constantius II", "Constantine I"],
+         ("NERO", "DRVSVS"): ["Nero"],
+         ("VERVS", "PIVS"): ["Lucius Verus"], ("VERVS", "PIVSAVG"): ["Lucius Verus"]}
 ZORLA = {("CONSTANTINVS", "IVN"): ["Constantine II"], ("CONSTANTIVS", "IVN"): ["Constantine II"],
          ("LICIN", "IVN"): ["Licinius II"], ("VALENTINIANVS", "IVN"): ["Valentinian II"],
-         ("TRAIAN", "HAD"): ["Hadrian"]}      # IMP CAESAR TRAIANVS HADRIANVS AVG (Hadrian'ın ilk yılları)
+         ("TRAIAN", "HAD"): ["Hadrian"],      # IMP CAESAR TRAIANVS HADRIANVS AVG (Hadrian'ın ilk yılları)
+         ("VERVS", "PIVS"): ["Septimius Severus"], ("VERVS", "PIVSAVG"): ["Septimius Severus"]}
 # unvanlar kısa: harf karışmaları düzenli ifadeyle (OCR'da V/N/Y, I/L karışıyor); C ile G _norm'da zaten bir
 ES = {"PIVS": r"PI[VNY]S", "BRIT": r"BR[IVL]T", "IVN": r"[IL1S][VN]N(?:N|P)",   # IVN NOB C / IVN P F AVG
-      "IMPC": r"I[MAEL]PC", "HAD": r"[AI]AN[VN]?S.{0,3}HAD", "DRVSVS": r"DR[VNY]S[VNY]S"}
+      "IMPC": r"I[MAEL]PC", "HAD": r"[AI]AN[VN]?S.{0,3}HAD", "DRVSVS": r"DR[VNY]S[VNY]S",
+      # normalize metinde G -> C, U -> V; boşluk ve noktalama yok
+      "PIVSAVG": r"[PD]I?[VNY]SA[VNY][CL]", "GERM": r"C[EA]R[MN]", "CONCORDIA": r"ORDIA{1,2}[VNY]C",
+      "TACIT": r"CETAC[LI]", "FLCL": r"LC[EL]?CONS"}
 # "IMP C" ile başlayan lejant 4. yüzyıl sonu "D N" imparatorlarında yok (Maximinus Daia "IMP C GAL VAL MAXIMINVS"
 # okuması "GVALEES" -> VALENS sanılıyordu, VCoins vc101)
 DN_IMPARATOR = {"Valens", "Valentinian I", "Valentinian II", "Gratian", "Theodosius I", "Theodosius II", "Arcadius",
@@ -250,8 +279,12 @@ class LejantOkur:
             d = {s: v for s, v in d.items() if v is not None}
             # yakın sözcük budaması: aynı okuma birbirine çok benzeyen iki sözcükle eşleşirse (CONSTANTINVS /
             # CONSTANTIVS) yalnız daha az hatalı olan kalır
+            # içerilen sözcük (VERVS, SEVERVS'ün içinde): ikisi de eşleşiyorsa VERVS SEVERVS'ün parçasıdır; budanan o
+            # olur, birebir eşleştiği için SEVERVS'ü budamaz
             for s, v in d.items():
-                if not any(o != s and d[o] < v and _mesafe(o, s) <= 2 for o in d):
+                if any(o != s and s in o for o in d):
+                    continue
+                if not any(o != s and d[o] < v and _mesafe(o, s) <= 2 and o not in s for o in d):
                     bulunan.add(s)
                     oy[s] = oy.get(s, 0) + 1
                     tam[s] = tam.get(s, 0) + (v == 0)
@@ -262,6 +295,8 @@ class LejantOkur:
         # önek kuralı: uzun ad bulunduysa aynı 5 harfle başlayan en az 3 harf kısa ad düşer (VALENTINIANVS -> VALENS değil)
         bulunan = {s for s in bulunan
                    if not any(len(o) - len(s) >= 3 and o[:5] == s[:5] for o in bulunan)}
+        # okumalar arası içerilen sözcük: bir okumada SEVERVS, ötekinde yalnız VERVS çıktıysa VERVS düşer
+        bulunan = {s for s in bulunan if not any(o != s and s in o for o in bulunan)}
         if not bulunan:
             return None
         disla = {k for (s, e), kisiler in DISLA.items() if _norm(s) in bulunan and e in es for k in kisiler}
