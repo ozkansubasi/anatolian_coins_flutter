@@ -260,6 +260,19 @@ LEJANT_FLAG = "/app/index/lejant.on"
 LEJANT_BAS = "/app/index/hukumdar_bas.npz"
 LEJANT_MODEL = "/app/models/ocr/en_PP-OCRv5_mobile_rec"
 LEJANT_THREADS = 2
+# Second portrait head (2026-11-26, update 5): trained on the catalog obverse vectors + licensed Wikimedia Commons coin
+# photos with the person in the portrait as label (NumisTR scripts/ai1/hukumdar_commons.py). Optional file: missing ->
+# one head as before. Used two ways:
+#  - legend: when the catalog head rejects the legend's person (portrait rank > 5), the second head is asked
+#  - portrait gate (while PORTRE_KAPI_FLAG exists, checked per request): an unverified portrait-vote ruler is kept only
+#    when the second head ranks the same person first.
+# Measured on real phone photos (Facebook groups, 2,292 pieces; never used for training or tuning), checked by eye:
+# legend +24 right names (Caracalla ANTONINVS denarii, Gordian III, Hadrian), +1 wrong (Caracalla -> Antoninus Pius);
+# portrait-only names 5 right / 9 wrong -> 5 right / 4 wrong (GALLIENVS AVG coins named Claudius II, VESPASIANVS named
+# Constantine I) and 2 names from reverse photos dropped. Earlier Facebook set 15/15 -> 17/17; VCoins 20/21 -> 19/20
+# (one right portrait-only Augustus dropped). Report: runbook 2026-11-25-ai-lejant-portre.md section 9.
+LEJANT_BAS2 = "/app/index/hukumdar_bas_commons.npz"
+PORTRE_KAPI_FLAG = "/app/index/portre_kapi.on"
 SCOPE_MAX = 0.42
 AYIRT_FLAG = "/app/index/ayirt.on"
 HIER_T = 0.05
@@ -758,8 +771,12 @@ class RecognitionService:
             return None
         if self.lejant is None:
             try:
-                self.lejant = LejantOkur(LEJANT_MODEL, LEJANT_BAS, threads=LEJANT_THREADS)
-                logger.info("lejant: head loaded (%d classes)" % len(self.lejant.siniflar))
+                if os.path.exists(LEJANT_BAS2):
+                    self.lejant = LejantOkur(LEJANT_MODEL, LEJANT_BAS, threads=LEJANT_THREADS, bas2_path=LEJANT_BAS2)
+                else:
+                    self.lejant = LejantOkur(LEJANT_MODEL, LEJANT_BAS, threads=LEJANT_THREADS)
+                logger.info("lejant: head loaded (%d classes, second head %s)"
+                            % (len(self.lejant.siniflar), getattr(self.lejant, 'W2', None) is not None))
             except Exception as e:
                 logger.error("lejant: head load failed, layer off: %s" % e)
                 self.lejant_hata = True
@@ -811,6 +828,18 @@ class RecognitionService:
             new['dynasty'] = self._dynasty_info(g)
         new['legend'] = {'tokens': r['tokens'], 'portrait_p': r['p'], 'replaced': claimed}
         return new
+
+    def _portre_kapi(self, ruler, side):
+        """Portrait-vote ruler (unverified result) -> kept, or None when the second portrait head does not rank the
+        same person first. No second head / no legend layer / no vector -> kept (behaviour as before)."""
+        lo = self._lejant_al()
+        if lo is None or not hasattr(lo, 'kapi') or side is None or not side.get('embs'):
+            return ruler
+        vec = side['embs'][1] if side.get('detected') and len(side['embs']) > 1 else side['embs'][0]
+        if lo.kapi(vec, ruler[0]):
+            return ruler
+        logger.info("lejant: portrait gate dropped %s" % ruler[0])
+        return None
 
     def _ruler_info(self, name, share=None):
         # name = catalog canonical (English, may carry ", governor of Asia"); the app shows name_tr / name_en.
@@ -926,6 +955,11 @@ class RecognitionService:
         onc = [(a, c) for a, c, f in cands if f == 'on']
         rv = self._vote(allc, 'a', RULER_K)
         ruler = rv[0] if rv and rv[0][1] >= RULER_SHARE and allc[0][1] >= RULER_MIN_COS else None
+        if ruler and os.path.exists(PORTRE_KAPI_FLAG):
+            try:
+                ruler = self._portre_kapi(ruler, obv if basis == 'obverse' else rev)
+            except Exception as e:                  # optional layer: never fails the recognition
+                logger.error("lejant: portrait gate failed: %s" % e, exc_info=True)
         dv = self._vote(onc, 'g', DYN_K)
         dyn = dv[0] if (dv and dv[0][1] >= DYN_SHARE and onc[0][1] >= DYN_MIN_COS
                         and dv[0][0] in self.dynasties) else None

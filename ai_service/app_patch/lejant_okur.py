@@ -24,6 +24,11 @@ PORTRE_MIN = 0.01         # birden çok aday varsa seçilenin portre olasılığ
 PORTRE_SIRA_MAX = 5       # seçilen kişi portre başının GENEL sıralamasında ilk 5'te değilse ad verilmez
                           # (OCR yanlış okuması: Maximinus Daia için "VALENS" -> portre sırası 12; FB 9/10, VCoins 8/10)
 KISA = 5                  # bu uzunluğa kadar sözcük en az iki okumada çıkmalı
+# İkinci portre başı (26 Kas, güncelleme 5): katalog + Wikimedia Commons gerçek fotoğrafları (hukumdar_commons.py).
+# Lejantta önce birinci (katalog) baş karar verir; reddederse ikinci baş sorulur (Caracalla ANTONINVS okumaları: birinci
+# baş Caracalla'yı Roma denarında 5'ten sonraya koyuyordu). Yalnız portre oyunun verdiği ad, ikinci baş o kişiyi
+# PORTRE_KAPI_SIRA'da görmüyorsa verilmez (FB: GALLIENVS AVG yazan sikkelere Claudius II, VESPASIANVS'a Constantine I).
+PORTRE_KAPI_SIRA = 1
 PENCERE_EN = 14           # pencere genişliği = şerit yüksekliği x 14 (uzun adlar sığsın; VCoins sınama yarısı 8/33)
 PENCERE_ADIM = 0.1        # adım = pencere genişliğinin %10'u
 SERIT_Y = 72
@@ -155,7 +160,7 @@ YAKIN = _yakin_sozcukler()
 
 
 class LejantOkur:
-    def __init__(self, model_dir, bas_path, threads=2):
+    def __init__(self, model_dir, bas_path, threads=2, bas2_path=None):
         self.model_dir, self.bas_path, self.threads = model_dir, bas_path, threads
         self._rec = None
         self._hata = False
@@ -166,6 +171,13 @@ class LejantOkur:
         self.siniflar = [str(x) for x in z["siniflar"]]
         self.olcek = float(z["olcek"]) if "olcek" in z else 20.0
         self.idx = {k: i for i, k in enumerate(self.siniflar)}
+        self.W2 = self.b2 = None
+        if bas2_path:
+            z2 = np.load(bas2_path, allow_pickle=False)
+            if [str(x) for x in z2["siniflar"]] != self.siniflar:
+                raise ValueError("ikinci portre başının sınıfları birinciyle aynı sırada değil")
+            self.W2, self.b2 = z2["W"].astype(np.float32), z2["b"].astype(np.float32)
+            self.olcek2 = float(z2["olcek"]) if "olcek" in z2 else 20.0
         self.sozcuk = {_norm(t): [a for a in kisiler if a in self.idx] for t, kisiler in SOZCUK.items()}
         self.sozcuk = {t: k for t, k in self.sozcuk.items() if k}
 
@@ -262,13 +274,29 @@ class LejantOkur:
             out.append((str(r["rec_text"]), float(r["rec_score"])))
         return out
 
-    def portre(self, vec):
-        z = (self.W @ np.asarray(vec, np.float32) + self.b) * self.olcek
+    def portre(self, vec, bas=1):
+        W, b, olcek = (self.W, self.b, self.olcek) if bas == 1 else (self.W2, self.b2, self.olcek2)
+        z = (W @ np.asarray(vec, np.float32) + b) * olcek
         z = np.exp(z - z.max())
         return z / z.sum()
 
+    def kapi(self, vec, kisi):
+        """Yalnız portre oyunun adı verilsin mi: ikinci baş yoksa ya da kişiyi tanımıyorsa evet; yoksa ikinci başın
+        genel sıralamasında ilk PORTRE_KAPI_SIRA'da ise."""
+        if self.W2 is None or kisi not in self.idx:
+            return True
+        p = self.portre(vec, 2)
+        return int((p > p[self.idx[kisi]]).sum()) + 1 <= PORTRE_KAPI_SIRA
+
     def karar(self, okumalar, vec):
-        """-> {'ruler', 'alternatives', 'tokens', 'p'} ya da None."""
+        """-> {'ruler', 'alternatives', 'tokens', 'p', 'margin', 'strong', 'head'} ya da None. Birinci baş reddederse
+        (ad verilmez) ikinci baş varsa aynı adaylarla o sorulur."""
+        r = self._karar(okumalar, vec, 1)
+        if r is None and self.W2 is not None:
+            r = self._karar(okumalar, vec, 2)
+        return r
+
+    def _karar(self, okumalar, vec, bas):
         bulunan, es = set(), set()
         oy, tam = {}, {}                              # sözcük başına eşleşen okuma ve birebir okuma sayısı
         for m, g in okumalar:
@@ -320,7 +348,7 @@ class LejantOkur:
         aday = sorted(aday - disla)
         if not aday:
             return None
-        p = self.portre(vec)
+        p = self.portre(vec, bas)
         sirali = sorted(aday, key=lambda a: -p[self.idx[a]])
         best = sirali[0]
         sira = int((p > p[self.idx[best]]).sum()) + 1
@@ -335,4 +363,4 @@ class LejantOkur:
         alt = [a for a in sirali[1:] if p[self.idx[a]] >= 0.25 * p[self.idx[best]]][:2]
         oran = float(p[self.idx[best]] / max(p[self.idx[sirali[1]]], 1e-9)) if len(sirali) > 1 else None
         return {"ruler": best, "alternatives": alt, "tokens": sorted(bulunan), "p": round(float(p[self.idx[best]]), 3),
-                "margin": round(oran, 2) if oran else None, "strong": bool(guclu)}
+                "margin": round(oran, 2) if oran else None, "strong": bool(guclu), "head": bas}
