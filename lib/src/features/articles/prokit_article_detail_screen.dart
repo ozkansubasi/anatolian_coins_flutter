@@ -16,6 +16,7 @@ import '../../prokit_ui/numistr_colors.dart';
 import 'articles_api.dart';
 import 'article_related.dart';
 import 'article_image_extension.dart';
+import 'article_videos.dart';
 
 /// ProKit styled Article Detail Screen
 /// Features: Hero header, elegant typography, share functionality
@@ -320,6 +321,9 @@ class _ArticleContent extends StatelessWidget {
                       ),
 
                     32.height,
+
+                    // API 1.30.0: sayfaya bağlı YouTube videoları (yoksa hiç yer kaplamaz)
+                    ArticleVideosSection(videos: article.videos),
 
                     // İlgili sikkeler (başlıkta bölge/darphane varsa) + ilgili makaleler
                     ArticleRelatedSection(article: article),

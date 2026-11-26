@@ -1,3 +1,70 @@
+/// Yazıya ya da yerleşim sayfasına bağlı YouTube videosu (API 1.30.0 `videos`).
+/// Uygulama videoyu gömmez: kart küçük resmi gösterir, dokununca YouTube açılır.
+class ArticleVideo {
+  final String youtubeId;
+
+  /// `shorts` (9:16) | `video` (16:9)
+  final String format;
+  final String title;
+
+  /// Görsel ve müzik künyesi (CC BY atfı); boş olabilir.
+  final String credit;
+  final int? durationSec;
+  final String? thumbnailUrl;
+  final String watchUrl;
+
+  const ArticleVideo({
+    required this.youtubeId,
+    required this.format,
+    required this.title,
+    required this.credit,
+    required this.watchUrl,
+    this.durationSec,
+    this.thumbnailUrl,
+  });
+
+  bool get isShorts => format != 'video';
+
+  /// 52 → "0:52"; süre yoksa null.
+  String? get durationLabel {
+    final s = durationSec;
+    if (s == null || s <= 0) return null;
+    return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
+  }
+
+  static final _id = RegExp(r'^[A-Za-z0-9_-]{11}$');
+
+  /// Geçersiz kimlik ya da YouTube dışı izleme adresi → null (kart çizilmez).
+  static ArticleVideo? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final j = Map<String, dynamic>.from(raw);
+    final id = '${j['youtube_id'] ?? ''}';
+    final watch = '${j['watch_url'] ?? ''}';
+    final host = Uri.tryParse(watch)?.host ?? '';
+    if (!_id.hasMatch(id) || !(host == 'www.youtube.com' || host == 'youtube.com')) return null;
+    final thumb = j['thumbnail_url'];
+    return ArticleVideo(
+      youtubeId: id,
+      format: j['format'] == 'video' ? 'video' : 'shorts',
+      title: '${j['title'] ?? ''}'.trim(),
+      credit: '${j['credit'] ?? ''}'.trim(),
+      durationSec: (j['duration_sec'] as num?)?.toInt(),
+      thumbnailUrl: thumb is String && thumb.startsWith('https://') ? thumb : null,
+      watchUrl: watch,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'youtube_id': youtubeId,
+        'format': format,
+        'title': title,
+        'credit': credit,
+        if (durationSec != null) 'duration_sec': durationSec,
+        if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
+        'watch_url': watchUrl,
+      };
+}
+
 /// Article model for blog content
 class Article {
   final int id;
@@ -9,6 +76,9 @@ class Article {
   final DateTime created;
   final DateTime? modified;
 
+  /// API 1.30.0: sayfaya bağlı YouTube videoları (yalnız ayrıntı ucunda; listede boş).
+  final List<ArticleVideo> videos;
+
   const Article({
     required this.id,
     required this.title,
@@ -18,6 +88,7 @@ class Article {
     required this.categoryId,
     required this.created,
     this.modified,
+    this.videos = const [],
   });
 
   factory Article.fromJson(Map<String, dynamic> json) {
@@ -32,6 +103,9 @@ class Article {
       modified: json['modified'] != null
           ? DateTime.parse(json['modified'] as String)
           : null,
+      videos: json['videos'] is List
+          ? (json['videos'] as List).map(ArticleVideo.tryParse).whereType<ArticleVideo>().toList()
+          : const [],
     );
   }
 
@@ -45,6 +119,7 @@ class Article {
       'category_id': categoryId,
       'created': created.toIso8601String(),
       if (modified != null) 'modified': modified!.toIso8601String(),
+      if (videos.isNotEmpty) 'videos': videos.map((v) => v.toJson()).toList(),
     };
   }
 
