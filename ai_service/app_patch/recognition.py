@@ -271,7 +271,13 @@ LEJANT_THREADS = 2
 # portrait-only names 5 right / 9 wrong -> 5 right / 4 wrong (GALLIENVS AVG coins named Claudius II, VESPASIANVS named
 # Constantine I) and 2 names from reverse photos dropped. Earlier Facebook set 15/15 -> 17/17; VCoins 20/21 -> 19/20
 # (one right portrait-only Augustus dropped). Report: runbook 2026-11-25-ai-lejant-portre.md section 9.
+# Gate head (2026-11-26, update 6): the second head was retrained on 3,354 Commons photos (was 881). It picks Caracalla
+# better in the legend, but as the gate it dropped right late-Roman portrait names (Constantius II, Licinius, Galerius,
+# Numerian), so the gate keeps the 881-photo head in its own optional file (missing -> the gate uses the second head).
+# Same phone set: names agreeing with the caption 108 -> 112, disagreeing 4 -> 3; earlier Facebook set 17/0 -> 18/1;
+# VCoins unchanged 19/1. Report: runbook 2026-11-25-ai-lejant-portre.md section 10.
 LEJANT_BAS2 = "/app/index/hukumdar_bas_commons.npz"
+LEJANT_KAPI_BAS = "/app/index/hukumdar_bas_kapi.npz"
 PORTRE_KAPI_FLAG = "/app/index/portre_kapi.on"
 SCOPE_MAX = 0.42
 AYIRT_FLAG = "/app/index/ayirt.on"
@@ -772,11 +778,14 @@ class RecognitionService:
         if self.lejant is None:
             try:
                 if os.path.exists(LEJANT_BAS2):
-                    self.lejant = LejantOkur(LEJANT_MODEL, LEJANT_BAS, threads=LEJANT_THREADS, bas2_path=LEJANT_BAS2)
+                    kapi = LEJANT_KAPI_BAS if os.path.exists(LEJANT_KAPI_BAS) else None
+                    self.lejant = LejantOkur(LEJANT_MODEL, LEJANT_BAS, threads=LEJANT_THREADS, bas2_path=LEJANT_BAS2,
+                                             kapi_path=kapi)
                 else:
                     self.lejant = LejantOkur(LEJANT_MODEL, LEJANT_BAS, threads=LEJANT_THREADS)
-                logger.info("lejant: head loaded (%d classes, second head %s)"
-                            % (len(self.lejant.siniflar), getattr(self.lejant, 'W2', None) is not None))
+                logger.info("lejant: head loaded (%d classes, second head %s, gate head %s)"
+                            % (len(self.lejant.siniflar), getattr(self.lejant, 'W2', None) is not None,
+                               getattr(self.lejant, 'Wk', None) is not None))
             except Exception as e:
                 logger.error("lejant: head load failed, layer off: %s" % e)
                 self.lejant_hata = True

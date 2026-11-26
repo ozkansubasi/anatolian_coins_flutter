@@ -29,6 +29,9 @@ KISA = 5                  # bu uzunluğa kadar sözcük en az iki okumada çıkm
 # baş Caracalla'yı Roma denarında 5'ten sonraya koyuyordu). Yalnız portre oyunun verdiği ad, ikinci baş o kişiyi
 # PORTRE_KAPI_SIRA'da görmüyorsa verilmez (FB: GALLIENVS AVG yazan sikkelere Claudius II, VESPASIANVS'a Constantine I).
 PORTRE_KAPI_SIRA = 1
+# Kapı başı (26 Kas, güncelleme 6): kapı ayrı bir başla da sorulabilir (kapi_path). İkinci baş 3.354 Commons görseliyle
+# yeniden eğitilince lejantta Caracalla'yı daha iyi seçti, ama kapı olarak geç Roma portre adlarını (Constantius II,
+# Licinius, Galerius, Numerian) düşürdü; kapıda 881 görsellik baş kaldı. kapi_path yoksa kapı ikinci başı kullanır.
 PENCERE_EN = 14           # pencere genişliği = şerit yüksekliği x 14 (uzun adlar sığsın; VCoins sınama yarısı 8/33)
 PENCERE_ADIM = 0.1        # adım = pencere genişliğinin %10'u
 SERIT_Y = 72
@@ -160,7 +163,7 @@ YAKIN = _yakin_sozcukler()
 
 
 class LejantOkur:
-    def __init__(self, model_dir, bas_path, threads=2, bas2_path=None):
+    def __init__(self, model_dir, bas_path, threads=2, bas2_path=None, kapi_path=None):
         self.model_dir, self.bas_path, self.threads = model_dir, bas_path, threads
         self._rec = None
         self._hata = False
@@ -173,13 +176,18 @@ class LejantOkur:
         self.idx = {k: i for i, k in enumerate(self.siniflar)}
         self.W2 = self.b2 = None
         if bas2_path:
-            z2 = np.load(bas2_path, allow_pickle=False)
-            if [str(x) for x in z2["siniflar"]] != self.siniflar:
-                raise ValueError("ikinci portre başının sınıfları birinciyle aynı sırada değil")
-            self.W2, self.b2 = z2["W"].astype(np.float32), z2["b"].astype(np.float32)
-            self.olcek2 = float(z2["olcek"]) if "olcek" in z2 else 20.0
+            self.W2, self.b2, self.olcek2 = self._ek_bas(bas2_path, "ikinci")
+        self.Wk = self.bk = None
+        if kapi_path:
+            self.Wk, self.bk, self.olcekk = self._ek_bas(kapi_path, "kapı")
         self.sozcuk = {_norm(t): [a for a in kisiler if a in self.idx] for t, kisiler in SOZCUK.items()}
         self.sozcuk = {t: k for t, k in self.sozcuk.items() if k}
+
+    def _ek_bas(self, yol, ad):
+        z = np.load(yol, allow_pickle=False)
+        if [str(x) for x in z["siniflar"]] != self.siniflar:
+            raise ValueError("%s portre başının sınıfları birinciyle aynı sırada değil" % ad)
+        return z["W"].astype(np.float32), z["b"].astype(np.float32), float(z["olcek"]) if "olcek" in z else 20.0
 
     def _model(self):
         if self._rec is not None or self._hata:
@@ -275,17 +283,20 @@ class LejantOkur:
         return out
 
     def portre(self, vec, bas=1):
-        W, b, olcek = (self.W, self.b, self.olcek) if bas == 1 else (self.W2, self.b2, self.olcek2)
+        """bas: 1 katalog başı, 2 ikinci baş, "kapi" kapı başı"""
+        W, b, olcek = {1: (self.W, self.b, self.olcek), 2: (self.W2, self.b2, getattr(self, "olcek2", 20.0)),
+                       "kapi": (self.Wk, self.bk, getattr(self, "olcekk", 20.0))}[bas]
         z = (W @ np.asarray(vec, np.float32) + b) * olcek
         z = np.exp(z - z.max())
         return z / z.sum()
 
     def kapi(self, vec, kisi):
-        """Yalnız portre oyunun adı verilsin mi: ikinci baş yoksa ya da kişiyi tanımıyorsa evet; yoksa ikinci başın
-        genel sıralamasında ilk PORTRE_KAPI_SIRA'da ise."""
-        if self.W2 is None or kisi not in self.idx:
+        """Yalnız portre oyunun adı verilsin mi: kapı başı (yoksa ikinci baş) yoksa ya da kişiyi tanımıyorsa evet;
+        yoksa o başın genel sıralamasında ilk PORTRE_KAPI_SIRA'da ise."""
+        bas = "kapi" if self.Wk is not None else 2
+        if (self.Wk if bas == "kapi" else self.W2) is None or kisi not in self.idx:
             return True
-        p = self.portre(vec, 2)
+        p = self.portre(vec, bas)
         return int((p > p[self.idx[kisi]]).sum()) + 1 <= PORTRE_KAPI_SIRA
 
     def karar(self, okumalar, vec):
