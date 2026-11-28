@@ -773,7 +773,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
     final summary = sel.loadingSummary ? l10n.translate('loading') : sel.summary;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+      padding: const EdgeInsets.fromLTRB(8, 10, 0, 10),
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: BorderRadius.circular(14),
@@ -798,13 +798,13 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
             ),
             child: Icon(isMint ? Icons.account_balance : Icons.place_outlined, color: color, size: 18),
           ),
-          12.width,
+          10.width,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Kart haritayı az kapatsın (28 Kas, kullanıcı): ad ve düğmeler küçük; özet paragrafı 12 kalır.
+                // Kart haritayı az kapatsın (28 Kas, kullanıcı): ad 14, bağlantılar 11, yan boşluklar dar; özet paragrafı 12 kalır.
                 Text(sel.title, style: boldTextStyle(size: 14, color: c.text)),
                 if (summary != null && summary.isNotEmpty) ...[
                   4.height,
@@ -825,10 +825,10 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
                           padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
                           foregroundColor: c.accent,
                           visualDensity: VisualDensity.compact,
-                          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, fontSize: 12, fontWeight: FontWeight.w600),
+                          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, fontSize: 11, fontWeight: FontWeight.w600),
                         ),
                         onPressed: () => _openArticle(articleId),
-                        icon: const Icon(Icons.article_outlined, size: 14),
+                        icon: const Icon(Icons.article_outlined, size: 13),
                         label: Text(l10n.translate('open_article')),
                       ),
                     if (sel.position != null)
@@ -837,13 +837,13 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
                           padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
                           foregroundColor: c.accent,
                           visualDensity: VisualDensity.compact,
-                          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, fontSize: 12, fontWeight: FontWeight.w600),
+                          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, fontSize: 11, fontWeight: FontWeight.w600),
                         ),
                         onPressed: () => _openModernMap(sel.position!),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.public, size: 14),
+                            const Icon(Icons.public, size: 13),
                             6.width,
                             Flexible(
                               child: Text(
@@ -866,6 +866,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
           IconButton(
             icon: const Icon(Icons.close),
             onPressed: () => setState(() => _selected = null),
+            visualDensity: VisualDensity.compact,
             iconSize: 20,
             color: c.textMuted,
           ),
