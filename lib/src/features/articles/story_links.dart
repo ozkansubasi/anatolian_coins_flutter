@@ -16,7 +16,8 @@ class StoryLinks extends StatelessWidget {
   /// (harita tam ekranda önce kapanmalı).
   final void Function(int articleId) onOpen;
 
-  /// Harita kartı için sıkı biçim: tek satır başlık, kategori yok.
+  /// Harita kartı için sıkı biçim: küçük yazı, kategori yok. Başlık iki biçimde de en çok 2 satır
+  /// (28 Kas, kullanıcı: tek satırda "Kydnos'ta mor yelkenler: Antonius v…" gibi kesiliyordu).
   final bool compact;
 
   /// Sıkı biçimde listenin üstündeki küçük başlık (Kaynak sekmesinde başlığı kart taşır).
@@ -64,7 +65,7 @@ class StoryLinks extends StatelessWidget {
                         Text(
                           s.title,
                           style: (compact ? t.caption : t.body).copyWith(color: c.text, fontWeight: FontWeight.w600),
-                          maxLines: compact ? 1 : 2,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (!compact && s.category.isNotEmpty) ...[

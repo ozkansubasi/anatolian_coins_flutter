@@ -71,6 +71,8 @@ void main() {
       )));
       expect(find.text('Bu kentin hikâyeleri'), findsOneWidget);
       expect(find.text('Sikke Odağı'), findsNothing);
+      // Uzun başlık tek satırda kesilmesin (28 Kas): sıkı biçimde de 2 satır.
+      expect(tester.widget<Text>(find.text('Kydnos')).maxLines, 2);
     });
   });
 }
