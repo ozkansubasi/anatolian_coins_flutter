@@ -50,7 +50,41 @@ class ArticlesApi {
     final data = response.data['data'] as Map<String, dynamic>;
     return Article.fromJson(data);
   }
+
+  /// Sikkenin hikâyeleri (API 1.31.0): darphane / hükümdar etiketli blog yazıları, sitedeki
+  /// "İlgili yazılar" kuralıyla (dönem süzgeci + sıra). Bağ yoksa boş liste.
+  Future<List<Article>> getCoinStories(int variantId, {int limit = 3}) =>
+      _list('/variants/$variantId/articles', limit);
+
+  /// Yerleşimin hikâyeleri (API 1.31.0): yerleşimin darphanelerine bağlı blog yazıları.
+  Future<List<Article>> getPlaceStories(String locId, {int limit = 3}) =>
+      _list('/locations/${Uri.encodeComponent(locId)}/articles', limit);
+
+  Future<List<Article>> _list(String path, int limit) async {
+    final response = await _apiClient.dio.get(path, queryParameters: {'lang': _lang, 'limit': limit});
+    final data = response.data['data'];
+    if (data is! List) return const [];
+    return data.whereType<Map>().map((j) => Article.fromJson(Map<String, dynamic>.from(j))).toList();
+  }
 }
+
+/// Sikke detayı Kaynak sekmesi: sikkenin hikâyeleri. Hata olursa bölüm gizlenir (boş liste).
+final coinStoriesProvider = FutureProvider.autoDispose.family<List<Article>, int>((ref, variantId) async {
+  try {
+    return await ref.watch(articlesApiProvider).getCoinStories(variantId);
+  } catch (_) {
+    return const [];
+  }
+});
+
+/// Harita bilgi ekranı: yerleşimin hikâyeleri (en çok 2, kart küçük). Hata olursa gizlenir.
+final placeStoriesProvider = FutureProvider.autoDispose.family<List<Article>, String>((ref, locId) async {
+  try {
+    return await ref.watch(articlesApiProvider).getPlaceStories(locId, limit: 2);
+  } catch (_) {
+    return const [];
+  }
+});
 
 /// Provider for ArticlesApi
 /// Dil değişince yeniden kurulur; onu izleyen sağlayıcılar (öne çıkan yazı)

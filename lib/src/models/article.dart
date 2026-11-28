@@ -65,6 +65,36 @@ class ArticleVideo {
       };
 }
 
+/// Günün hikâyesinin sikkesi (API 1.31.0 `/articles/featured` → `coin`): yazıdaki ilk görselli sikke.
+/// Kimlik TR katalog kimliğidir (`/variant/:id`); küçük görsel 480 px, filigransız.
+class StoryCoin {
+  final int id;
+  final String title;
+  final String? thumbUrl;
+
+  const StoryCoin({required this.id, required this.title, this.thumbUrl});
+
+  /// Geçersiz kimlik → null (blok çizilmez). Yalnız https küçük görsel kabul edilir.
+  static StoryCoin? tryParse(Object? raw) {
+    if (raw is! Map) return null;
+    final j = Map<String, dynamic>.from(raw);
+    final id = (j['id'] as num?)?.toInt() ?? 0;
+    if (id <= 0) return null;
+    final thumb = j['thumb_url'];
+    return StoryCoin(
+      id: id,
+      title: '${j['title'] ?? ''}'.trim(),
+      thumbUrl: thumb is String && thumb.startsWith('https://') ? thumb : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        if (thumbUrl != null) 'thumb_url': thumbUrl,
+      };
+}
+
 /// Article model for blog content
 class Article {
   final int id;
@@ -79,6 +109,12 @@ class Article {
   /// API 1.30.0: sayfaya bağlı YouTube videoları (yalnız ayrıntı ucunda; listede boş).
   final List<ArticleVideo> videos;
 
+  /// API 1.31.0, yalnız günün hikâyesinde: yazıdaki ilk görselli sikke (yoksa null).
+  final StoryCoin? coin;
+
+  /// API 1.31.0, yalnız günün hikâyesinde: `today` (o sabah yayımlanan yazı) | `rotation` (günlük dönüşüm).
+  final String? reason;
+
   const Article({
     required this.id,
     required this.title,
@@ -89,6 +125,8 @@ class Article {
     required this.created,
     this.modified,
     this.videos = const [],
+    this.coin,
+    this.reason,
   });
 
   factory Article.fromJson(Map<String, dynamic> json) {
@@ -106,6 +144,8 @@ class Article {
       videos: json['videos'] is List
           ? (json['videos'] as List).map(ArticleVideo.tryParse).whereType<ArticleVideo>().toList()
           : const [],
+      coin: StoryCoin.tryParse(json['coin']),
+      reason: json['reason'] is String ? json['reason'] as String : null,
     );
   }
 
@@ -120,6 +160,8 @@ class Article {
       'created': created.toIso8601String(),
       if (modified != null) 'modified': modified!.toIso8601String(),
       if (videos.isNotEmpty) 'videos': videos.map((v) => v.toJson()).toList(),
+      if (coin != null) 'coin': coin!.toJson(),
+      if (reason != null) 'reason': reason,
     };
   }
 

@@ -30,6 +30,11 @@ import '../../widgets/image_credit.dart';
 import '../../widgets/coin_image_placeholder.dart';
 import '../../widgets/pro_feature.dart';
 import '../map/ancient_map_widget.dart';
+import '../../core/analytics/app_analytics.dart';
+import '../../models/article.dart';
+import '../../prokit_ui/widgets/num_bottom_nav.dart';
+import '../articles/articles_api.dart';
+import '../articles/story_links.dart';
 
 class ProkitVariantDetailPage extends ConsumerStatefulWidget {
   final int articleId;
@@ -884,6 +889,28 @@ class _ProkitVariantDetailPageState extends ConsumerState<ProkitVariantDetailPag
               ),
             ],
           ),
+          // Bu sikkenin hikâyeleri (28 Kas 2026, API 1.31.0): sitedeki "İlgili yazılar" kuralıyla en çok 3 blog
+          // yazısı. Yüklenirken ya da bağ yokken bölüm hiç görünmez.
+          Consumer(builder: (context, ref, _) {
+              final stories = ref.watch(coinStoriesProvider(v.articleId)).valueOrNull ?? const <Article>[];
+              if (stories.isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: _buildInfoCard(
+                  title: l10n.translate('coin_stories'),
+                  icon: Icons.auto_stories_outlined,
+                  children: [
+                    StoryLinks(
+                      stories: stories,
+                      onOpen: (id) {
+                        AppAnalytics.instance.storyOpen(id: id, source: 'sikke');
+                        context.openRoute('/article/$id');
+                      },
+                    ),
+                  ],
+                ),
+              );
+            }),
           if (v.sourceCitation != null && v.sourceCitation!.isNotEmpty) ...[
             16.height,
             _buildInfoCard(

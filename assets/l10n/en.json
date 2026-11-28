@@ -1084,5 +1084,9 @@
   "camera_permission_body": "Camera access is needed to recognise a coin from a photo. Turn it on in Settings and come back, or choose the photo from your gallery.",
   "camera_permission_restricted": "Camera use is restricted on this device (e.g. Screen Time). You can choose the coin's photo from your gallery.",
   "camera_permission_open_settings": "Open Settings",
-  "camera_permission_gallery": "Choose from gallery"
+  "camera_permission_gallery": "Choose from gallery",
+  "daily_story": "Story of the Day",
+  "coin_stories": "Stories About This Coin",
+  "place_stories": "Stories about this city",
+  "story_coin": "The coin in this story"
 }

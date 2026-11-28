@@ -223,6 +223,12 @@ class AppAnalytics {
     } catch (_) {}
   }
 
+  /// Hikâye bağlantısına dokunuldu (28 Kas 2026): hangi yüzeyin yazıya taşıdığını ölçer.
+  /// [source]: `sikke` (Kaynak sekmesi) · `harita` (bilgi ekranı) · `gunun_hikayesi` (ana sayfa) ·
+  /// `hikaye_sikkesi` (günün hikâyesi kartındaki sikke). Yazının açılışı ayrıca `select_content` olarak düşer.
+  Future<void> storyOpen({required int id, required String source}) =>
+      _log('story_open', {'kaynak': source, 'item_id': '$id'});
+
   /// Asistana soru soruldu; sorunun metni GİTMEZ.
   Future<void> assistantQuestion(String lang) => _log('assistant_question', {'lang': lang});
 

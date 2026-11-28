@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../prokit_ui/widgets/num_bottom_nav.dart';
@@ -5,8 +6,10 @@ import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/article.dart';
 import 'articles_api.dart';
+import '../../core/analytics/app_analytics.dart';
 
-/// Editor's Pick Card - Shows daily featured article on dashboard
+/// Günün hikâyesi kartı (28 Kas 2026; eski adı Editor's Pick): API 1.31.0 `/articles/featured` o sabah
+/// yayımlanan yazıyı, yoksa sikkeye bağlı yazılarda günlük dönüşümü verir; varsa hikâyenin sikkesi de görünür.
 class EditorsPickCard extends ConsumerWidget {
   const EditorsPickCard({super.key});
 
@@ -61,7 +64,10 @@ class _ArticleCard extends StatelessWidget {
       shadowColor: theme.colorScheme.shadow,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        onTap: () => context.openRoute('/article/${article.id}'),
+        onTap: () {
+          AppAnalytics.instance.storyOpen(id: article.id, source: 'gunun_hikayesi');
+          context.openRoute('/article/${article.id}');
+        },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -117,6 +123,12 @@ class _ArticleCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
 
+              // Hikâyenin sikkesi (API 1.31.0): yazıdaki ilk görselli sikke; dokununca sikke detayı.
+              if (article.coin != null) ...[
+                const SizedBox(height: 12),
+                _StoryCoinRow(coin: article.coin!, label: l10n.translate('story_coin'), theme: theme),
+              ],
+
               const SizedBox(height: 12),
 
               // Footer - Date and Read More
@@ -166,6 +178,65 @@ class _ArticleCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Günün hikâyesindeki sikke: küçük görsel + "Hikâyenin sikkesi" + katalog adı; dokununca sikke detayı.
+class _StoryCoinRow extends StatelessWidget {
+  final StoryCoin coin;
+  final String label;
+  final ThemeData theme;
+
+  const _StoryCoinRow({required this.coin, required this.label, required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = theme.colorScheme.onSurfaceVariant;
+    return InkWell(
+      key: const ValueKey('story-coin'),
+      onTap: () {
+        AppAnalytics.instance.storyOpen(id: coin.id, source: 'hikaye_sikkesi');
+        context.openRoute('/variant/${coin.id}');
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: coin.thumbUrl == null
+                  ? ColoredBox(color: theme.colorScheme.surfaceContainerHighest,
+                      child: Icon(Icons.toll_outlined, color: muted, size: 22))
+                  : CachedNetworkImage(
+                      imageUrl: coin.thumbUrl!,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, __, ___) => ColoredBox(color: theme.colorScheme.surfaceContainerHighest,
+                          child: Icon(Icons.toll_outlined, color: muted, size: 22)),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: theme.textTheme.labelSmall?.copyWith(color: muted, fontWeight: FontWeight.w600)),
+                if (coin.title.isNotEmpty)
+                  Text(
+                    coin.title,
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, size: 18, color: muted),
+        ],
       ),
     );
   }

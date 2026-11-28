@@ -1084,5 +1084,9 @@
   "camera_permission_body": "Sikkeyi fotoğrafla tanımak için kamera izni gerekiyor. Ayarlar'dan izni açıp uygulamaya dönün ya da fotoğrafı galeriden seçin.",
   "camera_permission_restricted": "Bu cihazda kamera kullanımı kısıtlanmış (ör. Ekran Süresi). Sikkenin fotoğrafını galeriden seçebilirsiniz.",
   "camera_permission_open_settings": "Ayarları aç",
-  "camera_permission_gallery": "Galeriden seç"
+  "camera_permission_gallery": "Galeriden seç",
+  "daily_story": "Günün Hikâyesi",
+  "coin_stories": "Bu Sikkenin Hikâyeleri",
+  "place_stories": "Bu kentin hikâyeleri",
+  "story_coin": "Hikâyenin sikkesi"
 }

@@ -371,7 +371,8 @@ class _ProkitHomeScreenState extends ConsumerState<ProkitHomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         numSectionHeader(
-          title: l10n.translate('editors_pick'),
+          // "Günün hikâyesi" (28 Kas 2026): o sabahın yazısı ya da günlük dönüşüm + hikâyenin sikkesi.
+          title: l10n.translate('daily_story'),
           // Bağlantı nereye götürdüğünü söyler: "Daha Fazla" yerine "Blog" (kullanıcı, 2026-10-10).
           actionText: l10n.translate('blog'),
           // Blog menusune gider; "sikke arama" (/browse) yanlis hedefti.

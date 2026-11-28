@@ -18,6 +18,10 @@ import 'map_label_layout.dart';
 import 'map_locations_api.dart';
 import 'map_marker_icons.dart';
 import '../../widgets/pro_feature.dart';
+import '../../core/analytics/app_analytics.dart';
+import '../../models/article.dart';
+import '../articles/articles_api.dart';
+import '../articles/story_links.dart';
 
 /// Antik Anadolu haritası için veri modelleri
 ///
@@ -851,6 +855,7 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
                       ),
                   ],
                 ),
+                if (sel.location != null) _placeStories(sel.location!.id, l10n),
               ],
             ),
           ),
@@ -862,6 +867,22 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
           ),
         ],
       ),
+    );
+  }
+
+  /// "Bu kentin hikâyeleri" (28 Kas 2026, API 1.31.0): yerleşimin darphanelerine bağlı en çok 2 blog yazısı.
+  /// Yüklenirken ya da bağ yokken hiçbir şey çizilmez; kart yüksekliği yalnız hikâye varsa artar.
+  Widget _placeStories(String locId, AppLocalizations l10n) {
+    final stories = ref.watch(placeStoriesProvider(locId)).valueOrNull ?? const <Article>[];
+    if (stories.isEmpty) return const SizedBox.shrink();
+    return StoryLinks(
+      stories: stories,
+      compact: true,
+      heading: l10n.translate('place_stories'),
+      onOpen: (id) {
+        AppAnalytics.instance.storyOpen(id: id, source: 'harita');
+        _openArticle(id);
+      },
     );
   }
 
