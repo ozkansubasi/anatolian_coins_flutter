@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:nb_utils/nb_utils.dart';
+import '../../core/app_theme.dart';
 import '../../core/coin_format.dart';
 import '../../core/region_data.dart';
 import '../../prokit_ui/numistr_colors.dart';
@@ -803,7 +804,8 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(sel.title, style: boldTextStyle(size: 16, color: c.text)),
+                // Kart haritayı az kapatsın (28 Kas, kullanıcı): ad ve düğmeler küçük; özet paragrafı 12 kalır.
+                Text(sel.title, style: boldTextStyle(size: 14, color: c.text)),
                 if (summary != null && summary.isNotEmpty) ...[
                   4.height,
                   Text(
@@ -820,26 +822,28 @@ class _AncientMapWidgetState extends ConsumerState<AncientMapWidget> {
                     if (articleId != null)
                       TextButton.icon(
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
                           foregroundColor: c.accent,
                           visualDensity: VisualDensity.compact,
+                          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                         onPressed: () => _openArticle(articleId),
-                        icon: const Icon(Icons.article_outlined, size: 16),
+                        icon: const Icon(Icons.article_outlined, size: 14),
                         label: Text(l10n.translate('open_article')),
                       ),
                     if (sel.position != null)
                       TextButton(
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
                           foregroundColor: c.accent,
                           visualDensity: VisualDensity.compact,
+                          textStyle: const TextStyle(fontFamily: AppTheme.fontFamily, fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                         onPressed: () => _openModernMap(sel.position!),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.public, size: 16),
+                            const Icon(Icons.public, size: 14),
                             6.width,
                             Flexible(
                               child: Text(

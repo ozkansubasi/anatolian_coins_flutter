@@ -16,7 +16,7 @@ class StoryLinks extends StatelessWidget {
   /// (harita tam ekranda önce kapanmalı).
   final void Function(int articleId) onOpen;
 
-  /// Harita kartı için sıkı biçim: küçük yazı, kategori yok. Başlık iki biçimde de en çok 2 satır
+  /// Harita kartı için sıkı biçim: 11 punto yazı, kategori yok (kart haritayı az kapatsın). Başlık iki biçimde de en çok 2 satır
   /// (28 Kas, kullanıcı: tek satırda "Kydnos'ta mor yelkenler: Antonius v…" gibi kesiliyordu).
   final bool compact;
 
@@ -43,7 +43,7 @@ class StoryLinks extends StatelessWidget {
         if (heading != null)
           Padding(
             padding: const EdgeInsets.only(top: 4, bottom: 2),
-            child: Text(heading!, style: t.caption.copyWith(color: c.textMuted, fontWeight: FontWeight.w600)),
+            child: Text(heading!, style: t.caption.copyWith(fontSize: 11, color: c.textMuted, fontWeight: FontWeight.w600)),
           ),
         for (final s in stories)
           InkWell(
@@ -51,11 +51,11 @@ class StoryLinks extends StatelessWidget {
             onTap: () => onOpen(s.id),
             borderRadius: BorderRadius.circular(8),
             child: Padding(
-              padding: EdgeInsets.symmetric(vertical: compact ? 4 : 8),
+              padding: EdgeInsets.symmetric(vertical: compact ? 3 : 8),
               child: Row(
                 crossAxisAlignment: compact ? CrossAxisAlignment.center : CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.auto_stories_outlined, size: compact ? 16 : 18, color: c.accent),
+                  Icon(Icons.auto_stories_outlined, size: compact ? 14 : 18, color: c.accent),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -64,7 +64,7 @@ class StoryLinks extends StatelessWidget {
                       children: [
                         Text(
                           s.title,
-                          style: (compact ? t.caption : t.body).copyWith(color: c.text, fontWeight: FontWeight.w600),
+                          style: (compact ? t.caption.copyWith(fontSize: 11) : t.body).copyWith(color: c.text, fontWeight: FontWeight.w600),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -75,7 +75,7 @@ class StoryLinks extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right, size: compact ? 16 : 20, color: c.textMuted),
+                  Icon(Icons.chevron_right, size: compact ? 14 : 20, color: c.textMuted),
                 ],
               ),
             ),
